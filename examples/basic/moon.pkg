@@ -1,0 +1,5 @@
+import {
+  "123123213weqw/moon_pyversion" @pyversion,
+}
+
+pkgtype(kind: "executable")
