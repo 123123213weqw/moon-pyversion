@@ -54,12 +54,12 @@ version specifier 的解析、规范化、比较和筛选。它面向需要在 M
 - `moon test` 覆盖核心路径；
 - `README.md`、`README.mbt.md`、`docs/*.md`；
 - `.github/workflows/ci.yml` 四目标验证；
-- 10 个以上本地 git 提交。
+- 12 个真实有效提交并推送至公开仓库；
 
 ## 明确不做范围
 
 不做 pip、联网下载安装、完整依赖求解器、平台标签、包名规范化、SemVer
-兼容和远程发布。
+兼容或自动发布/安装流程。
 
 ## 原创 / 移植 / 参考来源与许可证
 

@@ -28,7 +28,7 @@
 - 已运行 `moon check/build/test/run`（wasm、wasm-gc、js）；
 - native 本地是否通过取决于本机 C 工具链；CI 仍覆盖 native；
 - 测试块数量：25（实现与验证时实际数为准）；
-- Git 提交数量：10 个以上（本地，未 push）。
+- Git 提交数量：12 个真实有效提交，已推送至公开仓库 `main`（origin/main）。
 
 ## 范围事实
 

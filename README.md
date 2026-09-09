@@ -1,4 +1,5 @@
 # Moon PyVersion
+[![CI](https://github.com/123123213weqw/moon-pyversion/actions/workflows/ci.yml/badge.svg)](https://github.com/123123213weqw/moon-pyversion/actions/workflows/ci.yml)
 
 纯 MoonBit 实现的 Python 包版本库：按 PEP 440 解析、规范化、比较版本，
 并按 PEP 440 version specifier 做筛选。零第三方依赖，仅使用
