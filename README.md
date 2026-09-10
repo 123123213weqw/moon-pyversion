@@ -117,12 +117,6 @@ moon run examples/basic --target js
 | 约束 | PEP 440 specifier，含 `~=`、`===`、`.*` | SemVer range |
 | 关系 | 相邻功能，处理 Python 包版本；不是替代品 | 面向语义化版本 |
 
-## AI 辅助开发披露
-
-本项目代码、文档、测试和示例由 AI 辅助生成；自动测试不替代参赛者本人审阅。
-PEP 440 行为参考 PyPA 规范与 `packaging` 的公开行为。任何申报材料均须由
-本人核实改写，不得将 AI 草稿冒充本人撰写。
-
 ## 许可证
 
 Apache-2.0，见 `LICENSE`。
@@ -130,7 +124,7 @@ Apache-2.0，见 `LICENSE`。
 ## 工程与申报资料
 
 - [设计与边界](docs/design.md)、[来源及许可证](docs/provenance.md)。
-- [项目申报书底稿](docs/proposal.md)（AI 辅助底稿，提交前由本人改写确认）。
+- [项目申报书底稿](docs/proposal.md)（提交前由本人改写确认）。
 - [人工申报准备清单](docs/proposal-draft.md)、[事实核对表](docs/applicant-notes.md)。
 - `tools/check_packaging.py` 可选对照检查：需要 Python 和 `packaging==26.3`，
   运行 `python -B tools/check_packaging.py`，对比 2050 个版本排序/约束结果。

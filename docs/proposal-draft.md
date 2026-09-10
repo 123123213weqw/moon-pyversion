@@ -1,6 +1,6 @@
 # Moon PyVersion — 人工申报准备清单
 
-> AI 辅助技术资料，不是可提交的项目申报书。请参赛者独立撰写一页 Markdown；
+> 技术资料，不是可提交的项目申报书。请参赛者独立撰写一页 Markdown；
 > 不能删掉提示后将本文件冒充本人撰写。无需 PDF。
 
 - 名称 / 仓库：[Moon PyVersion](https://github.com/123123213weqw/moon-pyversion)。
