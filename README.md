@@ -130,7 +130,9 @@ Apache-2.0，见 `LICENSE`。
 ## 工程与申报资料
 
 - [设计与边界](docs/design.md)、[来源及许可证](docs/provenance.md)。
+- [项目申报书底稿](docs/proposal.md)（AI 辅助底稿，提交前由本人改写确认）。
 - [人工申报准备清单](docs/proposal-draft.md)、[事实核对表](docs/applicant-notes.md)。
 - `tools/check_packaging.py` 可选对照检查：需要 Python 和 `packaging==26.3`，
   运行 `python -B tools/check_packaging.py`，对比 2050 个版本排序/约束结果。
   Python 仅用于测试，不是 MoonBit 库的运行依赖；CI 的 JS 作业自动执行。
+
