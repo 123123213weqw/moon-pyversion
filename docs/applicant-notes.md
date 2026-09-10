@@ -27,8 +27,8 @@
 - 已运行 `moon fmt --check`；
 - 已运行 `moon check/build/test/run`（wasm、wasm-gc、js）；
 - native 本地是否通过取决于本机 C 工具链；CI 仍覆盖 native；
-- 测试块数量：25（实现与验证时实际数为准）；
-- Git 提交数量：12 个真实有效提交，已推送至公开仓库 `main`（origin/main）。
+- 修复后测试块数量：29；另有 2050 项 packaging 26.3 独立对照（以实际运行结果为准）；
+- Git 提交数量及归属须核对 GitHub main；不得把数量直接称为官方认可的有效提交。
 
 ## 范围事实
 
@@ -43,3 +43,4 @@
 - 核实账号、提交数、测试数、CI 状态；
 - 不要声称官方已认可或已发布；
 - 搜索未命中不代表绝对无同类。
+- 完整赛事与人工申报要求见 [提交核对表](submission-checklist.md)。

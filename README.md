@@ -15,6 +15,17 @@
 
 ## 安装
 
+尚未在本文中确认 MoonCakes 发布成功。可先从源码复现：
+
+```sh
+git clone https://github.com/123123213weqw/moon-pyversion.git
+cd moon-pyversion
+moon run examples/basic --target js
+moon test --target js --deny-warn
+```
+
+发布成功后才可在消费项目运行 `moon add 123123213weqw/moon_pyversion@0.1.0`。
+
 开发时在 `moon.pkg` 中引入：
 
 ```text
@@ -81,6 +92,16 @@ moon run examples/basic --target js
 
 ## 边界
 
+预发布策略对齐 `packaging 26.3`：`contains` 只有一个候选，默认允许满足
+边界的预发布版本；`filter` 有完整候选集，默认优先正式版，没有匹配正式版时
+才回退预发布版。约束显式包含预发布边界时会允许预发布候选。二者均可传
+`prereleases=Some(false)` 强制禁用，或 `Some(true)` 允许。该默认行为不同于
+旧版 packaging，不能把“落入区间”当作安全升级保证。
+
+`===` 对已解析 `Version` 的规范化字符串做不区分大小写的相等判断；
+不支持不可解析的任意 legacy 字符串候选。排序时 local 参与比较，但有序约束
+忽略候选 local；有序约束本身不接受 local 后缀。
+
 明确不做：pip、联网下载安装、完整依赖求解、平台兼容性标签、包名规范化。
 `SpecifierSet` 只做约束筛选，不生成候选集、不做回溯或冲突诊断。
 整数组件当前由 MoonBit `BigInt` 承接；非 ASCII 的本地版本段会被拒绝。
@@ -98,10 +119,18 @@ moon run examples/basic --target js
 
 ## AI 辅助开发披露
 
-本项目代码、文档、测试和示例由 AI 辅助生成，并由提交者逐项验证与修改；
+本项目代码、文档、测试和示例由 AI 辅助生成；自动测试不替代参赛者本人审阅。
 PEP 440 行为参考 PyPA 规范与 `packaging` 的公开行为。任何申报材料均须由
 本人核实改写，不得将 AI 草稿冒充本人撰写。
 
 ## 许可证
 
 Apache-2.0，见 `LICENSE`。
+
+## 工程与申报资料
+
+- [设计与边界](docs/design.md)、[来源及许可证](docs/provenance.md)。
+- [人工申报准备清单](docs/proposal-draft.md)、[事实核对表](docs/applicant-notes.md)。
+- `tools/check_packaging.py` 可选对照检查：需要 Python 和 `packaging==26.3`，
+  运行 `python -B tools/check_packaging.py`，对比 2050 个版本排序/约束结果。
+  Python 仅用于测试，不是 MoonBit 库的运行依赖；CI 的 JS 作业自动执行。

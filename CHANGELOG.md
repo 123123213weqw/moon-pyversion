@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — 2026-09-10 review fixes
+
+- Correct nested pre/post/dev ordering, zero-padded wildcard matching and local-label constraints.
+- Correct exclusive-boundary post/dev exclusions and case-insensitive parsed-version `===`.
+- Add explicit prerelease policy and stable-first candidate filtering (packaging 26.3 behavior).
+- Add regression tests and 2050 independent packaging comparisons in JS CI.
+- Correct documentation and replace application prose with a human-author preparation checklist.
+- These changes are source updates, not a claim of MoonCakes publication.
+
 All notable changes to this project are documented in this file.
 
 ## [0.1.0] - 2026-09-10

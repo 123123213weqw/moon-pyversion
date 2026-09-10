@@ -491,17 +491,24 @@ pub fn Version::compare(left : Version, right : Version) -> Int {
   if c_release != 0 {
     return c_release
   }
-  if left.has_dev != right.has_dev {
-    return if left.has_dev { -1 } else { 1 }
+  // A bare development release precedes alpha; a post-development release
+  // stays with its post-release, not before every prerelease.
+  let left_pre = if left.has_pre {
+    0
+  } else if left.has_dev && !left.has_post {
+    -1
+  } else {
+    1
   }
-  if left.has_dev {
-    let c_dev = left.dev_num.compare(right.dev_num)
-    if c_dev != 0 {
-      return c_dev
-    }
+  let right_pre = if right.has_pre {
+    0
+  } else if right.has_dev && !right.has_post {
+    -1
+  } else {
+    1
   }
-  if left.has_pre != right.has_pre {
-    return if left.has_pre { -1 } else { 1 }
+  if left_pre != right_pre {
+    return left_pre.compare(right_pre)
   }
   if left.has_pre {
     let c_kind = left.pre_kind.compare(right.pre_kind)
@@ -520,6 +527,15 @@ pub fn Version::compare(left : Version, right : Version) -> Int {
     let c_post = left.post_num.compare(right.post_num)
     if c_post != 0 {
       return c_post
+    }
+  }
+  if left.has_dev != right.has_dev {
+    return if left.has_dev { -1 } else { 1 }
+  }
+  if left.has_dev {
+    let c_dev = left.dev_num.compare(right.dev_num)
+    if c_dev != 0 {
+      return c_dev
     }
   }
   compare_local(left.local_segments, right.local_segments)

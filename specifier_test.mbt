@@ -26,6 +26,7 @@ test "wildcard equality and exclusion match release prefixes" {
   assert_true(eq.contains(Version::parse("1.1")))
   assert_true(eq.contains(Version::parse("1.1.5")))
   assert_true(eq.contains(Version::parse("1.1a1")))
+  assert_true(eq.contains(Version::parse("1.1a1"), prereleases=Some(true)))
   assert_false(eq.contains(Version::parse("1.2")))
 
   let ne = SpecifierSet::parse("!=1.1.*")
@@ -49,7 +50,7 @@ test "compatible release has inclusive lower and exclusive upper bound" {
 }
 
 ///|
-test "arbitrary equality compares the raw string" {
+test "arbitrary equality compares normalized version spelling case insensitively" {
   let exact = SpecifierSet::parse("===1.0")
   assert_true(exact.contains(Version::parse("1.0")))
   assert_false(exact.contains(Version::parse("1.0.0")))
@@ -62,6 +63,7 @@ test "pre-release boundary behavior for ordered and equality specifiers" {
   let ge = SpecifierSet::parse(">=1.0")
   assert_false(ge.contains(Version::parse("1.0a1")))
   assert_true(ge.contains(Version::parse("1.1a1")))
+  assert_true(ge.contains(Version::parse("1.1a1"), prereleases=Some(true)))
 
   let eq = SpecifierSet::parse("==1.0")
   assert_false(eq.contains(Version::parse("1.0a1")))
@@ -77,9 +79,9 @@ test "pre-release boundary behavior for ordered and equality specifiers" {
 test "strict upper bound excludes the boundary prerelease" {
   let lt = SpecifierSet::parse("<2.0")
   assert_false(lt.contains(Version::parse("2.0a1")))
-  assert_true(lt.contains(Version::parse("1.9a1")))
+  assert_true(lt.contains(Version::parse("1.9a1"), prereleases=Some(true)))
   let le = SpecifierSet::parse("<=2.0")
-  assert_true(le.contains(Version::parse("2.0a1")))
+  assert_true(le.contains(Version::parse("2.0a1"), prereleases=Some(true)))
 }
 
 ///|
@@ -99,10 +101,11 @@ test "filter returns only versions accepted by the set" {
 }
 
 ///|
-test "empty specifier set accepts every version" {
+test "empty specifier contains uses single-candidate prerelease fallback" {
   let spec = SpecifierSet::parse("")
   assert_true(spec.contains(Version::parse("0")))
   assert_true(spec.contains(Version::parse("1.0a1")))
+  assert_false(spec.contains(Version::parse("1.0a1"), prereleases=Some(false)))
 }
 
 ///|
