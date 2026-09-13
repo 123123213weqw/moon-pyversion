@@ -2,24 +2,26 @@
 /// Deterministic corpus emitter for the independent PyPA `packaging` oracle
 /// implemented in `tools/diff_packaging.py`.
 ///
-/// Records are tab separated, one per line:
+/// Records are tab separated, one per line, and always start with the corpus
+/// source (`curated`, `generated`, `mutated` or `pypi`):
 ///
-/// - `parse\t<raw>\t<ok|bad>\t<normalized form or ->`
-/// - `spec\t<raw>\t<ok|bad>`
-/// - `cmp\t<left>\t<right>\t<-1|0|1>`
-/// - `contains\t<mode>\t<spec>\t<version>\t<true|false>`
-/// - `filter\t<mode>\t<spec>\t<candidates joined by “|”>\t<accepted joined by “|”>`
-/// - `order\t<input joined by “|”>\t<ascending order joined by “|”>`
+/// - `<source>\tparse\t<raw>\t<ok|bad>\t<normalized form or ->`
+/// - `<source>\tspec\t<raw>\t<ok|bad>`
+/// - `<source>\tcmp\t<left>\t<right>\t<-1|0|1>`
+/// - `<source>\tcontains\t<mode>\t<spec>\t<version>\t<true|false>`
+/// - `<source>\tfilter\t<mode>\t<spec>\t<candidates as a|b>\t<accepted as c|d>`
+/// - `<source>\torder\t<input as a|b>\t<ascending as b|a>`
 ///
 /// `mode` is `auto` (the library default policy), `any` (prereleases forced
 /// on) or `none` (prereleases forced off); the oracle maps them onto
 /// `None`, `True` and `False`.
 ///
-/// The corpus has four sources: a small curated list, generated versions and
-/// specifiers, mutated strings that are usually illegal, and the real-world
-/// PyPI fixture in the `fixtures` package (`fixtures/pypi_corpus.mbt`). Nothing here reads the
-/// clock, the environment or the network, and the generator is a wrapping
-/// 64-bit LCG with a constant seed, so the output is byte identical on wasm,
+/// The corpus has four sources: a curated list, versions and specifiers
+/// sampled from the PEP 440 grammar, mutated strings that are usually
+/// illegal, and the real-world PyPI fixture in the `fixtures` package
+/// (`fixtures/pypi_corpus.mbt`). Nothing here reads the clock, the
+/// environment or the network, and the generator is a wrapping 64-bit LCG
+/// with a constant seed, so the output is byte identical on wasm,
 /// wasm-gc, js and native; `tools/target_parity.py` checks that claim.
 struct Rng {
   mut state : UInt64

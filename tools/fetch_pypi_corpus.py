@@ -305,13 +305,22 @@ def render_mbt_array(binding, doc_lines, values):
     return "\n".join(out)
 
 
+# These doc strings are mirrored in the committed fixture, so regenerating the
+# corpus does not rewrite its header.
 MBT_VERSIONS_DOC = [
-    "Real-world version strings sampled from the PyPI JSON API.",
+    "Real-world version strings sampled from the PyPI JSON API",
+    "(`/pypi/<package>/json` -> `releases` keys), %d per package at most,"
+    % PER_PACKAGE_VERSION_CAP,
+    "round-robin over %d well-known packages up to the %d entry cap."
+    % (len(PACKAGES), VERSION_CAP),
     "Regenerate with tools/fetch_pypi_corpus.py; do not edit by hand.",
 ]
 MBT_SPECIFIERS_DOC = [
-    "Real-world version constraints extracted from PyPI Requires-Dist / "
-    "Requires-Python metadata.",
+    "Real-world version constraints extracted from PyPI `Requires-Dist` /",
+    "`Requires-Python` metadata: the parenthesised constraint text only, with",
+    "environment markers and extras dropped, deduplicated and sorted. %d of"
+    % SPECIFIER_CAP,
+    "them, every one of which parsing accepts.",
     "Regenerate with tools/fetch_pypi_corpus.py; do not edit by hand.",
 ]
 

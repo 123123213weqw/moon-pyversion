@@ -1,7 +1,7 @@
 ///|
 /// Throughput harness for the version and specifier hot paths.
 ///
-/// It reuses the real-world corpus in `examples/diff/pypi_corpus.mbt` so the
+/// It reuses the real-world corpus in the `fixtures` package so the
 /// inputs are the same strings the differential oracle validates. Timing uses
 /// `@env.now()`, which is millisecond resolution on every backend; each loop
 /// runs long enough (hundreds of milliseconds) for that to be meaningful.
