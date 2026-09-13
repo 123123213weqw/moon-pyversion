@@ -159,6 +159,37 @@ fn Cursor::consume_separator(self : Cursor) -> Bool {
 }
 
 ///|
+/// Match a suffix label `offset` characters ahead of the cursor without
+/// moving it. Returns `(kind, length)` with the same meaning as
+/// `Cursor::suffix_info`.
+fn Cursor::label_at(self : Cursor, offset : Int) -> (Int, Int) {
+  let saved = self.pos
+  self.pos += offset
+  let (kind, len) = self.suffix_info()
+  self.pos = saved
+  (kind, len)
+}
+
+///|
+/// PEP 440 allows `[-_.]?label[-_.]?number?`, so a suffix may be glued to the
+/// previous component (`1.0post1`) or introduced by any single separator
+/// (`1.0.post1`, `1.0-post1`). The separator is part of the match only when a
+/// label follows it; otherwise it stays available for the next suffix group.
+fn Cursor::peek_suffix(self : Cursor) -> (Int, Int) {
+  let (direct_kind, direct_len) = self.label_at(0)
+  if direct_kind != 0 {
+    return (direct_kind, direct_len)
+  }
+  if is_separator(self.peek()) {
+    let (kind, len) = self.label_at(1)
+    if kind != 0 {
+      return (kind, len + 1)
+    }
+  }
+  (0, 0)
+}
+
+///|
 fn all_digits(text : String) -> Bool {
   for i = 0; i < text.length(); i = i + 1 {
     if !is_digit(text[i].to_int()) {
@@ -179,7 +210,7 @@ fn parse_version(input : String) -> Version raise VersionError {
   if source.is_empty() {
     raise VersionError::InvalidVersion("EMPTY_VERSION", 0)
   }
-  let cursor = { source, pos: 0, }
+  let cursor = { source, pos: 0 }
 
   if cursor.peek() == 118 || cursor.peek() == 86 {
     cursor.advance()
@@ -211,96 +242,41 @@ fn parse_version(input : String) -> Version raise VersionError {
   let mut post_num = @bigint.BigInt::from_int(0)
   let mut has_dev = false
   let mut dev_num = @bigint.BigInt::from_int(0)
-  let mut state = 0
-
-  while cursor.peek() != -1 && cursor.peek() != 43 {
-    if state == 0 {
-      if cursor.peek() == 45 && is_digit(cursor.peek_at(1)) {
-        cursor.advance()
-        post_num = cursor.parse_digits()
-        has_post = true
-        state = 2
-      } else {
-        ignore(cursor.consume_separator())
-        let (kind, len) = cursor.suffix_info()
-        if kind == 0 {
-          raise VersionError::InvalidVersion("EXPECTED_SUFFIX", cursor.pos)
-        }
-        cursor.pos += len
-        ignore(cursor.consume_separator())
-        let num = if is_digit(cursor.peek()) {
-          cursor.parse_digits()
-        } else {
-          @bigint.BigInt::from_int(0)
-        }
-        if kind <= 3 {
-          if has_pre {
-            raise VersionError::InvalidVersion(
-              "DUPLICATE_PRE_RELEASE",
-              cursor.pos,
-            )
-          }
-          has_pre = true
-          pre_kind = kind
-          pre_num = num
-          state = 1
-        } else if kind == 4 {
-          if has_post {
-            raise VersionError::InvalidVersion(
-              "DUPLICATE_POST_RELEASE",
-              cursor.pos,
-            )
-          }
-          has_post = true
-          post_num = num
-          state = 2
-        } else {
-          if has_dev {
-            raise VersionError::InvalidVersion(
-              "DUPLICATE_DEV_RELEASE",
-              cursor.pos,
-            )
-          }
-          has_dev = true
-          dev_num = num
-          state = 3
-        }
-      }
-    } else {
-      if !cursor.consume_separator() {
-        raise VersionError::InvalidVersion(
-          "EXPECTED_SUFFIX_SEPARATOR",
-          cursor.pos,
-        )
-      }
-      let (kind, len) = cursor.suffix_info()
-      if kind == 0 {
-        raise VersionError::InvalidVersion("EXPECTED_SUFFIX", cursor.pos)
-      }
-      cursor.pos += len
+  // PEP 440 fixes the order of the optional suffixes: pre, then post, then
+  // dev. Each label accepts an optional separator on either side, and the
+  // `-N` spelling is an alternative form of `.postN`.
+  let (pre_candidate, pre_len) = cursor.peek_suffix()
+  if pre_candidate >= 1 && pre_candidate <= 3 {
+    cursor.pos += pre_len
+    ignore(cursor.consume_separator())
+    has_pre = true
+    pre_kind = pre_candidate
+    if is_digit(cursor.peek()) {
+      pre_num = cursor.parse_digits()
+    }
+  }
+  if cursor.peek() == 45 && is_digit(cursor.peek_at(1)) {
+    cursor.advance()
+    has_post = true
+    post_num = cursor.parse_digits()
+  } else {
+    let (post_candidate, post_len) = cursor.peek_suffix()
+    if post_candidate == 4 {
+      cursor.pos += post_len
       ignore(cursor.consume_separator())
-      let num = if is_digit(cursor.peek()) {
-        cursor.parse_digits()
-      } else {
-        @bigint.BigInt::from_int(0)
+      has_post = true
+      if is_digit(cursor.peek()) {
+        post_num = cursor.parse_digits()
       }
-      if kind <= 3 {
-        raise VersionError::InvalidVersion("INVALID_SUFFIX_ORDER", cursor.pos)
-      } else if kind == 4 {
-        if has_post || state >= 2 {
-          raise VersionError::InvalidVersion("INVALID_SUFFIX_ORDER", cursor.pos)
-        }
-        has_post = true
-        post_num = num
-        state = 2
-      } else {
-        if has_dev || state >= 3 {
-          raise VersionError::InvalidVersion("INVALID_SUFFIX_ORDER", cursor.pos)
-        }
-        has_dev = true
-        dev_num = num
-        state = 3
-      }
+    }
+  }
+  let (dev_candidate, dev_len) = cursor.peek_suffix()
+  if dev_candidate == 5 {
+    cursor.pos += dev_len
+    ignore(cursor.consume_separator())
+    has_dev = true
+    if is_digit(cursor.peek()) {
+      dev_num = cursor.parse_digits()
     }
   }
 
@@ -325,7 +301,7 @@ fn parse_version(input : String) -> Version raise VersionError {
       } else {
         raw_segment
       }
-      local_segments.push({ text, numeric, })
+      local_segments.push({ text, numeric })
       if is_separator(cursor.peek()) {
         cursor.advance()
         if cursor.peek() == -1 || !is_alnum(cursor.peek()) {
@@ -472,7 +448,10 @@ fn compare_local(left : Array[LocalPart], right : Array[LocalPart]) -> Int {
         -1
       }
     } else {
-      l.text.compare(r.text)
+      // PEP 440 compares textual local segments as byte strings. MoonBit's
+      // `Compare` for `String` orders by length first, which would place `x`
+      // below `a1`, so the lexical comparison is requested explicitly.
+      String::lexical_compare(l.text, r.text)
     }
     if c != 0 {
       return c

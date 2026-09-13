@@ -68,6 +68,33 @@ fn parse_operator(text : String) -> (SpecifierOp, Int) raise VersionError {
 }
 
 ///|
+/// PEP 440 allows whitespace around a specifier and, in practice, right after
+/// the operator, but never inside the version operand: packaging parses the
+/// operand with a whitespace free pattern.
+fn has_ascii_whitespace(text : String) -> Bool {
+  for i = 0; i < text.length(); i = i + 1 {
+    let c = text[i].to_int()
+    if c == 32 || c == 9 || c == 10 || c == 11 || c == 12 || c == 13 {
+      return true
+    }
+  }
+  false
+}
+
+///|
+/// The arbitrary equality operator keeps the operand verbatim, so the
+/// characters packaging forbids there (`\s`, `;` and `)`) are rejected here.
+fn has_arbitrary_separator(text : String) -> Bool {
+  for i = 0; i < text.length(); i = i + 1 {
+    let c = text[i].to_int()
+    if c == 59 || c == 41 {
+      return true
+    }
+  }
+  false
+}
+
+///|
 fn parse_specifier(text : String) -> Specifier raise VersionError {
   let s = text.trim().to_owned()
   if s.is_empty() {
@@ -76,10 +103,17 @@ fn parse_specifier(text : String) -> Specifier raise VersionError {
   let (op, start) = parse_operator(s)
   let mut version_part = s[start:s.length()].to_owned().trim().to_owned()
   if op == ArbitraryEqual {
-    return { op, raw_version: version_part, version: None, wildcard: false, }
+    if has_ascii_whitespace(version_part) ||
+      has_arbitrary_separator(version_part) {
+      raise VersionError::InvalidSpecifier("INVALID_ARBITRARY_VERSION", start)
+    }
+    return { op, raw_version: version_part, version: None, wildcard: false }
   }
   if version_part.is_empty() {
     raise VersionError::InvalidSpecifier("EMPTY_VERSION", start)
+  }
+  if has_ascii_whitespace(version_part) {
+    raise VersionError::InvalidSpecifier("INVALID_VERSION_CHAR", start)
   }
   let mut wildcard = false
   if version_part.has_suffix(".*") {
@@ -106,7 +140,7 @@ fn parse_specifier(text : String) -> Specifier raise VersionError {
       "COMPATIBLE_RELEASE_NEEDS_TWO_SEGMENTS", start,
     )
   }
-  { op, raw_version: version_part, version: Some(v), wildcard, }
+  { op, raw_version: version_part, version: Some(v), wildcard }
 }
 
 ///|
@@ -116,7 +150,7 @@ pub fn SpecifierSet::parse(input : String) -> SpecifierSet raise VersionError {
   for i = 0; i < parts.length(); i = i + 1 {
     specs.push(parse_specifier(parts[i]))
   }
-  { specs, original: input, }
+  { specs, original: input }
 }
 
 ///|
@@ -186,8 +220,8 @@ fn compatible_contains(v : Version, spec_v : Version) -> Bool {
 
 ///|
 fn compare_without_local(left : Version, right : Version) -> Int {
-  let l = { ..left, local_segments: [], }
-  let r = { ..right, local_segments: [], }
+  let l = { ..left, local_segments: [] }
+  let r = { ..right, local_segments: [] }
   l.compare(r)
 }
 

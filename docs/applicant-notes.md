@@ -27,7 +27,9 @@
 - 已运行 `moon fmt --check`；
 - 已运行 `moon check/build/test/run`（wasm、wasm-gc、js）；
 - native 本地是否通过取决于本机 C 工具链；CI 仍覆盖 native；
-- 修复后测试块数量：29；另有 2050 项 packaging 26.3 独立对照（以实际运行结果为准）；
+- 测试块数量：34，四个后端全部通过（以实际运行结果为准）；
+- 独立差分实验：87 916 条记录对照 CPython packaging 26.3，0 不一致；
+  旧版本 oracle 的差异按原因分类记录，见 docs/experiment-results.md；
 - Git 提交数量及归属须核对 GitHub main；不得把数量直接称为官方认可的有效提交。
 
 ## 范围事实

@@ -1,4 +1,14 @@
 ///|
+fn specifier_accepted(input : String) -> Bool {
+  try {
+    ignore(SpecifierSet::parse(input))
+    true
+  } catch {
+    _ => false
+  }
+}
+
+///|
 fn specifier_rejected(input : String) -> Bool {
   try {
     ignore(SpecifierSet::parse(input))
@@ -115,5 +125,28 @@ test "invalid specifier strings are rejected" {
   ]
   for i = 0; i < bad.length(); i = i + 1 {
     assert_true(specifier_rejected(bad[i]))
+  }
+}
+
+///|
+/// packaging anchors its operand patterns with `\\s*` around the whole
+/// specifier but never inside the version operand, so whitespace between the
+/// operator and the version is fine while whitespace inside it is an error.
+test "whitespace is allowed around a specifier but not inside the operand" {
+  assert_true(specifier_accepted("  ==  1.0  "))
+  assert_true(specifier_accepted(">= 1.0, <= 2.0"))
+  for raw in ["!=2.0 .*", ">=1.0 <=2.0", "==1.0 2.0", ">1 .0", "<1.0. 0"] {
+    assert_true(specifier_rejected(raw))
+  }
+}
+
+///|
+/// The arbitrary equality operator is a verbatim string match, but packaging
+/// still refuses whitespace, `;` and `)` in its operand.
+test "arbitrary equality keeps packaging's operand restrictions" {
+  assert_true(specifier_accepted("===1.0+ABC"))
+  assert_true(specifier_accepted("===1.0"))
+  for raw in ["===V012.2.3P OST_5", "===_ 10_r-0 ", "===1.0;x", "===1.0)"] {
+    assert_true(specifier_rejected(raw))
   }
 }

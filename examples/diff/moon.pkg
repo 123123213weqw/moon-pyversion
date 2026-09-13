@@ -1,5 +1,6 @@
 import {
   "123123213weqw/moon_pyversion" @pyversion,
+  "123123213weqw/moon_pyversion/fixtures",
 }
 
 pkgtype(kind: "executable")

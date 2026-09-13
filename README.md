@@ -65,30 +65,56 @@ let accepted = @pyversion.SpecifierSet::filter(candidates, spec)
 
 ```sh
 moon fmt --check
-moon check --target wasm --deny-warn
-moon check --target wasm-gc --deny-warn
-moon check --target js --deny-warn
-moon build --target wasm --deny-warn
-moon build --target wasm-gc --deny-warn
-moon build --target js --deny-warn
-moon test --target wasm --deny-warn
-moon test --target wasm-gc --deny-warn
-moon test --target js --deny-warn
-moon run examples/basic --target wasm
-moon run examples/basic --target wasm-gc
-moon run examples/basic --target js
+for t in wasm wasm-gc js native; do
+  moon check --target $t --deny-warn
+  moon build --target $t --deny-warn
+  moon test --target $t --deny-warn
+  moon run examples/basic --target $t
+done
 ```
+
+### 差分实验（可复现，见 `docs/experiment.md`）
+
+```sh
+# 1. 四个后端必须产出逐字节相同的语料
+python -B tools/target_parity.py
+
+# 2. 语料逐条回放给 CPython packaging 26.3（独立 oracle）
+python -m pip install packaging==26.3
+python -B tools/diff_packaging.py --oracle-version 26.3
+
+# 3. 同一份语料在多个 packaging 版本下的漂移矩阵
+python -B tools/oracle_matrix.py --oracle python3
+
+# 4. 可选：重新抓取真实 PyPI 语料
+python -B tools/fetch_pypi_corpus.py
+```
+
+`tools/diff_packaging.py` 失败时按语料来源、记录类型和预发布模式分组打印
+不一致，最多各留 5 条样本，并用 `--json` 输出机器可读报告。
 
 ## 已实现
 
 - 版本解析：epoch、release segments、pre/post/dev、local version、
-  implicit post/dev/pre number、`v` 前缀和首尾 ASCII 空白；
+  implicit post/dev/pre number、后缀标签两侧的 `[-_.]?` 分隔符
+  （`1.0post1`、`1.0-post1`、`1.0a1-5`、`1.0a1post2dev3`）、`v` 前缀和
+  首尾 ASCII 空白；
 - 规范化：前导零去除、pre/post/dev 别名规范化、`-`/`_` 规范形式、
   本地段小写与数字段前导零去除；
 - 比较：epoch 优先、release 补齐零、dev/pre/post/local 的 PEP 440 顺序；
 - specifier：`==`、`!=`、`<`、`<=`、`>`、`>=`、`~=`、`===`、通配后缀、
   预发布边界规则与 `filter`；
 - 稳定错误类型 `VersionError` 及格式化诊断。
+
+## 与 packaging 的一致性
+
+不是自我声明，而是实测的：`examples/diff` 生成 87 916 条确定性记录
+（手工边界、按 PEP 440 文法生成、单字符变异、97 个 PyPI 包的真实元数据），
+逐条回放给 CPython `packaging 26.3`，**0 不一致**；同一份语料在
+24.2 / 25.0 / 26.0 上分别有 1961 / 1961 / 212 条差异，全部对应上游三次
+行为变更（自动预发布准入、`<`/`>` 的区间实现、`~=` 上界）。实验设计、数据
+和这次查出的三个真实缺陷见 [docs/experiment.md](docs/experiment.md) 与
+[docs/experiment-results.md](docs/experiment-results.md)。
 
 ## 边界
 
@@ -126,7 +152,9 @@ Apache-2.0，见 `LICENSE`。
 - [设计与边界](docs/design.md)、[来源及许可证](docs/provenance.md)。
 - [项目申报书底稿](docs/proposal.md)（提交前由本人改写确认）。
 - [人工申报准备清单](docs/proposal-draft.md)、[事实核对表](docs/applicant-notes.md)。
-- `tools/check_packaging.py` 可选对照检查：需要 Python 和 `packaging==26.3`，
-  运行 `python -B tools/check_packaging.py`，对比 2050 个版本排序/约束结果。
-  Python 仅用于测试，不是 MoonBit 库的运行依赖；CI 的 JS 作业自动执行。
+- [差分实验设计](docs/experiment.md)、[实验结果](docs/experiment-results.md)。
+- 工具链：`tools/diff_packaging.py`（对照 oracle）、`tools/target_parity.py`
+  （四后端语料一致性）、`tools/oracle_matrix.py`（多 oracle 漂移矩阵）、
+  `tools/fetch_pypi_corpus.py`（抓取真实 PyPI 语料）。Python 只用于测试，
+  不是 MoonBit 库的运行依赖；CI 的 JS 作业会执行前三者。
 

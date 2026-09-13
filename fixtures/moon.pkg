@@ -1,0 +1,4 @@
+// Library package holding the generated real-world PyPI corpus. It has no
+// dependency on the library under test, so both the differential emitter
+// (`examples/diff`) and the throughput harness (`examples/bench`) can share
+// exactly the same strings.

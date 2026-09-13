@@ -30,11 +30,11 @@ https://github.com/123123213weqw/moon-pyversion
 
 ## 技术路线
 
-解析器是按 UTF-16 偏移移动的 ASCII 游标，不引入正则依赖；所有整数组件经 `BigInt` 解析，避免组件溢出。比较按键序进行：epoch → 补齐后的 release → pre 相位与序号 → post → dev → local 分段。规范化为公开形式（去前导零、统一 `a`/`b`/`rc`/`.post`/`.dev`、`-`/`_` 归一、local 小写），release 段数保留，因此 `1.0` 与 `1.0.0` 输出不同但比较相等。所有约束以 AND 组合；`~=` 取含下界、上界由倒数第二个 release 段加一构成。CI 在 wasm / wasm-gc / js / native 四后端执行格式化检查、构建、测试与示例，并在 js 作业中用 Python `packaging==26.3` 对 2050 项排序与约束结果做独立黑盒对照（仅作行为参照，不引入其运行时代码）。
+解析器是按 UTF-16 偏移移动的 ASCII 游标，不引入正则依赖；所有整数组件经 `BigInt` 解析，避免组件溢出。比较按键序进行：epoch → 补齐后的 release → pre 相位与序号 → post → dev → local 分段。规范化为公开形式（去前导零、统一 `a`/`b`/`rc`/`.post`/`.dev`、`-`/`_` 归一、local 小写），release 段数保留，因此 `1.0` 与 `1.0.0` 输出不同但比较相等。所有约束以 AND 组合；`~=` 取含下界、上界由倒数第二个 release 段加一构成。CI 在 wasm / wasm-gc / js / native 四后端执行格式化检查、构建、测试与示例；另一个作业生成 87 916 条确定性语料（手工边界、按文法生成、单字符变异、真实 PyPI 元数据）并逐条回放给 CPython `packaging==26.3` 做独立黑盒对照，同时在多个 packaging 版本上输出差异分类矩阵（仅作行为参照，不引入其运行时代码）。
 
 ## 预计交付成果
 
-公开可复现的 MoonBit 源码与 Apache-2.0 许可证；中文 README 与英文 API 契约；`examples/basic` 可运行示例与 `examples/oracle` 对照示例；覆盖核心路径的测试（现有 29 个测试块，含 PEP 440 官方规范化样例、非法输入拒绝、比较边例、各操作符、预发布规则与固定版本集上的反自反/反对称/传递性属性测试）；`tools/check_packaging.py` 独立对照脚本；四后端 CI；MoonCakes 发布。
+公开可复现的 MoonBit 源码与 Apache-2.0 许可证；中文 README 与英文 API 契约；`examples/basic`、`examples/diff`（确定性语料发射器）、`examples/bench`（吞吐）三个可运行示例；覆盖核心路径的测试（现有 34 个测试块，含 PEP 440 官方规范化样例、非法输入拒绝、比较边例、各操作符、预发布规则与固定版本集上的反自反/反对称/传递性属性测试）；`tools/` 下的差分实验工具链（`diff_packaging.py`、`target_parity.py`、`oracle_matrix.py`、`fetch_pypi_corpus.py`）与 `fixtures/` 真实语料；四后端 CI；MoonCakes 发布。
 
 ## 明确不做的范围
 
