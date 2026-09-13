@@ -153,6 +153,8 @@ Apache-2.0，见 `LICENSE`。
 - [项目申报书底稿](docs/proposal.md)（提交前由本人改写确认）。
 - [人工申报准备清单](docs/proposal-draft.md)、[事实核对表](docs/applicant-notes.md)。
 - [差分实验设计](docs/experiment.md)、[实验结果](docs/experiment-results.md)。
+- [扩展工作项](docs/roadmap.md)：把场景从头跑通所需的四个模块（需求行、环境标记、
+  包名与版本键、元数据）及其验收标准；当前未实现部分在该文件里标注为 `[计划]`。
 - 工具链：`tools/diff_packaging.py`（对照 oracle）、`tools/target_parity.py`
   （四后端语料一致性）、`tools/oracle_matrix.py`（多 oracle 漂移矩阵）、
   `tools/fetch_pypi_corpus.py`（抓取真实 PyPI 语料）。Python 只用于测试，
