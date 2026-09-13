@@ -1,8 +1,12 @@
 ///|
-/// A stable, structured error for version and specifier parsing.
+/// A stable, structured error for version, specifier and packaging-metadata
+/// parsing. Every variant carries a stable code and, where a position is
+/// meaningful, a UTF-16 offset.
 pub(all) suberror VersionError {
   InvalidVersion(String, Int)
   InvalidSpecifier(String, Int)
+  InvalidName(String, Int)
+  InvalidFilename(String, Int)
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -10,6 +14,8 @@ pub fn VersionError::diagnostic(self : VersionError) -> String {
   match self {
     InvalidVersion(code, pos) => "\{code} at \{pos}"
     InvalidSpecifier(code, pos) => "\{code} at \{pos}"
+    InvalidName(code, pos) => "\{code} at \{pos}"
+    InvalidFilename(code, pos) => "\{code} at \{pos}"
   }
 }
 

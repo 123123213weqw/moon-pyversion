@@ -21,7 +21,7 @@ oracle 只在测试期运行，不出现在 MoonBit 库的依赖里（`moon.mod`
 | `curated` | 81 个版本 × 47 条约束 | 手工挑选的 PEP 440 角落：epoch、别名、隐式 post/dev、local、边界排除规则 |
 | `generated` | 4000 个版本、700 条约束 | 按 PEP 440 文法随机组合生成，覆盖 curated 没想到的组合 |
 | `mutated` | 3000 个版本、1244 条约束 | 对上述合法串做单字符替换/删除/插入，外加固定垃圾串，用来压拒绝行为 |
-| `pypi` | 3000 个真实版本、500 条真实约束 | 来自 PyPI JSON API（`releases`、`Requires-Dist`、`Requires-Python`），见 `fixtures/` |
+| `pypi` | 3000 个真实版本、500 条真实约束、600 条真实需求行、900 个真实文件名 | 来自 PyPI JSON API（`releases`、`Requires-Dist`、`Requires-Python`、`urls[].filename`），见 `fixtures/` |
 
 `pypi` 语料由 `tools/fetch_pypi_corpus.py` 生成：抓取 97 个知名包的元数据，
 每包最多取 60 个版本（轮转、按字典序），去重排序后写成
@@ -38,6 +38,8 @@ oracle 只在测试期运行，不出现在 MoonBit 库的依赖里（`moon.mod`
 | `contains` | `spec.contains(version)`，三种预发布模式 |
 | `filter` | `SpecifierSet::filter(candidates, spec)` 的保序结果 |
 | `order` | 对整批候选排序是否真的升序 |
+| `canon` | 名称规范化，以及版本键/显示两种形式 |
+| `file` | 分发文件名：wheel / sdist / 其他扩展名，各自解析结果 |
 
 预发布模式 `auto`/`any`/`none` 分别对应 `packaging` 的 `None`/`True`/`False`，
 这是库对外暴露的 `prereleases? : Bool?` 参数。
@@ -53,7 +55,12 @@ tools/diff_packaging.py ──► 逐条回放给 packaging，按来源/类型/�
         │  同一份捕获结果
 tools/oracle_matrix.py ──► 在多个 packaging 版本上回放，输出漂移矩阵
 tools/target_parity.py ──► 只比较四个后端输出的 sha256
+tools/mutation_probe.py ─► 注入故意缺陷，断言上面的对照能报错
 ```
+
+**变异探针**是这套实验的元检查：如果注入缺陷后 harness 仍然是绿的，
+说明语料没覆盖那段行为，绿是无意义的。因此每个里程碑都要保证新增记录
+能被变异探针覆盖（见 experiment-results.md 第 5.5 节）。
 
 ## 三点设计约束
 

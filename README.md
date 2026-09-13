@@ -86,7 +86,10 @@ python -B tools/diff_packaging.py --oracle-version 26.3
 # 3. 同一份语料在多个 packaging 版本下的漂移矩阵
 python -B tools/oracle_matrix.py --oracle python3
 
-# 4. 可选：重新抓取真实 PyPI 语料
+# 4. 语料是否有牙：注入故意缺陷，断言对照能报错
+python -B tools/mutation_probe.py
+
+# 5. 可选：重新抓取真实 PyPI 语料
 python -B tools/fetch_pypi_corpus.py
 ```
 
@@ -95,6 +98,10 @@ python -B tools/fetch_pypi_corpus.py
 
 ## 已实现
 
+- 打包元数据辅助（`utils.mbt`，对齐 packaging 26.3）：
+  `canonicalize_name`（PEP 503 名称规范化）、`canonicalize_version`
+  （PEP 625 两种形式：索引键与显示形式）、`parse_wheel_filename`
+  （PEP 427，含 build 段与压缩标签集展开）、`parse_sdist_filename`（PEP 625）；
 - 版本解析：epoch、release segments、pre/post/dev、local version、
   implicit post/dev/pre number、后缀标签两侧的 `[-_.]?` 分隔符
   （`1.0post1`、`1.0-post1`、`1.0a1-5`、`1.0a1post2dev3`）、`v` 前缀和
@@ -108,12 +115,17 @@ python -B tools/fetch_pypi_corpus.py
 
 ## 与 packaging 的一致性
 
-不是自我声明，而是实测的：`examples/diff` 生成 87 916 条确定性记录
-（手工边界、按 PEP 440 文法生成、单字符变异、97 个 PyPI 包的真实元数据），
-逐条回放给 CPython `packaging 26.3`，**0 不一致**；同一份语料在
-24.2 / 25.0 / 26.0 上分别有 1961 / 1961 / 212 条差异，全部对应上游三次
-行为变更（自动预发布准入、`<`/`>` 的区间实现、`~=` 上界）。实验设计、数据
-和这次查出的三个真实缺陷见 [docs/experiment.md](docs/experiment.md) 与
+不是自我声明，而是实测的：`examples/diff` 生成 **99 020 条**确定性记录
+（手工边界、按 PEP 440 文法生成、单字符变异、97 个 PyPI 包的真实元数据：
+3000 个版本、500 条约束、600 条需求行、900 个分发文件名），逐条回放给
+CPython `packaging 26.3`，**0 不一致**；同一份语料在 24.2 / 25.0 / 26.0 上
+分别有 2109 / 2109 / 360 条差异，全部对应上游四次行为变更（自动预发布准入、
+`<`/`>` 的区间实现、`~=` 上界、26.3 的文件名校验收紧）。
+
+另外 `tools/mutation_probe.py` 会向库里注入 7 处**故意缺陷**并断言对照能报错，
+7/7 全部检出 —— 即"0 不一致"不是因为对照失效。
+
+实验设计、数据和查出的真实缺陷见 [docs/experiment.md](docs/experiment.md) 与
 [docs/experiment-results.md](docs/experiment-results.md)。
 
 ## 边界
@@ -153,8 +165,10 @@ Apache-2.0，见 `LICENSE`。
 - [项目申报书底稿](docs/proposal.md)（提交前由本人改写确认）。
 - [人工申报准备清单](docs/proposal-draft.md)、[事实核对表](docs/applicant-notes.md)。
 - [差分实验设计](docs/experiment.md)、[实验结果](docs/experiment-results.md)。
-- [扩展工作项](docs/roadmap.md)：把场景从头跑通所需的四个模块（需求行、环境标记、
-  包名与版本键、元数据）及其验收标准；当前未实现部分在该文件里标注为 `[计划]`。
+- [大项目规划](docs/plan.md)：从"版本比较器"扩为"离线 Python 打包元数据工具库"
+  的里程碑、依赖图与统一验收门禁。
+- [扩展工作项](docs/roadmap.md)：各模块的公开 API、验收标准与进展；
+  未实现部分标注为 `[计划]`（M1 `utils.mbt` 已完成）。
 - 工具链：`tools/diff_packaging.py`（对照 oracle）、`tools/target_parity.py`
   （四后端语料一致性）、`tools/oracle_matrix.py`（多 oracle 漂移矩阵）、
   `tools/fetch_pypi_corpus.py`（抓取真实 PyPI 语料）。Python 只用于测试，

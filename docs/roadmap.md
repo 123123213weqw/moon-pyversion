@@ -95,12 +95,12 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 | 模块 | 公开 API | 关掉哪个场景 | 估行数 |
 | --- | --- | --- | ---: |
-| `utils.mbt` | `canonicalize_name`、`canonicalize_version`、`parse_wheel_filename`、`parse_sdist_filename` | 场景 2 | ~220 |
+| `utils.mbt` `[已有]` | `canonicalize_name`、`canonicalize_version`、`parse_wheel_filename`、`parse_sdist_filename` | 场景 2 | 331 |
 | `requirements.mbt` | `Requirement::parse`、`Requirement::to_string` | 场景 1 | ~260 |
 | `markers.mbt` | `Marker::parse`、`Marker::evaluate`、`MarkerEnvironment` | 场景 1 | ~380 |
 | `metadata.mbt` | `Metadata::parse`、`Metadata::requires_dist`、`Metadata::requires_python` | 场景 1（端到端） | ~200 |
 
-**`utils.mbt` 设计要点**（已用 packaging 26.3 核实）：
+**`utils.mbt` 设计要点** `[已完成，见下]`（已用 packaging 26.3 核实）：
 
 - `canonicalize_name`：PEP 503，小写 + `-_.` 连续串归一为 `-`。
   已核实：`Flask→flask`、`importlib_metadata→importlib-metadata`、
@@ -154,6 +154,22 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 - `Requires-Dist` 的值逐条交给 `Requirement::parse`（可能解析失败，要保留原始串
   与错误，不能整份文件失败）。
 - `Requires-Python` 交给 `SpecifierSet::parse`。
+
+### `[已完成]` M1 落地情况
+
+`utils.mbt` 已实现并通过验收：
+
+- 4 个公开函数 + `WheelFilename` / `SdistFilename` 两个结构体，331 行；
+- 12 个测试块（`utils_test.mbt`，约 190 行）；
+- 差分语料新增 `canon`（名称 / 版本键两种形式）与 `file`（wheel / sdist / 其他）
+  两类记录，共 **11 104 条**，其中真实文件名的 `pypi/file` 记录 900 条；
+- 对照 `packaging 26.3` **0 不一致**；
+- `tools/mutation_probe.py` 对 7 处故意注入的缺陷全部检出，证明语料对这部分
+  行为有覆盖。
+
+`utils_test.mbt` 在开发中抓到一处真实缺陷：标签排序用了 MoonBit 默认的
+`String` 比较（先比长度），与 `packaging` 的 `sorted()`（按码点）不一致 ——
+与之前 local 段比较是同一类问题。
 
 ## 技术路线
 

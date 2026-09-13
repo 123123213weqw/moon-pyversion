@@ -40,6 +40,10 @@ The source repository contains this working example in `examples/basic`.
 - `SpecifierSet::parse(String) -> SpecifierSet raise VersionError`
 - `SpecifierSet::contains(SpecifierSet, Version, prereleases? : Bool? = None) -> Bool`
 - `SpecifierSet::filter(Array[Version], SpecifierSet, prereleases? : Bool? = None) -> Array[Version]`
+- `canonicalize_name(String) -> String`
+- `canonicalize_version(String, strip_trailing_zero? : Bool = true) -> String`
+- `parse_wheel_filename(String) -> WheelFilename raise VersionError`
+- `parse_sdist_filename(String) -> SdistFilename raise VersionError`
 
 `Version` implements `Eq`, `Compare`, and `Show`. Its `raw` field retains the
 caller's original string. `to_string` returns a normalized public form:
@@ -87,10 +91,29 @@ Operator-specific exclusions still apply: `<1.0` excludes `1.0a1` even when
 prereleases are enabled; `>1.0` excludes `1.0.post1`. This is not a resolver
 or a security assessment of upgrade candidates.
 
+## Packaging metadata helpers
+
+`canonicalize_name` implements PEP 503 key normalization (lowercase, collapse
+runs of `-`, `_` and `.` into `-`; leading and trailing separators survive).
+`canonicalize_version` implements PEP 625 in both forms: by default it strips
+trailing zeros from the release segment, which is the form used as an index
+lookup key (`1.0.0` -> `1`, `0.0` -> `0`), and with
+`strip_trailing_zero=false` it only normalizes the spelling (`v1.2.3` -> `1.2.3`).
+Invalid input is returned unaltered rather than raising, matching `packaging`.
+
+`parse_wheel_filename` implements PEP 427 (extension, part count, project name
+rules, optional build tag, compressed tag set expansion) and returns a
+`WheelFilename` with a normalized name, the version, `(leading digits, rest)` or
+`None`, and the expanded tags sorted by code point. `parse_sdist_filename`
+implements PEP 625 for `.tar.gz` and `.zip`, splitting on the last dash.
+
+Both order strings with `String::lexical_compare`, because MoonBit's default
+`String` comparison orders by length first and would disagree with PEP 440.
+
 ## Differential experiment
 
 Agreement with CPython `packaging` is measured rather than asserted.
-`examples/diff` emits a deterministic corpus of 87 916 records from four sources
+`examples/diff` emits a deterministic corpus of 99 020 records from four sources
 (a curated PEP 440 list, grammar-generated versions and specifiers,
 single-character mutations, and 3000 real version strings plus 500 real
 constraint strings from 97 PyPI packages in `fixtures/`). The corpus is byte
@@ -101,10 +124,13 @@ identical on wasm, wasm-gc, js and native.
 * `python -B tools/target_parity.py` fails if the backends diverge.
 * `python -B tools/oracle_matrix.py --oracle python3` replays one captured corpus
   against several `packaging` releases.
+* `python -B tools/mutation_probe.py` breaks the library on purpose and asserts the
+  corpus notices; all 7 injected defects are detected.
 
-Current results: 0 differences against the targeted `packaging` 26.3; 1961, 1961
-and 212 differences against 24.2, 25.0 and 26.0 respectively, all attributable to
-three upstream behaviour changes. See `docs/experiment.md` and
+Current results: 0 differences against the targeted `packaging` 26.3; 2109, 2109
+and 360 differences against 24.2, 25.0 and 26.0 respectively, all attributable to
+four upstream behaviour changes (automatic prerelease admission, the `<`/`>`
+range rewrite, the `~=` upper bound, and the 26.3 filename grammar). See `docs/experiment.md` and
 `docs/experiment-results.md`, including the three defects this corpus found.
 
 License: Apache-2.0. See `docs/design.md`, `docs/provenance.md`, and the

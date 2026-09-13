@@ -88,6 +88,31 @@
 - local 段仅允许 ASCII 字母数字；
 - 错误信息只包含稳定代码和 UTF-16 偏移，不回显敏感环境数据。
 
+## 打包元数据辅助（`utils.mbt`）
+
+与 `packaging.utils` 对齐的四项能力，语义均已用 `packaging 26.3` 核实：
+
+- `canonicalize_name`：PEP 503。小写后把 `-`、`_`、`.` 的连续串折成一个 `-`；
+  **首尾分隔符保留**（`-foo-` 仍是 `-foo-`），`--` 折成 `-`；
+- `canonicalize_version`：PEP 625，**两种形式都提供**。默认去掉 release 尾部零
+  （索引查找键，`1.0.0` -> `1`，且至少保留一段，`0.0` -> `0`）；传
+  `strip_trailing_zero=false` 只做拼写规范化（`v1.2.3` -> `1.2.3`）。
+  非法输入**原样返回而不报错**，与 packaging 一致；
+- `parse_wheel_filename`：PEP 427。扩展名、连字符段数（4 或 5）、项目名
+  （`[\w._]+`、非空、不含 `__`）、版本、可选 build 段（`(前导数字, 其余)`）、
+  以及压缩标签集展开（`py2.py3-none-any` -> 2 个 tag）。标签输出为
+  `interpreter-abi-platform` 字符串，按**码点**排序去重；
+- `parse_sdist_filename`：PEP 625。扩展名限 `.tar.gz` / `.zip`，从**最后一个**
+  连字符切分（PEP 440 版本不含连字符），项目名非空，名称规范化。
+
+排序与比较一律用 `String::lexical_compare` 而不是 `String` 的默认比较：
+后者先比长度，会与 PEP 440 / packaging 的码点序不一致。这一点在 local 段
+比较和标签排序上各踩过一次，两次都由测试或差分语料抓出。
+
+已知边界：名称规范化与 wheel 名称校验按 ASCII 实现；packaging 在这两处使用
+Unicode 感知的正则。PEP 427 要求 wheel 文件名是转义后的 ASCII，因此实际输入
+不受影响，差分语料也刻意不在这两类记录里放非 ASCII。
+
 ## 验证
 
 `moon test` 覆盖官方规范化样例、非法输入、比较边例、各操作符、

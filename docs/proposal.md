@@ -20,19 +20,18 @@ https://github.com/123123213weqw/moon-pyversion
 
 ## 预期使用场景
 
-> **核对提示**：场景 1 与场景 2 目前**尚不能端到端跑通**。用真实 PyPI 字符串实测，
-> `Werkzeug>=3.0.0`、`flask-3.0.3-py3-none-any.whl` 等输入会被本库拒绝，因为库当前
-> 只接受"已经提取好的纯约束/纯版本"，需求行解析、包名规范化、环境标记求值、
-> 分发文件名解析都还缺。补齐计划见 [扩展工作项](roadmap.md)；
-> **这些能力落地之前，本节不应作为可交付能力对外陈述**。场景 3 当前可用。
+> **核对提示**：三个场景的完成度不同，逐项说明如下。
+> 场景 2 的**解析环节已完成**（`utils.mbt`，M1）；场景 1 的解析环节仍缺
+> 需求行与环境标记；场景 3 当前可用。补齐计划见 [扩展工作项](roadmap.md)，
+> **未完成的部分不应作为可交付能力对外陈述**。
 
-1. **依赖清单检查**：工具先从上层的项目元数据中提取版本约束字符串，再对锁定版本逐个调用 `SpecifierSet::contains`，输出越界项清单。约束非法时返回稳定的 `VersionError` 与 UTF-16 偏移，便于定位；本库只判断单个版本是否满足约束，不解析整条依赖表达式。
-2. **离线包索引筛选**：上层把本地镜像索引中的候选版本数组交给 `SpecifierSet::filter`，按 `>=1.0, !=1.4.*, <2.0` 之类的约束筛出可用集合，默认优先正式版、在没有任何匹配正式版时才回退到预发布，也可用 `prereleases=Some(false)` 显式排除预发布，从而减少无谓的下载与构建尝试。
+1. **依赖清单检查** `[部分完成]`：工具先从上层的项目元数据中提取版本约束字符串，再对锁定版本逐个调用 `SpecifierSet::contains`，输出越界项清单。约束非法时返回稳定的 `VersionError` 与 UTF-16 偏移，便于定位。**当前仍不解析整条依赖表达式**（`name[extras]>=1.0 ; marker`），该能力在 M2/M3。
+2. **离线包索引筛选** `[解析已完成，索引扫描待做]`：库已能用 `parse_wheel_filename` / `parse_sdist_filename` 从分发文件名解析出名称与版本（含真实 PyPI 文件名，900 条对照通过），并可用 `canonicalize_name` / `canonicalize_version` 得到归组与查找用的键形式；随后把候选版本数组交给 `SpecifierSet::filter`，按 `>=1.0, !=1.4.*, <2.0` 之类的约束筛出可用集合，默认优先正式版、在没有任何匹配正式版时才回退到预发布，也可用 `prereleases=Some(false)` 显式排除预发布，从而减少无谓的下载与构建尝试。
 3. **升级候选评估**：解析当前版本与候选版本，用 `compare` 排序并筛出落在目标区间内的候选，生成待测试短名单。本库明确不保证 API 兼容性、安全性与依赖可解性——它给的是“满足版本约束”这一层结论，是否真的可以升级仍由人工与集成测试决定。
 
 ## 核心功能
 
-`Version::parse` / `normalize` / `to_string` / `compare`；支持 epoch、任意段数的 release、pre/post/dev 版本、local version、`v` 前缀、隐式补零与隐式 post（如 `1.0-1`）；`Version` 实现 `Eq`、`Compare`、`Show` 并保留调用方原始字符串。`SpecifierSet::parse` / `contains` / `filter`；支持 `==`、`!=`、`<`、`<=`、`>`、`>=`、`~=`、`===` 以及 `==`/`!=` 的 `.*` 通配后缀；提供 `prereleases` 显式开关。错误为稳定的 `VersionError`，只含错误码与偏移，不回显环境数据。
+`Version::parse` / `normalize` / `to_string` / `compare`；支持 epoch、任意段数的 release、pre/post/dev 版本、local version、`v` 前缀、后缀标签两侧的 `[-_.]?` 分隔符、隐式补零与隐式 post（如 `1.0-1`）；`Version` 实现 `Eq`、`Compare`、`Show` 并保留调用方原始字符串。`canonicalize_name`（PEP 503）、`canonicalize_version`（PEP 625，索引键与显示两种形式）、`parse_wheel_filename`（PEP 427，含 build 段与压缩标签集展开）、`parse_sdist_filename`（PEP 625）。`SpecifierSet::parse` / `contains` / `filter`；支持 `==`、`!=`、`<`、`<=`、`>`、`>=`、`~=`、`===` 以及 `==`/`!=` 的 `.*` 通配后缀；提供 `prereleases` 显式开关。错误为稳定的 `VersionError`，只含错误码与偏移，不回显环境数据。
 
 ## 技术路线
 

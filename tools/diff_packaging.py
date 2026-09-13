@@ -45,12 +45,29 @@ from pathlib import Path
 
 from packaging import __version__ as ORACLE_VERSION
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
+from packaging.utils import (
+    InvalidSdistFilename,
+    InvalidWheelFilename,
+    canonicalize_name,
+    canonicalize_version,
+    parse_sdist_filename,
+    parse_wheel_filename,
+)
 from packaging.version import InvalidVersion, Version
 
 MODES = {"auto": None, "any": True, "none": False}
 
 # field count per record kind, including the leading source field
-ARITY = {"parse": 5, "spec": 4, "cmp": 5, "contains": 6, "filter": 6, "order": 4}
+ARITY = {
+    "parse": 5,
+    "spec": 4,
+    "cmp": 5,
+    "contains": 6,
+    "filter": 6,
+    "order": 4,
+    "canon": 6,
+    "file": 9,
+}
 
 EXIT_OK = 0
 EXIT_MISMATCH = 1
@@ -178,6 +195,79 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
             )
         return None
 
+    if kind == "canon":
+        subkind, raw, primary, secondary = parts[2], parts[3], parts[4], parts[5]
+        if subkind == "name":
+            expected = canonicalize_name(raw)
+            if expected != primary:
+                return f"canonicalize_name({raw!r}): moonbit {primary!r}, packaging {expected!r}"
+            return None
+        if subkind == "version":
+            expected_key = canonicalize_version(raw)
+            expected_display = canonicalize_version(raw, strip_trailing_zero=False)
+            if expected_key != primary or expected_display != secondary:
+                return (
+                    f"canonicalize_version({raw!r}): moonbit key {primary!r} / display "
+                    f"{secondary!r}, packaging key {expected_key!r} / display "
+                    f"{expected_display!r}"
+                )
+            return None
+        return f"unknown canon sub kind {subkind!r}"
+
+    if kind == "file":
+        subkind, raw, status = parts[2], parts[3], parts[4]
+        expected_name, expected_version = parts[5], parts[6]
+        expected_build, expected_tags = parts[7], parts[8]
+        if subkind == "wheel":
+            try:
+                name, version, build, tags = parse_wheel_filename(raw)
+            except (InvalidWheelFilename, InvalidVersion):
+                if status != "bad":
+                    return f"parse_wheel_filename({raw!r}): moonbit accepts, packaging rejects"
+                return None
+            if status != "ok":
+                return f"parse_wheel_filename({raw!r}): moonbit rejects, packaging accepts"
+            build_text = "-" if build == () else f"{build[0]}:{build[1]}"
+            tags_text = "|".join(sorted(str(tag) for tag in tags))
+            if (name, str(version), build_text, tags_text) != (
+                expected_name,
+                expected_version,
+                expected_build,
+                expected_tags,
+            ):
+                return (
+                    f"parse_wheel_filename({raw!r}): moonbit "
+                    f"{(expected_name, expected_version, expected_build, expected_tags)!r}, "
+                    f"packaging {(name, str(version), build_text, tags_text)!r}"
+                )
+            return None
+        if subkind == "sdist":
+            try:
+                name, version = parse_sdist_filename(raw)
+            except (InvalidSdistFilename, InvalidVersion):
+                if status != "bad":
+                    return f"parse_sdist_filename({raw!r}): moonbit accepts, packaging rejects"
+                return None
+            if status != "ok":
+                return f"parse_sdist_filename({raw!r}): moonbit rejects, packaging accepts"
+            if (name, str(version)) != (expected_name, expected_version):
+                return (
+                    f"parse_sdist_filename({raw!r}): moonbit "
+                    f"{(expected_name, expected_version)!r}, packaging {(name, str(version))!r}"
+                )
+            return None
+        if subkind == "other":
+            # Neither parser may accept a name with a different extension.
+            accepted = _any_filename_parser_accepts(raw)
+            expected = "ok" if accepted else "bad"
+            if expected != status:
+                return (
+                    f"filename {raw!r}: moonbit says {status!r}, packaging says {expected!r} "
+                    f"(no matching extension)"
+                )
+            return None
+        return f"unknown file sub kind {subkind!r}"
+
     if kind == "order":
         inputs_raw, sorted_raw = parts[2], parts[3]
         inputs = [oracle.version(item) for item in inputs_raw.split("|")]
@@ -194,6 +284,20 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
         return None
 
     raise ProtocolError(f"unknown record kind {kind!r}")
+
+
+def _any_filename_parser_accepts(raw: str) -> bool:
+    """True when either packaging filename parser accepts `raw`."""
+    for parser, error in (
+        (parse_wheel_filename, InvalidWheelFilename),
+        (parse_sdist_filename, InvalidSdistFilename),
+    ):
+        try:
+            parser(raw)
+            return True
+        except (error, InvalidVersion):
+            continue
+    return False
 
 
 def classify_difference(oracle: "Oracle", parts: list[str]) -> str:
@@ -241,6 +345,10 @@ def classify_difference(oracle: "Oracle", parts: list[str]) -> str:
         if "<" in constraint or ">" in constraint:
             return "exclusive-ordered-comparison"
         return "unclassified"
+    if kind == "canon":
+        return "name-normalization" if parts[2] == "name" else "version-key-form"
+    if kind == "file":
+        return "filename-grammar"
     return {"parse": "version-grammar", "spec": "specifier-grammar"}.get(kind, "ordering")
 
 

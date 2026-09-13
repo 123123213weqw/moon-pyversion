@@ -52,6 +52,8 @@ jobs:
           moon run examples/diff --target js > corpus-a.tsv
           moon run examples/diff --target js > corpus-b.tsv
           cmp corpus-a.tsv corpus-b.tsv
+      - name: The corpus must detect deliberate defects
+        run: python -B tools/mutation_probe.py --oracle python
       - name: Prerelease and compatible-release drift against packaging < 26.3
         run: |
           python -m venv /tmp/packaging-25.0

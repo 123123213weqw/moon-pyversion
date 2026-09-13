@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased — M1: packaging metadata helpers
+
+### Added
+
+- `utils.mbt` (M1, 331 lines): PEP 503 `canonicalize_name`, PEP 625
+  `canonicalize_version` in both the index-key and display forms, PEP 427
+  `parse_wheel_filename` (build tags and compressed tag set expansion) and
+  `parse_sdist_filename`, with `WheelFilename` / `SdistFilename` result types.
+- `VersionError` gains `InvalidName` and `InvalidFilename`, so filename and name
+  failures carry stable codes like the existing version and specifier errors.
+- `fixtures/` grows to four real-world arrays: 3000 versions, 500 constraints,
+  600 verbatim `Requires-Dist` entries and 900 distribution filenames.
+- Two new differential record kinds, `canon` and `file`, adding 11 104 records.
+- `tools/mutation_probe.py`, which injects seven deliberate defects and asserts
+  the corpus reports them; all seven are detected.
+
+### Fixed
+
+- Wheel tag sets were ordered with MoonBit's default `String` comparison, which
+  orders by length first; PEP 425 ordering is by code point. Caught by
+  `utils_test.mbt`, the same class of mistake as the earlier local-segment bug.
+
+### Changed
+
+- Corpus grows from 87 916 to 99 020 records, all agreeing with `packaging` 26.3.
+- The oracle matrix now also reports `filename-grammar` drift: packaging 26.3
+  tightened wheel and sdist validation (empty project names, empty tag
+  components and non-identifier interpreters are rejected from 26.3 onwards).
+
 ## Unreleased — broader differential experiment
 
 ### Added

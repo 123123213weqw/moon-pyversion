@@ -558,6 +558,166 @@ fn sample_versions(
 }
 
 ///|
+fn parse_wheel_opt(raw : String) -> @pyversion.WheelFilename? {
+  Some(@pyversion.parse_wheel_filename(raw)) catch {
+    _ => None
+  }
+}
+
+///|
+fn parse_sdist_opt(raw : String) -> @pyversion.SdistFilename? {
+  Some(@pyversion.parse_sdist_filename(raw)) catch {
+    _ => None
+  }
+}
+
+///|
+fn curated_names() -> Array[String] {
+  [
+    "Flask", "flask", "importlib_metadata", "importlib-metadata", "zope.interface",
+    "Foo.Bar-Baz", "Foo__Bar", "a.-_b", "requests", "Django", "oslo.concurrency",
+    "UPPER", "Mixed_Case.Name", "x", "-foo-", "--", "-", "", "foo!", "a..b", "a--b",
+    "a-_-.b", "123", "_", ".", "importlib.metadata",
+  ]
+}
+
+///|
+fn curated_version_keys() -> Array[String] {
+  [
+    "1.0.0", "1.0", "0", "0.0", "0.0.0", "1.4.0.0.0", "1.0.0.post0", "1.0.0.dev0",
+    "1.0.0a1", "1!1.0.0", "1.0.0+abc", "1.0.0.post1.dev2", "v1.2.3", "01.02.03",
+    "1.0.0+ABC", "2!0.0.0", "1.0rc1", "1.0.0-1", "1.0.0.post", "1.0.0.dev", "1.0.0a",
+    "1.0.0.0.0.0", "0.0+abc", "1!0.0", "foo bar baz", "", "1.0.", "1..0", "1.0 ",
+    " 1.0", "1.0.0.post0.dev0",
+  ]
+}
+
+///|
+fn curated_filenames() -> Array[String] {
+  [
+    // valid wheels: build tags, local versions, escaped names, compressed tags
+    "flask-3.0.3-py3-none-any.whl", "flask-3.0.3-1-py3-none-any.whl", "foo_bar-1.0-py3-none-any.whl",
+    "foo-1.0-py2.py3-none-any.whl", "foo-1.0-cp39.cp310-abi3-manylinux1_x86_64.whl",
+    "numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", "torch-2.4.0+cu121-cp311-cp311-linux_x86_64.whl",
+    "Zope.Interface-5.4.0-cp311-cp311-linux_x86_64.whl", "foo-1.0-1abc-py3-none-any.whl",
+    "foo-01.02-py3-none-any.whl",
+    // invalid wheels
+     "foo-1.0-py3-none-any.zip", "foo-1.0-py3-none.whl", "foo-.whl", "a-b-c.whl",
+    "foo-1.0-py3-none-any-extra-part.whl", "foo__bar-1.0-py3-none-any.whl", "foo-bar-1.0-py3-none-any.whl",
+    "-1.0-py3-none-any.whl", "foo$bar-1.0-py3-none-any.whl", "foo-1.0-abc-py3-none-any.whl",
+    "foo-1.0-2py-none-any.whl", "foo-1.0-py3--any.whl", "foo-1.0-py3.none-any.whl",
+    "foo-1.0-1.5-py3-none-any.whl", "foo-1.0-py3-none-any.whl.whl",
+    // valid sdists
+     "flask-3.0.3.tar.gz", "flask-3.0.3.zip", "foo-bar-1.0.tar.gz", "Zope.Interface-5.4.0.tar.gz",
+    "torch-2.4.0+cu121.tar.gz", "a-1.0.tar.gz",
+    // invalid sdists
+     "foo-1.0.tar.bz2", "foo.tar.gz", "-1.0.tar.gz", "foo-abc.tar.gz", "foo-1.0.whl",
+    ".tar.gz", "foo-.tar.gz",
+    // neither extension
+     "README.md", "foo", "tar.gz", ".whl", "3.0.3", "foo-1.0", "any",
+  ]
+}
+
+///|
+/// `canon` records carry a fixed field count so the harness can check arity
+/// without knowing the sub kind: names use `-` for the unused extra field.
+fn emit_canon_name(source : String, sb : StringBuilder, raw : String) -> Unit {
+  sb.write_string(
+    "\{source}\tcanon\tname\t\{raw}\t\{@pyversion.canonicalize_name(raw)}\t-\n",
+  )
+}
+
+///|
+fn emit_canon_version(
+  source : String,
+  sb : StringBuilder,
+  raw : String,
+) -> Unit {
+  sb.write_string(
+    "\{source}\tcanon\tversion\t\{raw}\t\{@pyversion.canonicalize_version(raw)}\t\{@pyversion.canonicalize_version(raw, strip_trailing_zero=false)}\n",
+  )
+}
+
+///|
+/// Filenames are dispatched by extension, the way a caller would: `.whl` to the
+/// wheel parser, `.tar.gz` and `.zip` to the sdist parser, and anything else to
+/// both, where the record reports agreement only if neither parser accepts it.
+fn emit_file(source : String, sb : StringBuilder, raw : String) -> Unit {
+  if raw.has_suffix(".whl") {
+    sb.write_string("\{source}\tfile\twheel\t\{raw}\t")
+    match parse_wheel_opt(raw) {
+      Some(w) => {
+        let build = match w.build {
+          Some((number, rest)) => "\{number}:\{rest}"
+          None => "-"
+        }
+        sb.write_string(
+          "ok\t\{w.name}\t\{@pyversion.Version::to_string(w.version)}\t\{build}\t\{w.tags.join("|")}\n",
+        )
+      }
+      None => sb.write_string("bad\t-\t-\t-\t-\n")
+    }
+  } else if raw.has_suffix(".tar.gz") || raw.has_suffix(".zip") {
+    sb.write_string("\{source}\tfile\tsdist\t\{raw}\t")
+    match parse_sdist_opt(raw) {
+      Some(s) =>
+        sb.write_string(
+          "ok\t\{s.name}\t\{@pyversion.Version::to_string(s.version)}\t-\t-\n",
+        )
+      None => sb.write_string("bad\t-\t-\t-\t-\n")
+    }
+  } else {
+    let accepted = parse_wheel_opt(raw) is Some(_) ||
+      parse_sdist_opt(raw) is Some(_)
+    sb.write_string(
+      "\{source}\tfile\tother\t\{raw}\t\{if accepted { "ok" } else { "bad" }}\t-\t-\t-\t-\n",
+    )
+  }
+}
+
+///|
+fn filename_pool() -> Array[Char] {
+  ['!', '+', '-', '.', '_', '0', '9', 'a', 'z', 'w', 'h', 'l', ' ']
+}
+
+///|
+fn mutate_filename(rng : Rng, source : String) -> String {
+  let pool = filename_pool()
+  let chars = source.to_array()
+  if chars.length() == 0 {
+    return String::from_array([rng.pick_char(pool)])
+  }
+  let at = rng.below(chars.length())
+  let replacement = rng.pick_char(pool)
+  match rng.below(3) {
+    0 => {
+      let out = chars.copy()
+      out[at] = replacement
+      String::from_array(out)
+    }
+    1 => {
+      let out : Array[Char] = []
+      for i = 0; i < chars.length(); i = i + 1 {
+        if i != at {
+          out.push(chars[i])
+        }
+      }
+      String::from_array(out)
+    }
+    _ => {
+      let out : Array[Char] = []
+      for i = 0; i < chars.length(); i = i + 1 {
+        if i == at {
+          out.push(replacement)
+        }
+        out.push(chars[i])
+      }
+      String::from_array(out)
+    }
+  }
+}
+
+///|
 fn main {
   let sb = StringBuilder()
   let rng = Rng::new(0x5EED202644000001UL)
@@ -672,5 +832,38 @@ fn main {
     emit_filter("pypi", sb, spec, real_versions)
   }
   emit_order("pypi", sb, @fixtures.pypi_versions)
+  // 5. Packaging metadata helpers: name and version canonicalization, and
+  //    distribution filenames.
+  let curated_name_inputs = curated_names()
+  let curated_key_inputs = curated_version_keys()
+  let curated_file_inputs = curated_filenames()
+  for raw in curated_name_inputs {
+    emit_canon_name("curated", sb, raw)
+  }
+  for raw in curated_key_inputs {
+    emit_canon_version("curated", sb, raw)
+  }
+  for raw in curated_file_inputs {
+    emit_file("curated", sb, raw)
+  }
+  for raw in mutated_versions {
+    emit_canon_name("mutated", sb, raw)
+    emit_canon_version("mutated", sb, raw)
+  }
+  for raw in @fixtures.pypi_filenames {
+    emit_file("pypi", sb, raw)
+  }
+  let mutated_files : Array[String] = []
+  for i = 0; i < 4000; i = i + 1 {
+    let base = if i % 3 == 0 {
+      curated_file_inputs[rng.below(curated_file_inputs.length())]
+    } else {
+      @fixtures.pypi_filenames[rng.below(@fixtures.pypi_filenames.length())]
+    }
+    mutated_files.push(mutate_filename(rng, base))
+  }
+  for raw in mutated_files {
+    emit_file("mutated", sb, raw)
+  }
   println(sb.to_string())
 }

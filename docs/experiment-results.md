@@ -5,27 +5,31 @@
 
 ## 1. 语料规模
 
-| 来源 | parse | spec | cmp | contains | filter | order |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| curated | 81 | 47 | 6561 | 11421 | 141 | 1 |
-| generated | 4000 | 700 | 3000 | 12600 | 351 | 1 |
-| mutated | 3051 | 1244 | — | — | — | — |
-| pypi | 3000 | 500 | 3866 | 36849 | 501 | 1 |
-| **合计** | **10132** | **2491** | **13427** | **60870** | **993** | **3** |
+| 来源 | parse | spec | cmp | contains | filter | order | canon | file |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| curated | 81 | 47 | 6561 | 11421 | 141 | 1 | 57 | 45 |
+| generated | 4000 | 700 | 3000 | 12600 | 351 | 1 | — | — |
+| mutated | 3051 | 1244 | — | — | — | — | 6102 | 4000 |
+| pypi | 3000 | 500 | 3866 | 36849 | 501 | 1 | — | 900 |
+| **合计** | **10132** | **2491** | **13427** | **60870** | **993** | **3** | **6159** | **4945** |
 
-- 总记录数 **87 916**，其中 **61 863** 条带显式预发布模式（`auto`/`any`/`none`）。
+- 总记录数 **99 020**，其中 **61 863** 条带显式预发布模式（`auto`/`any`/`none`）。
 - oracle 侧接受的**互不相同**的版本字符串 11 035 个、约束集合 1 595 个。
-- pypi 来源：97 个包的 PyPI 元数据，3000 个版本、500 条约束，
-  详见 `fixtures/pypi_corpus.json`（抓取时 0 个包失败）。
+- pypi 来源：97 个包的 PyPI 元数据，**3000 个版本、500 条约束、600 条真实
+  `Requires-Dist` 原文、900 个真实分发文件名**，详见
+  `fixtures/pypi_corpus.json`（抓取时 0 个包失败）。
+- `canon` / `file` 是 M1（`utils.mbt`）新增的两类记录：名称与版本键规范化、
+  分发文件名解析。其中 `file` 的状态分布为 wheel 成功 2904 / 失败 919、
+  sdist 成功 216 / 失败 172、其他 734，不是只测成功路径。
 
 ## 2. 与目标 oracle（packaging 26.3）的一致性
 
 ```
 oracle: packaging 26.3 (python 3.10.12), library targets packaging 26.3
-records: 87916 (61863 with a prerelease mode)
+records: 99020 (61863 with a prerelease mode)
 mismatches per source, kind and mode:
   none
-OK: 87916 records agree with packaging 26.3
+OK: 99020 records agree with packaging 26.3
 ```
 
 退出码 0。**0 不一致**。
@@ -35,15 +39,14 @@ OK: 87916 records agree with packaging 26.3
 ```
 reference: wasm
 target      records      bytes  seconds  digest
-wasm          87917    6798765     2.98  990ae007a1a1da1f
-wasm-gc       87917    6798765     1.93  990ae007a1a1da1f identical
-js            87917    6798765     1.37  990ae007a1a1da1f identical
-native        87917    6798765     3.07  990ae007a1a1da1f identical
+wasm          99021    7629620     4.11  d0d683a513d6c71f
+wasm-gc       99021    7629620     3.50  d0d683a513d6c71f identical
+js            99021    7629620     2.52  d0d683a513d6c71f identical
+native        99021    7629620     4.88  d0d683a513d6c71f identical
 ```
 
 语料生成器在四个后端输出逐字节相同（sha256 前 16 位一致）。重复运行的
-js 输出与捕获文件 md5 均为 `6616e7b3dd0b8755893ce41f410d58a0`，
-即生成过程可重复。
+js 输出与捕获文件 md5 一致，即生成过程可重复。
 
 ## 4. 多 oracle 漂移矩阵
 
@@ -51,10 +54,10 @@ js 输出与捕获文件 md5 均为 `6616e7b3dd0b8755893ce41f410d58a0`，
 
 | packaging | records | differences | fatal | causes |
 | --- | ---: | ---: | ---: | --- |
-| 24.2 | 87916 | 1961 | 0 | auto-prerelease-admission x1749, exclusive-ordered-comparison x209, compatible-release-range x3 |
-| 25.0 | 87916 | 1961 | 0 | auto-prerelease-admission x1749, exclusive-ordered-comparison x209, compatible-release-range x3 |
-| 26.0 | 87916 | 212 | 0 | exclusive-ordered-comparison x209, compatible-release-range x3 |
-| **26.3（目标版本）** | 87916 | **0** | **0** | — |
+| 24.2 | 99020 | 2109 | 0 | auto-prerelease-admission x1749, exclusive-ordered-comparison x209, filename-grammar x148, compatible-release-range x3 |
+| 25.0 | 99020 | 2109 | 0 | 同上 |
+| 26.0 | 99020 | 360 | 0 | exclusive-ordered-comparison x209, filename-grammar x148, compatible-release-range x3 |
+| **26.3（目标版本）** | 99020 | **0** | **0** | — |
 
 差异全部落在三个已发布的上游行为变更上，各给一个最小复现：
 
@@ -64,6 +67,8 @@ js 输出与捕获文件 md5 均为 `6616e7b3dd0b8755893ce41f410d58a0`，
 | `SpecifierSet(">1.0a1").contains(Version("1.0.post1"), prereleases=True)` | ≤26.0 为 `False`（旧实现在 `_compare_greater_than` 里按 base version 排除 post/local） | `True` | 209（≤26.0） |
 | `SpecifierSet("<1.0.post1").contains(Version("1.0a1"), prereleases=True)` | ≤26.0 为 `False` | `True` | 同上 |
 | `SpecifierSet("~=0.5.preview").contains(Version("0.12"), prereleases=True)` | ≤26.2 为 `False`（上界按 `1.dev0` 算） | `True` | 3 |
+| `parse_wheel_filename("-1.0-py3-none-any.whl")` / `parse_sdist_filename("-1.0.tar.gz")` | ≤26.0 **接受**（项目名可为空） | 拒绝 | 148 |
+| `parse_wheel_filename("foo-1.0-2py-none-any.whl")` / `...-py3--any...` | ≤26.0 **接受**（不校验解释器标识符与空组件） | 拒绝 | 同上 |
 
 分类不是猜的：`auto-prerelease-admission` 的判定方式是"把 prereleases 强制打开后
 旧 oracle 就与库一致"，因此这一类差异**只**关于自动策略；其余按约束文本归入
@@ -89,14 +94,37 @@ labels…"、"textual local segments order lexically…"、"whitespace is allowe
 around a specifier…"、"arbitrary equality keeps packaging's operand
 restrictions"）。
 
+## 5.5 语料是否有牙：变异探针
+
+0 不一致只有在"对照能失败"的前提下才有意义。`tools/mutation_probe.py` 向库
+里注入 7 处**故意缺陷**（涵盖 M0 与 M1 的行为），重跑语料并断言 harness 报错：
+
+| 注入的缺陷 | 检出条数 |
+| --- | ---: |
+| `canonicalize_name` 丢掉尾部/首部分隔符 | 113 |
+| 标签排序退回默认 `String` 比较（按长度） | 214 |
+| 版本键形式保留尾部零 | 401 |
+| wheel 项目名不做规范化 | 395 |
+| sdist 从第一个连字符切分 | 35 |
+| local 文本段按长度比较 | 1 |
+| 预发布策略恒为允许 | 2038 |
+
+7/7 全部检出。这说明语料对这两部分行为**确实有覆盖**，而不是恰好都通过。
+
 ## 6. 测试与后端验证
 
 | 检查 | 结果 |
 | --- | --- |
 | `moon fmt --check` | 通过 |
-| `moon check/build/test --deny-warn`（wasm / wasm-gc / js / native） | 全部通过，每个后端 **34 个测试块全部通过**（合计 136） |
+| `moon check/build/test --deny-warn`（wasm / wasm-gc / js / native） | 全部通过，每个后端 **47 个测试块全部通过**（合计 188） |
 | `moon run examples/basic`（四后端） | 通过 |
-| `moon run examples/diff`（四后端） | 87 917 行语料，四端一致 |
+| `moon run examples/diff`（四后端） | 99 021 行语料，四端一致 |
+
+## 6.5 M1 新增能力的覆盖
+
+`utils.mbt`（M1）落地后，`canon` 与 `file` 两类记录把名称规范化、版本键形式、
+wheel/sdist 文件名解析纳入同一套对照：6159 + 4945 条记录，**0 不一致**。
+真实数据占比：900 个 `pypi` 文件名 + 4000 个变异文件名 + 3077 条名称/版本串。
 
 ## 7. 吞吐（`examples/bench`，本机墙钟，非跨语言基准）
 

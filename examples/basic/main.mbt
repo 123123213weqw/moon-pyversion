@@ -38,5 +38,9 @@ fn main {
       println("VersionError: \{code} at \{pos}")
     @pyversion.VersionError::InvalidSpecifier(code, pos) =>
       println("SpecifierError: \{code} at \{pos}")
+    @pyversion.VersionError::InvalidName(code, pos) =>
+      println("NameError: \{code} at \{pos}")
+    @pyversion.VersionError::InvalidFilename(code, pos) =>
+      println("FilenameError: \{code} at \{pos}")
   }
 }
