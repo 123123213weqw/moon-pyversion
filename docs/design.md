@@ -125,7 +125,7 @@ Unicode 感知的正则。PEP 427 要求 wheel 文件名是转义后的 ASCII，
 
 `moon test` 覆盖官方规范化样例、非法输入、比较边例、各操作符、
 预发布规则、通配符、`~=` 以及固定合法版本集上的反自反/反对称/传递性，
-共 251 个测试块，在 wasm、wasm-gc、js、native 四目标全部通过。
+共 259 个测试块，在 wasm、wasm-gc、js、native 四目标验证。
 CI 在四个目标执行 `fmt/check/build/test/run`。
 
 另有独立差分实验：`examples/diff` 生成 122 507 条确定性记录（手工语料、
@@ -141,5 +141,7 @@ PEP 691 索引响应、核心元数据与 PEP 751 锁文件），逐条回放给
 行为变更。
 差分实验证明的是"与 packaging 26.3 一致"，不是全规范合规证明。
 
-两个场景各有可运行示例：`examples/metadata-check`（场景 1）与
-`examples/resolve`（场景 2），四后端输出逐字节一致，CI 每次运行。
+三个场景各有可运行示例：`examples/metadata-check`（元数据与锁检查）、
+`examples/resolve`（索引到候选文件）与 `examples/audit`（需求、真实元数据、索引、
+锁文件和目标环境的统一审计）。CI 在同一 runner 上要求四后端逐字节一致；跨 Windows
+与 Unix 复现时，验证工具仅规范化 CRLF/LF，并同时保留原始与规范化摘要。

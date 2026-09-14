@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.0 — cross-artifact package audit, 2026-09-15
+
+### Added
+
+- `audit_package`: a high-level join across PEP 508 requirements, core metadata,
+  PEP 691 index responses, PEP 751 locks and an explicit target environment.
+- Stable audit findings for identity, Python, environment, selected-version and
+  sha256 inconsistencies, plus deterministic `PackageAudit::render` output.
+- A runnable audit using real PyPI Flask metadata, five integration tests, and
+  four-backend output parity in CI.
+- `tools/source_metrics.py`, which reports production code separately from tests,
+  examples, generated fixtures and Python verification tools.
+
+### Changed
+
+- Broaden the module description from a PEP 440 helper to the implemented Python
+  packaging metadata toolkit; retain the no-network, no-install boundary.
+
 ## Unreleased — M8 (continued): PEP 751 differential corpus, per-value metadata records
 
 ### Added

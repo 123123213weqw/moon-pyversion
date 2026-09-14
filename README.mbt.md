@@ -6,7 +6,7 @@ package dependencies; it uses only `moonbitlang/core`.
 
 ## Consumer example
 
-Once publication is confirmed, add `123123213weqw/moon_pyversion@0.1.0`,
+Once publication is confirmed, add `123123213weqw/moon_pyversion@0.2.0`,
 then import it in your `moon.pkg`. For source-based use see the repository README.
 
 ```text
@@ -44,6 +44,16 @@ The source repository contains this working example in `examples/basic`.
 - `canonicalize_version(String, strip_trailing_zero? : Bool = true) -> String`
 - `parse_wheel_filename(String) -> WheelFilename raise VersionError`
 - `parse_sdist_filename(String) -> SdistFilename raise VersionError`
+- `Metadata::parse`, `SimpleIndex::parse`, and `Pylock::parse`
+- `resolve_candidates` / `select_best` / `explain_rejection`
+- `audit_package(...) -> PackageAudit raise`
+- `PackageAudit::disposition()` and `PackageAudit::render()`
+
+`audit_package` is the high-level integration boundary. It joins one PEP 508
+requirement, one real core-metadata document, one PEP 691 index response and one
+PEP 751 lock for an explicitly supplied target. It reports cross-document name,
+Python, environment, version and sha256 inconsistencies without downloading or
+executing a file. See `examples/audit` and `docs/audit-scenario.md`.
 
 `Version` implements `Eq`, `Compare`, and `Show`. Its `raw` field retains the
 caller's original string. `to_string` returns a normalized public form:
@@ -116,8 +126,9 @@ Agreement with CPython `packaging` is measured rather than asserted.
 `examples/diff` emits a deterministic corpus of 99 020 records from four sources
 (a curated PEP 440 list, grammar-generated versions and specifiers,
 single-character mutations, and 3000 real version strings plus 500 real
-constraint strings from 97 PyPI packages in `fixtures/`). The corpus is byte
-identical on wasm, wasm-gc, js and native.
+constraint strings from 97 PyPI packages in `fixtures/`). Corpus content is
+identical across wasm, wasm-gc, js and native after normalizing the host C
+runtime's CRLF convention; raw and normalized hashes are both reported.
 
 * `python -B tools/diff_packaging.py --oracle-version 26.3` replays every record
   against `packaging` 26.3 and reports differences by source, kind, mode and cause.

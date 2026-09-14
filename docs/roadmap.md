@@ -1,4 +1,8 @@
-# Moon PyVersion — 扩展工作项（按申报书格式）
+# Moon PyVersion — 扩展工作项（历史路线与当前状态）
+
+> 2026-09-15 更新：M1–M11 已落地，当前模块版本 0.2.0。最新申报事实以
+> `docs/proposal.md`、`README.md` 和 `tools/source_metrics.py` 为准；下文保留施工前的
+> `[已有]` / `[计划]` 记录，用于说明范围如何扩展，不应再作为当前状态直接引用。
 
 > 本文件是**工作项清单**，沿用 [项目申报书](proposal.md) 的章节结构，说明"还要做什么、
 > 做到什么算完成、怎么验收"。它不是申报书，也不直接提交。
@@ -9,7 +13,7 @@
 
 ## 项目名称
 
-`[已有]` Moon PyVersion（MoonBit 模块 `123123213weqw/moon_pyversion`，当前 0.1.0）
+`[已有]` Moon PyVersion（MoonBit 模块 `123123213weqw/moon_pyversion`，当前 0.2.0）
 
 `[计划]` 扩展后定位从"版本字符串比较器"改为 **Python 包元数据与版本工具库**。
 包名与版本号是否一并升到 0.2.0，待扩展落地后再定。
@@ -104,8 +108,8 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 | `licenses.mbt` `[已有]` | `canonicalize_license_expression`、`is_valid_license_expression`、`canonicalize_license_file` | 场景 1 | 460 |
 | `metadata.mbt` `[已有]` | `Metadata::parse/requirements/requires_python/extras/is_compatible/diagnostics/to_string` | 场景 1（端到端） | 1336 |
 
-库源码合计 **8644 行**（不含测试与示例），测试 **6389 行**（`*_test.mbt`，
-251 个测试块 × 四后端），示例 2550（`diff`）+ 372（`metadata-check`）+ 570
+截至 M11，根目录生产 MoonBit 合计 **8976 行**（不含测试与示例），测试 **6605 行**（`*_test.mbt`，
+259 个测试块 × 四后端），示例 2550（`diff`）+ 372（`metadata-check`）+ 570
 （`resolve`）+ 180（`basic`/`bench`）行，工具链 3677 行 Python。
 
 **`utils.mbt` 设计要点** `[已完成，见下]`（已用 packaging 26.3 核实）：

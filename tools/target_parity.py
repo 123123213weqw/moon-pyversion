@@ -4,9 +4,9 @@
 The corpus emitter in ``examples/diff`` is meant to be deterministic: it seeds
 its generator with a constant, never reads the clock, the environment or the
 network, and uses only wrapping integer arithmetic. This script runs it on
-every backend, hashes the output and fails when one backend disagrees, which
-is the cheapest available check that the library behaves identically on wasm,
-wasm-gc, js and native.
+every backend and compares content after normalizing the host C runtime's CRLF
+to LF. Raw and normalized hashes are both reported, so a semantic difference
+cannot be hidden as a platform newline difference.
 
 Usage::
 
@@ -30,6 +30,11 @@ import time
 from pathlib import Path
 
 TARGETS = ("wasm", "wasm-gc", "js", "native")
+
+
+def normalized_newlines(output: bytes) -> bytes:
+    """Normalize only the standard Windows CRLF convention."""
+    return output.replace(b"\r\n", b"\n")
 
 
 def run_target(moon: str, root: Path, target: str) -> tuple[bytes, float]:
@@ -57,6 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     moon = args.moon or shutil.which("moon") or str(Path.home() / ".moon" / "bin" / "moon")
     reference_target = args.reference or args.targets[0]
 
+    raw_digests: dict[str, str] = {}
     digests: dict[str, str] = {}
     sizes: dict[str, int] = {}
     records: dict[str, int] = {}
@@ -66,9 +72,11 @@ def main(argv: list[str] | None = None) -> int:
 
     for target in args.targets:
         output, elapsed = run_target(moon, root, target)
-        digests[target] = hashlib.sha256(output).hexdigest()
+        normalized = normalized_newlines(output)
+        raw_digests[target] = hashlib.sha256(output).hexdigest()
+        digests[target] = hashlib.sha256(normalized).hexdigest()
         sizes[target] = len(output)
-        records[target] = output.count(b"\n")
+        records[target] = normalized.count(b"\n")
         seconds[target] = round(elapsed, 2)
         if target == reference_target:
             reference_bytes = output
@@ -80,7 +88,10 @@ def main(argv: list[str] | None = None) -> int:
         status = ""
         if reference_bytes is not None and target != reference_target:
             if digest == digests[reference_target]:
-                status = " identical"
+                if raw_digests[target] == raw_digests[reference_target]:
+                    status = " byte-identical"
+                else:
+                    status = " content-identical (newline-normalized)"
             else:
                 status = " DIFFERENT"
                 failed.append(target)
@@ -97,8 +108,14 @@ def main(argv: list[str] | None = None) -> int:
                     "records": records[target],
                     "bytes": sizes[target],
                     "seconds": seconds[target],
-                    "sha256": digests[target],
-                    "identical_to_reference": digests[target] == digests[reference_target],
+                    "raw_sha256": raw_digests[target],
+                    "normalized_sha256": digests[target],
+                    "byte_identical_to_reference": (
+                        raw_digests[target] == raw_digests[reference_target]
+                    ),
+                    "content_identical_to_reference": (
+                        digests[target] == digests[reference_target]
+                    ),
                 }
                 for target in args.targets
             },
@@ -109,7 +126,10 @@ def main(argv: list[str] | None = None) -> int:
     if failed:
         print(f"\nFAILED: {', '.join(failed)} differ(s) from {reference_target}")
         return 1
-    print(f"\nOK: {len(args.targets)} backends emitted identical corpora")
+    print(
+        f"\nOK: {len(args.targets)} backends emitted identical corpus content "
+        "after platform newline normalization"
+    )
     return 0
 
 

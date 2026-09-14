@@ -29,6 +29,7 @@ jobs:
       - run: moon run examples/basic --target ${{ matrix.target }}
       - run: moon run examples/metadata-check --target ${{ matrix.target }}
       - run: moon run examples/resolve --target ${{ matrix.target }}
+      - run: moon run examples/audit --target ${{ matrix.target }}
 
   differential:
     # The library is written against packaging 26.3, so that release is the
@@ -77,13 +78,17 @@ jobs:
           for target in wasm wasm-gc js native; do
             moon run examples/metadata-check --target $target > dependency-check-$target.txt
             moon run examples/resolve --target $target > candidate-resolution-$target.txt
+            moon run examples/audit --target $target > package-audit-$target.txt
           done
-          for report in dependency-check candidate-resolution; do
+          for report in dependency-check candidate-resolution package-audit; do
             cmp $report-wasm.txt $report-wasm-gc.txt
             cmp $report-wasm.txt $report-js.txt
             cmp $report-wasm.txt $report-native.txt
             echo "$report: identical on wasm, wasm-gc, js and native"
           done
+
+      - name: Report effective source separately from tests and fixtures
+        run: python -B tools/source_metrics.py
 
       - name: The corpus must detect deliberate defects
         run: python -B tools/mutation_probe.py --oracle python

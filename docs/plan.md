@@ -77,7 +77,7 @@ MoonBit 想消费 Python 生态（离线镜像、锁文件、包元数据）时�
 | 门禁 | 命令 | 标准 |
 | --- | --- | --- |
 | 四后端 | `moon check/build/test/run` × wasm/wasm-gc/js/native | 全通过，`--deny-warn` |
-| 后端一致 | `python -B tools/target_parity.py` | 四端语料 sha256 相同 |
+| 后端一致 | `python -B tools/target_parity.py` | 同平台字节一致；跨平台规范换行后内容一致，并保留原始摘要 |
 | oracle 一致 | `python -B tools/diff_packaging.py --oracle-version 26.3` | **0 不一致** |
 | 真实数据 | 新能力必须有 `fixtures/` 真实语料覆盖 | 不接受只用手写样例 |
 
@@ -96,8 +96,9 @@ MoonBit 想消费 Python 生态（离线镜像、锁文件、包元数据）时�
 | M8 | `pylock.mbt` | `pylock.toml` 解析（PEP 751） | 场景 1、2 | 1214 | M2 M4 | `[已完成]` |
 | M9 | `examples/metadata-check` | 依赖检查报告（可运行产物） | 场景 1 | 280 | M6 | `[已完成]` |
 | M10 | `examples/resolve` | 索引响应到可安装文件的候选解析报告（可运行产物） | 场景 2 | 570 | M7 | `[已完成]` |
+| M11 | `audit.mbt` + `examples/audit` | 跨需求、元数据、索引、锁文件和环境的统一审计 | 场景 1、2 | 332 + 36 | M2 M6 M7 M8 | `[已完成]` |
 
-实际落地（截至 M8）：库源码 **8644 行**、测试 **6389 行**（251 个测试块）、
+实际落地（截至 M11）：根目录生产 MoonBit **8976 行**、测试 **6605 行**（259 个测试块）、
 差分语料 **122 507 条**（含 M8 新增的 200 条 `pylock` 与 915 条 `meta_values`），
 变异探针 **31 处**。M7 的验收证据是 **97 份真实 PEP 691 索引响应**加上
 21 条手工文档与 18 组候选解析，全部独立重算后逐条比对；另有 1 条声明分歧。M6 的验收证据是 **239 份真实 PyPI `METADATA`**（取自
