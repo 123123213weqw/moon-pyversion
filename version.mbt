@@ -7,6 +7,8 @@ pub(all) suberror VersionError {
   InvalidSpecifier(String, Int)
   InvalidName(String, Int)
   InvalidFilename(String, Int)
+  InvalidRequirement(String, Int)
+  InvalidMarker(String, Int)
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -16,6 +18,8 @@ pub fn VersionError::diagnostic(self : VersionError) -> String {
     InvalidSpecifier(code, pos) => "\{code} at \{pos}"
     InvalidName(code, pos) => "\{code} at \{pos}"
     InvalidFilename(code, pos) => "\{code} at \{pos}"
+    InvalidRequirement(code, pos) => "\{code} at \{pos}"
+    InvalidMarker(code, pos) => "\{code} at \{pos}"
   }
 }
 

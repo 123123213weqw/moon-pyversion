@@ -11,6 +11,10 @@
 /// - `<source>\tcontains\t<mode>\t<spec>\t<version>\t<true|false>`
 /// - `<source>\tfilter\t<mode>\t<spec>\t<candidates as a|b>\t<accepted as c|d>`
 /// - `<source>\torder\t<input as a|b>\t<ascending as b|a>`
+/// - `<source>\treq\t<raw>\t<ok|bad>\t<name>\t<extras as a|b or ->\t<normalized specifier>\t<url or ->\t<marker text or ->`
+/// - `<source>\tmarker\t<raw>\t<ok|bad>\t<canonical rendering or ->`
+/// - `<source>\tmarker_env\t<name>\t<key=value;...>` (input, not a check)
+/// - `<source>\tmarker_eval\t<env name>\t<raw>\t<ok|bad|err>\t<true|false or error kind>`
 ///
 /// `mode` is `auto` (the library default policy), `any` (prereleases forced
 /// on) or `none` (prereleases forced off); the oracle maps them onto
@@ -718,6 +722,412 @@ fn mutate_filename(rng : Rng, source : String) -> String {
 }
 
 ///|
+/// Marker expressions that exercise the closed vocabulary, the word operators,
+/// the quote decoding and the parenthesis rules.
+fn curated_markers() -> Array[String] {
+  [
+    // the ordinary comparisons
+    "python_version == '3.8'", "python_version == \"3.8\"", "python_version<'3.10'",
+    "python_version < '3.10'", "python_version <= '3.8'", "python_version > '3.8'",
+    "python_version >= '3.8'", "python_version != '3.8'", "python_version ~= '3.8'",
+    "python_version === '3.8'", "python_full_version >= '3.8.1'", "implementation_name == 'cpython'",
+    "implementation_version == '3.8.0'", "platform_release == '5.4.0'", "platform_system == 'Linux'",
+    "platform_machine == 'x86_64'", "os_name == 'posix'", "sys_platform == 'linux'",
+    "extra == 'test'", "extra == 'Foo_Bar'", "extra == 'Foo.Bar'",
+    // dotted aliases and the python_implementation alias
+     "os.name == 'posix'", "sys.platform == 'linux'", "platform.version == '1'",
+    "platform.machine == 'x86_64'", "platform.python_implementation == 'CPython'",
+    "python_implementation == 'CPython'",
+    // membership, in both spellings
+     "python_version in '3.8 3.9'", "python_version not in '3.8 3.9'", "extra in 'a b'",
+    "extra not in 'a b'",
+    // the value on the left
+     "'3.8' == python_version", "'CPython' != platform_python_implementation",
+    // variable against variable
+     "python_version == python_full_version", "os_name == sys_platform", "extra == python_version",
+    // combining
+     "python_version == '3.8' and os_name == 'posix'", "os_name == 'posix' or python_version == '3.8'",
+    "os_name == 'posix' and python_version == '3.8' and extra == 'x'", "os_name == 'posix' or python_version == '3.8' and extra == 'x'",
+    "(os_name == 'posix' or python_version == '3.8') and extra == 'x'", "((os_name == 'posix'))",
+    "(os_name == 'posix')", "(((os_name == 'posix')))", "python_version == '3.8' and (os_name == 'posix')",
+    "(python_version == '3.8' or os_name == 'posix') and (extra == 'a' or extra == 'b')",
+    // whitespace is optional around and/or but not inside `not in`
+     "os_name=='posix'and extra=='x'", "  os_name  ==  'posix'  ", "python_version == '3.8'\tand\tos_name == 'posix'",
+    // set valued keys
+     "extra == 'x' or extras == 'y'", "'x' in extras", "extras == 'a'", "dependency_groups == 'test'",
+    // string escapes and quotes
+     "extra == 'a\\tb'", "extra == 'a\\nb'", "extra == 'a\\\\b'", "extra == \"it's\"",
+    "extra == 'say \"hi\"'", "extra == '\\\\x41'",
+    // rejected
+     "", "   ", "python_version", "python_version =", "python_version = '3.8'", "python_version == 3.8",
+    "python_version == '3.8", "python_version == \"3.8'", "ex0tra == 'x'", "etra == 'x'",
+    "extrax == 'x'", "version == 'x'", "python_version == '3.8' and", "python_version == '3.8' or",
+    "and python_version == '3.8'", "or python_version == '3.8'", "()", "(python_version == '3.8'",
+    "(python_version == '3.8'))", "python_version not '3.8'", "python_version notin 'x'",
+    "not python_version == '3.8'", "python_version == '3.8' extra", "python_version == '3.8'; os_name == 'posix'",
+    "python_version ==", "python_version == ==", "extra ==", "extra ==== 'x'", "in 'x'",
+    "'x' in", "python_version == '3.8' and ()", "python_version < '3.8' > '2'",
+  ]
+}
+
+///|
+/// The marker environments the evaluation records run against. Each is a
+/// complete environment, and each is emitted as a `marker_env` record before it
+/// is used, so the oracle does not have to keep a second copy of these values.
+fn marker_environments() -> Array[
+  (String, String, @pyversion.MarkerEnvironment),
+] {
+  let values : Array[(String, Array[(String, String)])] = [
+    (
+      "posix38",
+      [
+        ("python_version", "3.8"),
+        ("python_full_version", "3.8.18"),
+        ("os_name", "posix"),
+        ("sys_platform", "linux"),
+        ("platform_release", "5.4.0"),
+        ("platform_system", "Linux"),
+        ("platform_version", "#1 SMP"),
+        ("platform_machine", "x86_64"),
+        ("platform_python_implementation", "CPython"),
+        ("implementation_name", "cpython"),
+        ("implementation_version", "3.8.18"),
+        ("extra", ""),
+      ],
+    ),
+    (
+      "win311",
+      [
+        ("python_version", "3.11"),
+        ("python_full_version", "3.11.9"),
+        ("os_name", "nt"),
+        ("sys_platform", "win32"),
+        ("platform_release", "10"),
+        ("platform_system", "Windows"),
+        ("platform_version", "10.0.22631"),
+        ("platform_machine", "AMD64"),
+        ("platform_python_implementation", "CPython"),
+        ("implementation_name", "cpython"),
+        ("implementation_version", "3.11.9"),
+        ("extra", "test"),
+      ],
+    ),
+    (
+      "pypy310",
+      [
+        ("python_version", "3.10"),
+        ("python_full_version", "3.10.14"),
+        ("os_name", "posix"),
+        ("sys_platform", "linux"),
+        ("platform_release", "6.1.0"),
+        ("platform_system", "Linux"),
+        ("platform_version", "#1 SMP"),
+        ("platform_machine", "aarch64"),
+        ("platform_python_implementation", "PyPy"),
+        ("implementation_name", "pypy"),
+        ("implementation_version", "7.3.15"),
+        ("extra", "all"),
+      ],
+    ),
+    (
+      "macos312",
+      [
+        ("python_version", "3.12"),
+        ("python_full_version", "3.12.3"),
+        ("os_name", "posix"),
+        ("sys_platform", "darwin"),
+        ("platform_release", "23.5.0"),
+        ("platform_system", "Darwin"),
+        ("platform_version", "Darwin Kernel Version 23.5.0"),
+        ("platform_machine", "arm64"),
+        ("platform_python_implementation", "CPython"),
+        ("implementation_name", "cpython"),
+        ("implementation_version", "3.12.3"),
+        ("extra", "Docs"),
+      ],
+    ),
+  ]
+  let names : Array[String] = ["posix38", "win311", "pypy310", "macos312"]
+  let sets : Array[Array[(String, Array[String])]] = [
+    [],
+    [],
+    [],
+    [("extras", ["cli", "docs"])],
+  ]
+  let out : Array[(String, String, @pyversion.MarkerEnvironment)] = []
+  for i = 0; i < values.length(); i = i + 1 {
+    let environment = @pyversion.MarkerEnvironment::new()
+    let assignments = StringBuilder()
+    for j = 0; j < values[i].1.length(); j = j + 1 {
+      let key = values[i].1[j].0
+      environment.set(key, values[i].1[j].1)
+      if j > 0 {
+        assignments.write_string(";")
+      }
+      assignments.write_string(key + "=" + values[i].1[j].1)
+    }
+    for group in sets[i] {
+      let members = StringBuilder()
+      for k = 0; k < group.1.length(); k = k + 1 {
+        if k > 0 {
+          members.write_string(",")
+        }
+        members.write_string(group.1[k])
+      }
+      environment.set_names(group.0, group.1)
+      assignments.write_string(";set:" + group.0 + "=" + members.to_string())
+    }
+    out.push((names[i], assignments.to_string(), environment))
+  }
+  out
+}
+
+///|
+/// Emit an environment definition so the oracle evaluates against exactly the
+/// values the library was given.
+fn emit_marker_env(
+  source : String,
+  sb : StringBuilder,
+  name : String,
+  assignments : String,
+) -> Unit {
+  sb.write_string("\{source}\tmarker_env\t\{name}\t\{assignments}\n")
+}
+
+///|
+fn marker_opt(raw : String) -> @pyversion.Marker? {
+  Some(@pyversion.Marker::parse(raw)) catch {
+    _ => None
+  }
+}
+
+///|
+fn marker_render_opt(raw : String) -> String? {
+  match marker_opt(raw) {
+    Some(marker) => Some(marker.to_string()) catch { _ => None }
+    None => None
+  }
+}
+
+///|
+/// Escape the characters that would break the tab-separated, line-based record
+/// format. Only the marker records need this: a marker value is a quoted string
+/// whose decoded form may hold a tab or a newline, and the canonical rendering
+/// writes that decoded form back out.
+fn escape_record(text : String) -> String {
+  let out = StringBuilder()
+  for c in text {
+    if c == '\\' {
+      out.write_string("\\\\")
+    } else if c == '\t' {
+      out.write_string("\\t")
+    } else if c == '\n' {
+      out.write_string("\\n")
+    } else if c == '\r' {
+      out.write_string("\\r")
+    } else {
+      out.write_char(c)
+    }
+  }
+  out.to_string()
+}
+
+///|
+/// Emit one marker record: acceptance and canonical rendering.
+fn emit_marker(source : String, sb : StringBuilder, raw : String) -> Unit {
+  sb.write_string("\{source}\tmarker\t\{escape_record(raw)}\t")
+  match marker_render_opt(raw) {
+    Some(rendered) => sb.write_string("ok\t\{escape_record(rendered)}\n")
+    None => sb.write_string("bad\t-\n")
+  }
+}
+
+///|
+fn marker_error_kind(error : @pyversion.MarkerError) -> String {
+  match error {
+    @pyversion.UndefinedEnvironmentName(_) => "UndefinedEnvironmentName"
+    @pyversion.UndefinedComparison(_) => "UndefinedComparison"
+    @pyversion.SetValuedOnLeft(_, _) => "SetValuedOnLeft"
+  }
+}
+
+///|
+/// Emit one marker evaluation record against a named environment.
+fn emit_marker_eval(
+  source : String,
+  sb : StringBuilder,
+  env_name : String,
+  environment : @pyversion.MarkerEnvironment,
+  raw : String,
+) -> Unit {
+  sb.write_string(
+    "\{source}\tmarker_eval\t\{env_name}\t\{escape_record(raw)}\t",
+  )
+  match marker_opt(raw) {
+    None => sb.write_string("bad\t-\n")
+    Some(marker) =>
+      try {
+        let result = marker.evaluate(environment)
+        sb.write_string("ok\t\{result}\n")
+      } catch {
+        error => sb.write_string("err\t\{marker_error_kind(error)}\n")
+      }
+  }
+}
+
+///|
+/// Characters used to perturb marker expressions.
+fn marker_pool() -> Array[Char] {
+  [
+    '(', ')', '\'', '"', '=', '<', '>', '!', '~', ' ', 'a', 'n', 'd', 'o', 'r', 'i',
+    's', 'x', '0', '9', '_',
+  ]
+}
+
+///|
+fn mutate_marker(rng : Rng, source : String) -> String {
+  let pool = marker_pool()
+  let chars = source.to_array()
+  let at = rng.below(chars.length())
+  let replacement = rng.pick_char(pool)
+  match rng.below(3) {
+    0 => {
+      let out = chars.copy()
+      out[at] = replacement
+      String::from_array(out)
+    }
+    1 => {
+      let out : Array[Char] = []
+      for i = 0; i < chars.length(); i = i + 1 {
+        if i != at {
+          out.push(chars[i])
+        }
+      }
+      String::from_array(out)
+    }
+    _ => {
+      let out : Array[Char] = []
+      for i = 0; i < chars.length(); i = i + 1 {
+        out.push(chars[i])
+        if i == at {
+          out.push(replacement)
+        }
+      }
+      String::from_array(out)
+    }
+  }
+}
+
+///|
+/// Requirement lines that exercise the PEP 508 grammar at its edges: the two
+/// operand forms (`name specifier` and `name @ url`), extras, markers, and a
+/// batch of lines that `packaging` rejects.
+fn curated_requirements() -> Array[String] {
+  [
+    // plain names, with and without extras
+    "foo", "foo==1.0", "foo >=1.0", "foo>=1.0,<2.0", "foo != 1.0.*", "foo~=1.4.2",
+    "Requests[Security]", "Requests[Security]>=2.0,<3.0; python_version >= \"3.8\"",
+    "foo[a,b]", "foo[a, b]", "foo[ a ]", "foo[]", "foo[Bar.Baz]", "foo[a-b_c.d]",
+    // markers
+     "foo; python_version < \"3.10\"", "foo; python_version<'3.10'", "foo>=1.0 ; extra == \"test\"",
+    "foo; os_name == \"posix\" and python_version >= \"3.8\"", "foo; (python_version >= \"3.8\" or os_name == \"posix\") and extra == \"x\"",
+    "foo; sys_platform == \"win32\"",
+    // url form
+     "foo @ https://example.com/foo-1.0.tar.gz", "foo[bar] @ file:///tmp/foo.zip",
+    "foo @ file:///tmp/foo.zip ; python_version < \"3.9\"", "foo@https://example.com",
+    // parenthesised specifier, a legacy spelling packaging still accepts
+     "foo(>=1.0)", "foo (>=1.0,<2.0)", "foo ( >= 1.0 )",
+    // names that are legal in different ways
+     "1foo", "foo_", "foo._", "a-b_c.d", "FOO", "x", "zope.interface>=5", "importlib_metadata; python_version < \"3.8\"",
+    // rejected by packaging
+     "", "  ", "foo bar", "foo[", "foo]", "foo[ex", "foo>= ", "foo>=", "foo @ ",
+    "foo @@bar", ">=1.0", "foo-", "foo.", "-foo", ".foo", "_foo", "foo_-", "a.",
+    ".a", "_a", "foo!", "foo==1.0 extra", "foo;", "foo; and", "foo[extra] @ url2 url3",
+    "foo@", "nil",
+  ]
+}
+
+///|
+/// Characters used to perturb requirement lines. Brackets, operators and the
+/// semicolon are all in the pool so the mutants frequently become ungrammatical.
+fn requirement_pool() -> Array[Char] {
+  [
+    '[', ']', ',', ';', '@', '=', '<', '>', '~', '(', ')', ' ', '"', '!', '.', '_',
+    '-', 'a', 'z', '0', '9', '*', '|',
+  ]
+}
+
+///|
+fn mutate_requirement(rng : Rng, source : String) -> String {
+  let pool = requirement_pool()
+  let chars = source.to_array()
+  let at = rng.below(chars.length())
+  let replacement = rng.pick_char(pool)
+  match rng.below(3) {
+    0 => {
+      let out = chars.copy()
+      out[at] = replacement
+      String::from_array(out)
+    }
+    1 => {
+      let out : Array[Char] = []
+      for i = 0; i < chars.length(); i = i + 1 {
+        if i != at {
+          out.push(chars[i])
+        }
+      }
+      String::from_array(out)
+    }
+    _ => {
+      let out : Array[Char] = []
+      for i = 0; i < chars.length(); i = i + 1 {
+        out.push(chars[i])
+        if i == at {
+          out.push(replacement)
+        }
+      }
+      String::from_array(out)
+    }
+  }
+}
+
+///|
+fn requirement_opt(raw : String) -> @pyversion.Requirement? {
+  Some(@pyversion.Requirement::parse(raw)) catch {
+    _ => None
+  }
+}
+
+///|
+/// Emit one requirement record. The marker is reported as raw text and only its
+/// presence is compared against the oracle, because canonicalising marker
+/// rendering (quote style, redundant parentheses) is `markers.mbt`'s job.
+fn emit_req(source : String, sb : StringBuilder, raw : String) -> Unit {
+  sb.write_string("\{source}\treq\t\{raw}\t")
+  match requirement_opt(raw) {
+    Some(requirement) => {
+      let extras = if requirement.extras.length() == 0 {
+        "-"
+      } else {
+        requirement.extras.join("|")
+      }
+      let url = match requirement.url {
+        Some(value) => value
+        None => "-"
+      }
+      let marker = match requirement.marker_text {
+        Some(value) => value
+        None => "-"
+      }
+      sb.write_string(
+        "ok\t\{requirement.name}\t\{extras}\t\{requirement.specifier.to_string()}\t\{url}\t\{marker}\n",
+      )
+    }
+    None => sb.write_string("bad\t-\t-\t-\t-\t-\n")
+  }
+}
+
+///|
 fn main {
   let sb = StringBuilder()
   let rng = Rng::new(0x5EED202644000001UL)
@@ -864,6 +1274,75 @@ fn main {
   }
   for raw in mutated_files {
     emit_file("mutated", sb, raw)
+  }
+  // 6. PEP 508 requirement lines, including the real `Requires-Dist` fixture.
+  let curated_requirement_inputs = curated_requirements()
+  for raw in curated_requirement_inputs {
+    emit_req("curated", sb, raw)
+  }
+  for raw in @fixtures.pypi_requires_dist {
+    emit_req("pypi", sb, raw)
+  }
+  let mutated_requirements : Array[String] = []
+  for i = 0; i < 4000; i = i + 1 {
+    let base = if i % 3 == 0 {
+      curated_requirement_inputs[rng.below(curated_requirement_inputs.length())]
+    } else {
+      @fixtures.pypi_requires_dist[rng.below(
+        @fixtures.pypi_requires_dist.length(),
+      )]
+    }
+    if base.length() == 0 {
+      mutated_requirements.push(
+        String::from_array([rng.pick_char(requirement_pool())]),
+      )
+    } else {
+      mutated_requirements.push(mutate_requirement(rng, base))
+    }
+  }
+  for raw in mutated_requirements {
+    emit_req("mutated", sb, raw)
+  }
+  // 7. PEP 508 markers: acceptance, canonical rendering, and evaluation against
+  //    a handful of complete environments.
+  let environments = marker_environments()
+  for entry in environments {
+    emit_marker_env("curated", sb, entry.0, entry.1)
+  }
+  let curated_marker_inputs = curated_markers()
+  for raw in curated_marker_inputs {
+    emit_marker("curated", sb, raw)
+    for entry in environments {
+      emit_marker_eval("curated", sb, entry.0, entry.2, raw)
+    }
+  }
+  for raw in @fixtures.pypi_requires_dist {
+    match requirement_opt(raw) {
+      Some(requirement) =>
+        match requirement.marker_text {
+          Some(text) => emit_marker("pypi", sb, text)
+          None => ()
+        }
+      None => ()
+    }
+  }
+  let mutated_markers : Array[String] = []
+  for i = 0; i < 4000; i = i + 1 {
+    let base = if i % 3 == 0 {
+      curated_marker_inputs[rng.below(curated_marker_inputs.length())]
+    } else {
+      curated_marker_inputs[rng.below(curated_marker_inputs.length())]
+    }
+    if base.length() == 0 {
+      mutated_markers.push(String::from_array([rng.pick_char(marker_pool())]))
+    } else {
+      mutated_markers.push(mutate_marker(rng, base))
+    }
+  }
+  for raw in mutated_markers {
+    emit_marker("mutated", sb, raw)
+    emit_marker_eval("mutated", sb, environments[0].0, environments[0].2, raw)
+    emit_marker_eval("mutated", sb, environments[1].0, environments[1].2, raw)
   }
   println(sb.to_string())
 }

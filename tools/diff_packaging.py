@@ -44,6 +44,10 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from packaging import __version__ as ORACLE_VERSION
+from packaging.markers import InvalidMarker, Marker
+from packaging.markers import UndefinedComparison as MarkerUndefinedComparison
+from packaging.markers import UndefinedEnvironmentName as MarkerUndefinedEnvironmentName
+from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.utils import (
     InvalidSdistFilename,
@@ -67,6 +71,10 @@ ARITY = {
     "order": 4,
     "canon": 6,
     "file": 9,
+    "req": 9,
+    "marker": 5,
+    "marker_env": 4,
+    "marker_eval": 6,
 }
 
 EXIT_OK = 0
@@ -84,6 +92,9 @@ class Oracle:
     def __init__(self) -> None:
         self._versions: dict[str, Version | None] = {}
         self._specs: dict[str, SpecifierSet | None] = {}
+        self._requirements: dict[str, Requirement | None] = {}
+        self._markers: dict[str, Marker | None] = {}
+        self.marker_envs: dict[str, dict[str, str | frozenset[str]]] = {}
 
     def version(self, raw: str) -> Version | None:
         if raw not in self._versions:
@@ -100,6 +111,22 @@ class Oracle:
             except InvalidSpecifier:
                 self._specs[raw] = None
         return self._specs[raw]
+
+    def requirement(self, raw: str) -> Requirement | None:
+        if raw not in self._requirements:
+            try:
+                self._requirements[raw] = Requirement(raw)
+            except InvalidRequirement:
+                self._requirements[raw] = None
+        return self._requirements[raw]
+
+    def marker(self, raw: str) -> Marker | None:
+        if raw not in self._markers:
+            try:
+                self._markers[raw] = Marker(raw)
+            except (InvalidMarker, ValueError):
+                self._markers[raw] = None
+        return self._markers[raw]
 
     def accepted_versions(self) -> int:
         return sum(1 for value in self._versions.values() if value is not None)
@@ -268,6 +295,126 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
             return None
         return f"unknown file sub kind {subkind!r}"
 
+    if kind == "req":
+        raw, status, name, extras_raw, constraint, url, marker = parts[2:]
+        expected = oracle.requirement(raw)
+        if expected is None:
+            if status != "bad":
+                return f"Requirement({raw!r}): moonbit accepts, packaging rejects"
+            return None
+        if status != "ok":
+            return f"Requirement({raw!r}): moonbit rejects, packaging accepts"
+        actual_extras = [] if extras_raw == "-" else extras_raw.split("|")
+        expected_extras = sorted(expected.extras)
+        if name != expected.name:
+            return f"Requirement({raw!r}).name: moonbit {name!r}, packaging {expected.name!r}"
+        if actual_extras != expected_extras:
+            return (
+                f"Requirement({raw!r}).extras: moonbit {actual_extras!r}, "
+                f"packaging {expected_extras!r}"
+            )
+        expected_constraint = str(expected.specifier)
+        if constraint != expected_constraint:
+            return (
+                f"Requirement({raw!r}).specifier: moonbit {constraint!r}, "
+                f"packaging {expected_constraint!r}"
+            )
+        expected_url = expected.url if expected.url is not None else "-"
+        if url != expected_url:
+            return f"Requirement({raw!r}).url: moonbit {url!r}, packaging {expected_url!r}"
+        # Only marker presence is compared here; rendering markers canonically
+        # belongs to the marker module.
+        actual_has_marker = marker != "-"
+        expected_has_marker = expected.marker is not None
+        if actual_has_marker != expected_has_marker:
+            return (
+                f"Requirement({raw!r}).marker presence: moonbit {actual_has_marker}, "
+                f"packaging {expected_has_marker}"
+            )
+        return None
+
+    if kind == "marker_env":
+        name, assignments = parts[2], parts[3]
+        if name in oracle.marker_envs:
+            return f"marker_env {name!r} declared twice"
+        env: dict[str, str | frozenset[str]] = {}
+        for entry in assignments.split(";"):
+            if not entry:
+                continue
+            key, _, value = entry.partition("=")
+            if not key:
+                return f"marker_env {name!r} has an entry without a key: {entry!r}"
+            if key.startswith("set:"):
+                env[key[4:]] = frozenset(part for part in value.split(",") if part)
+            else:
+                env[key] = value
+        oracle.marker_envs[name] = env
+        return None
+
+    if kind == "marker":
+        raw, status, rendered = parts[2], parts[3], parts[4]
+        expected = oracle.marker(raw)
+        if expected is None:
+            if status != "bad":
+                return f"Marker({raw!r}): moonbit accepts, packaging rejects"
+            return None
+        if status != "ok":
+            return f"Marker({raw!r}): moonbit rejects, packaging accepts"
+        try:
+            canonical = str(expected)
+        except ValueError as error:
+            return f"Marker({raw!r}): packaging cannot render it either ({error})"
+        if rendered != canonical:
+            return f"Marker({raw!r}): moonbit {rendered!r}, packaging {canonical!r}"
+        return None
+
+    if kind == "marker_eval":
+        env_name, raw, status, detail = parts[2], parts[3], parts[4], parts[5]
+        if env_name not in oracle.marker_envs:
+            return f"marker_eval uses undeclared environment {env_name!r}"
+        environment = oracle.marker_envs[env_name]
+        marker = oracle.marker(raw)
+        if marker is None:
+            if status != "bad":
+                return f"Marker({raw!r}): moonbit accepts, packaging rejects"
+            return None
+        if status == "bad":
+            return f"Marker({raw!r}): moonbit rejects, packaging accepts"
+        try:
+            expected = marker.evaluate(environment, context="metadata")
+        except MarkerUndefinedEnvironmentName:
+            expected_kind, expected = "UndefinedEnvironmentName", None
+        except MarkerUndefinedComparison:
+            expected_kind, expected = "UndefinedComparison", None
+        except Exception as error:  # noqa: BLE001
+            expected_kind, expected = f"other:{type(error).__name__}", None
+        else:
+            expected_kind = None
+        if expected_kind is None:
+            if status != "ok":
+                return (
+                    f"Marker({raw!r}).evaluate({env_name}): moonbit raised {detail!r}, "
+                    f"packaging returned {expected}"
+                )
+            expected_text = "true" if expected else "false"
+            if detail != expected_text:
+                return (
+                    f"Marker({raw!r}).evaluate({env_name}): moonbit {detail!r}, "
+                    f"packaging {expected}"
+                )
+            return None
+        if status != "err":
+            return (
+                f"Marker({raw!r}).evaluate({env_name}): moonbit {status}/{detail!r}, "
+                f"packaging raised {expected_kind}"
+            )
+        if EQUIVALENT_ERROR_KINDS.get(detail, detail) != expected_kind:
+            return (
+                f"Marker({raw!r}).evaluate({env_name}): moonbit raised {detail!r}, "
+                f"packaging raised {expected_kind!r}"
+            )
+        return None
+
     if kind == "order":
         inputs_raw, sorted_raw = parts[2], parts[3]
         inputs = [oracle.version(item) for item in inputs_raw.split("|")]
@@ -349,11 +496,71 @@ def classify_difference(oracle: "Oracle", parts: list[str]) -> str:
         return "name-normalization" if parts[2] == "name" else "version-key-form"
     if kind == "file":
         return "filename-grammar"
+    if kind == "req":
+        return "requirement-grammar"
+    if kind == "marker":
+        return "marker-grammar"
+    if kind == "marker_eval":
+        return "marker-evaluation"
+    if kind == "marker_env":
+        return "marker-environment"
     return {"parse": "version-grammar", "spec": "specifier-grammar"}.get(kind, "ordering")
 
 
-def parse_record(line: str) -> tuple[str, str, str]:
-    """Split a record into (source, kind, mode) after validating its shape."""
+# Marker fields are escaped by the emitter because a marker value may contain a
+# tab or a newline once its quotes are decoded.
+ESCAPED_FIELDS = {
+    "marker": (2, 4),
+    "marker_eval": (3, 5),
+}
+
+
+# Error-kind equivalences. `packaging` collapses several distinct marker
+# evaluation failures into one exception type; the library keeps them apart so a
+# caller can tell them apart, so the comparison maps its finer-grained names
+# onto the oracle's coarser ones. `SetValuedOnLeft` is exactly the condition
+# packaging reports as `UndefinedComparison` ("Set-valued marker 'extras' can
+# only be used with the membership form ...").
+EQUIVALENT_ERROR_KINDS = {
+    "SetValuedOnLeft": "UndefinedComparison",
+}
+
+
+def unescape_record(text: str) -> str:
+    """Undo `escape_record` in the emitter."""
+    if "\\" not in text:
+        return text
+    out = []
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char != "\\" or index + 1 >= len(text):
+            out.append(char)
+            index += 1
+            continue
+        following = text[index + 1]
+        if following == "\\":
+            out.append("\\")
+        elif following == "t":
+            out.append("\t")
+        elif following == "n":
+            out.append("\n")
+        elif following == "r":
+            out.append("\r")
+        else:
+            out.append(char)
+            index += 1
+            continue
+        index += 2
+    return "".join(out)
+
+
+def parse_record(line: str) -> tuple[str, str, str, list[str]]:
+    """Validate a record's shape and return (source, kind, mode, fields).
+
+    The returned fields have the emitter's escaping undone, so they are the
+    values the oracle should see even when one of them contains a tab.
+    """
     parts = line.split("\t")
     if len(parts) < 2:
         raise ProtocolError(f"record without kind: {line[:80]!r}")
@@ -364,10 +571,12 @@ def parse_record(line: str) -> tuple[str, str, str]:
         raise ProtocolError(
             f"{kind} record has {len(parts)} fields, expected {ARITY[kind]}: {line[:80]!r}"
         )
+    for index in ESCAPED_FIELDS.get(kind, ()):
+        parts[index] = unescape_record(parts[index])
     mode = parts[2] if kind in ("contains", "filter") else "-"
     if mode != "-" and mode not in MODES:
         raise ProtocolError(f"unknown prerelease mode {mode!r}")
-    return source, kind, mode
+    return source, kind, mode, parts
 
 
 def emitter_command(args) -> list[str]:
@@ -396,10 +605,10 @@ def run_emitter(args) -> tuple[str, float]:
 
 
 def load_records(text: str):
+    """Yield every non-empty record line, unparsed."""
     for line in text.splitlines():
-        if not line:
-            continue
-        yield line.split("\t")
+        if line:
+            yield line
 
 
 def summarize(counters: Counter, width: int = 28) -> str:
@@ -475,8 +684,8 @@ def main(argv: list[str] | None = None) -> int:
     drift_is_expected = args.tolerate_drift and ORACLE_VERSION != args.pinned_oracle
 
     try:
-        for parts in load_records(text):
-            source, kind, mode = parse_record("\t".join(parts))
+        for line in load_records(text):
+            source, kind, mode, parts = parse_record(line)
             records += 1
             cases[(source, kind, mode)] += 1
             if mode != "-":

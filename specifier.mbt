@@ -144,6 +144,55 @@ fn parse_specifier(text : String) -> Specifier raise VersionError {
 }
 
 ///|
+/// The operator as written, used when re-rendering a specifier.
+fn SpecifierOp::symbol(self : SpecifierOp) -> String {
+  match self {
+    Equal => "=="
+    NotEqual => "!="
+    Less => "<"
+    LessEqual => "<="
+    Greater => ">"
+    GreaterEqual => ">="
+    Compatible => "~="
+    ArbitraryEqual => "==="
+  }
+}
+
+///|
+/// Render a specifier back to text. The operand keeps the caller's spelling
+/// (`==V1.0` stays `==V1.0`) and only surrounding whitespace is dropped, which
+/// is what `packaging` does.
+pub fn Specifier::to_string(self : Specifier) -> String {
+  let operand = if self.wildcard {
+    self.raw_version + ".*"
+  } else {
+    self.raw_version
+  }
+  self.op.symbol() + operand
+}
+
+///|
+/// Render a constraint set in its canonical form: clauses are deduplicated and
+/// sorted by code point, then joined with commas. `>=2.0,<3.0` therefore
+/// renders as `<3.0,>=2.0`.
+pub fn SpecifierSet::to_string(self : SpecifierSet) -> String {
+  let rendered : Array[String] = []
+  for spec in self.specs {
+    let text = spec.to_string()
+    if !rendered.contains(text) {
+      rendered.push(text)
+    }
+  }
+  rendered.sort_by(fn(a, b) { String::lexical_compare(a, b) })
+  rendered.join(",")
+}
+
+///|
+pub impl Show for SpecifierSet with fn to_string(self) {
+  self.to_string()
+}
+
+///|
 pub fn SpecifierSet::parse(input : String) -> SpecifierSet raise VersionError {
   let specs : Array[Specifier] = []
   let parts = split_specifier_list(input)
