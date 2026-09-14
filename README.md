@@ -190,6 +190,34 @@ differential 作业固定 `packaging==26.3` 与 `tomli==2.4.1`（TOML fixture �
 实验设计、数据和查出的真实缺陷见 [docs/experiment.md](docs/experiment.md) 与
 [docs/experiment-results.md](docs/experiment-results.md)。
 
+## 可运行示例：依赖清单检查
+
+`examples/metadata-check` 就是场景 1 的端到端证据：读入真实 `METADATA`、一个锁
+文件和一个目标环境，输出"哪些依赖越界、哪些对本环境不适用、哪些根本没能解析"。
+它对四份**真实 PyPI `METADATA`** 会给出：
+
+```sh
+moon run examples/metadata-check --target js
+```
+```text
+== flask-0.12.5
+   Flask 0.12.5 (metadata 2.1)
+   note: deprecated: Home-page is superseded by Project-URL
+   OUT OF RANGE  werkzeug: locked 2.0.0, needs <1.0,>=0.7
+   ok            jinja2 3.1.4 >=2.4
+   ...
+== alembic-1.5.8
+   requires-python: !=3.0.*,...,>=2.7 -> 3.11.9 is allowed
+   ...
+== kubernetes-10.0.0
+   not applicable ipaddress
+   not applicable adal
+```
+
+输入是编译进去的而不是从磁盘读的：库只依赖 `moonbitlang/core`，而 core 没有
+文件系统包，示例宁可保持四后端可移植也不为此引入依赖；文档来源与语料完全一致
+（真实 wheel 的 PEP 658 边上文件），把两个常量换成文件或网络响应即可。
+
 ## 边界
 
 预发布策略对齐 `packaging 26.3`：`contains` 只有一个候选，默认允许满足

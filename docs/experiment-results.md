@@ -250,6 +250,42 @@ TOML 的对照方式与其他记录不同，值得单独说明：参考实现给
 `torch-1.0.0` 的 `Author-email: UNKNOWN`）会被更严的版本拒掉，而它们正是场景 1
 要读的那种文档。
 
+## 6.7 场景 1 的端到端输出
+
+`examples/metadata-check` 把上面这些能力串成一个可运行产物：读真实 `METADATA`
+（取自语料），对锁表与固定环境逐条判定，输出 `ok` / `OUT OF RANGE` /
+`not applicable` / `not locked` / `UNPARSABLE` 与汇总。四份真实文档各自的用法：
+
+```
+== flask-0.12.5
+   requires-python: (none)
+   note: deprecated: Home-page is superseded by Project-URL
+   note: classifier-not-current: License :: OSI Approved :: BSD License
+   note: description-content-type-missing
+   OUT OF RANGE  werkzeug: locked 2.0.0, needs <1.0,>=0.7
+   ok            jinja2 3.1.4 >=2.4
+   -> 4/4 lines parsed, 1 problem(s)
+== alembic-1.5.8
+   requires-python: !=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,>=2.7 -> 3.11.9 is allowed
+   -> 4/4 lines parsed, 0 problem(s)
+== requests-2.24.0
+   INVALID METADATA: METADATA_VERSION_INVALID at 0
+== kubernetes-10.0.0
+   not applicable ipaddress
+   not applicable adal
+   -> 12/12 lines parsed, 0 problem(s)
+```
+
+`flask-0.12.5` 那条越界是**真实冲突**（该版本确实要求
+`werkzeug<1.0,>=0.7`，而锁里是 2.0.0）；`requests-2.24.0` 声明
+`Metadata-Version: 2.0`，这不是核心元数据规范定义过的版本，库与参考实现都拒绝
+——真实数据上跑出了失败路径，而不是只跑通路径。四个后端的输出逐字节一致
+（四后端 md5 一致：`1834d5459527`）。
+
+输入是编译进去的：库只依赖 `moonbitlang/core`，core 没有文件系统包，示例因此
+不从磁盘读文件（把常量换成文件或网络响应即可）。这一点在示例的注释里写明，不
+含糊。
+
 ## 7. 吞吐（`examples/bench`，本机墙钟，非跨语言基准）
 
 | 操作 | js | native |

@@ -27,6 +27,7 @@ jobs:
       - run: moon build --target ${{ matrix.target }} --deny-warn
       - run: moon test --target ${{ matrix.target }} --deny-warn
       - run: moon run examples/basic --target ${{ matrix.target }}
+      - run: moon run examples/metadata-check --target ${{ matrix.target }}
 
   differential:
     # The library is written against packaging 26.3, so that release is the

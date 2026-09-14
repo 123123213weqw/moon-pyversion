@@ -1,0 +1,12 @@
+// moon.pkg for the dependency-check example.
+//
+// It reads its inputs from the `fixtures` package rather than from disk: the
+// library depends only on `moonbitlang/core`, which has no filesystem package,
+// and staying portable across wasm / wasm-gc / js / native is worth more here
+// than reading a path. See the note at the top of `main.mbt`.
+import {
+  "123123213weqw/moon_pyversion" @pyversion,
+  "123123213weqw/moon_pyversion/fixtures",
+}
+
+pkgtype(kind: "executable")

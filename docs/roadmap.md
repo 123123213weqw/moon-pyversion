@@ -105,7 +105,7 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 | `metadata.mbt` `[已有]` | `Metadata::parse/requirements/requires_python/extras/is_compatible/diagnostics/to_string` | 场景 1（端到端） | 1336 |
 
 库源码合计 **6128 行**（不含测试与示例），测试 **1851 行**（`*_test.mbt`，
-120 个测试块 × 四后端），差分语料发射器 1645 行，工具链 2829 行 Python。
+120 个测试块 × 四后端），示例 1645 + 245 行，工具链 2829 行 Python。
 
 **`utils.mbt` 设计要点** `[已完成，见下]`（已用 packaging 26.3 核实）：
 
@@ -303,9 +303,9 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 `[计划]` 还差：
 
-- `examples/metadata-check`：读一份真实 `METADATA`，输出越界项与不适用项清单
-  ——即场景 1 的**可运行**证据（库与语料已完成，差一个示例程序；`docs/plan.md`
-  把这一项归到 M9）；
+- `[已完成]` `examples/metadata-check`：读真实 `METADATA` + 锁表 + 目标环境，
+  输出越界项、不适用项与无法解析项清单——场景 1 的可运行证据，四后端输出一致，
+  CI 已纳入；
 - `metadata.mbt` 与 `index.mbt` / `pylock.mbt`（`docs/plan.md` 的 M6/M7）。
 
 ## 明确不做的范围

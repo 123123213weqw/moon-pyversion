@@ -78,6 +78,14 @@
   `meta_divergence` input record, compared against
   `packaging.metadata.Metadata.from_email(data, validate=True)`. Corpus grows
   from 120 951 to 121 239 records, still 0 mismatches.
+- `examples/metadata-check`: scenario 1 end to end. It parses real `METADATA`
+  documents, decides each `Requires-Dist` against a lock table and a fixed
+  environment, and prints `ok` / `OUT OF RANGE` / `not applicable` /
+  `not locked` / `UNPARSABLE` per line plus a summary. Inputs are compiled in
+  rather than read from disk, because `moonbitlang/core` has no filesystem
+  package and the library stays dependency free; the documents are the same real
+  PyPI `METADATA` files the corpus uses. Its output is byte identical on the four
+  backends and CI runs it on all of them.
 
 ### Changed
 
