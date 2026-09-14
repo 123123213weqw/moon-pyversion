@@ -16,6 +16,7 @@
 /// - `<source>\tmarker_env\t<name>\t<key=value;...>` (input, not a check)
 /// - `<source>\tmarker_eval\t<env name>\t<raw>\t<ok|bad|err>\t<true|false or error kind>`
 /// - `<source>\ttoml\t<case name>\t<document>\t<ok|bad>\t<re-serialization or ->`
+/// - `<source>\tlicense\t<raw>\t<ok|bad>\t<canonical expression or ->`
 ///
 /// `mode` is `auto` (the library default policy), `any` (prereleases forced
 /// on) or `none` (prereleases forced off); the oracle maps them onto
@@ -1020,6 +1021,104 @@ fn mutate_marker(rng : Rng, source : String) -> String {
 }
 
 ///|
+/// PEP 639 license expressions at their edges: the SPDX identifier lookups, the
+/// operators, the `LicenseRef-` and `DocumentRef-` forms, and the shapes the
+/// grammar rejects.
+fn curated_licenses() -> Array[String] {
+  [
+    // plain identifiers, and the case folding that finds them
+    "MIT", "mit", "MiT", "Apache-2.0", "apache-2.0", "APACHE-2.0", "BSD-3-Clause",
+    "GPL-2.0-only", "gpl-2.0-ONLY", "0BSD", "blessing", "curl", "xinetd",
+    // the identifiers whose canonical spelling is not a title case transform
+     "BSD-2-Clause-FreeBSD", "CC-BY-SA-4.0", "LGPL-2.1-or-later", "AGPL-3.0-or-later",
+    "GFDL-1.3-invariants-or-later", "Zlib", "zlib-acknowledgement", "ZPL-2.1",
+    // operators, in every case and with every padding
+     "MIT OR Apache-2.0", "mit or apache-2.0", "MIT and Apache-2.0", "MIT AND Apache-2.0",
+    "MIT  AND  Apache-2.0", "MIT\tOR\tApache-2.0", "MIT\nOR\nApache-2.0", "MIT OR Apache-2.0 OR BSD-3-Clause",
+    "MIT AND Apache-2.0 AND BSD-3-Clause",
+    // and binds tighter than or, but neither is reordered
+     "MIT AND Apache-2.0 OR BSD-3-Clause", "MIT OR Apache-2.0 AND BSD-3-Clause",
+    // parentheses, which are only padding in this grammar
+     "(MIT)", "(mit)", "( MIT )", "((MIT))", "(MIT OR Apache-2.0) AND BSD-3-Clause",
+    "MIT AND (Apache-2.0 OR BSD-3-Clause)",
+    // the `+` suffix
+     "MIT+", "GPL-2.0+", "CDDL-1.0+", "MIT++",
+    // license references
+     "LicenseRef-a", "licenseref-a", "LICENSEREF-A", "LicenseRef-a.b-c", "LicenseRef-a OR LicenseRef-A",
+    "LicenseRef-a WITH LicenseRef-b", "DocumentRef-doc:LicenseRef-a", "DocumentRef-doc:licenseref-a",
+    // exceptions
+     "GPL-2.0-only WITH Classpath-exception-2.0", "gpl-2.0-only with classpath-exception-2.0",
+    "GPL-2.0-only WITH Bison-exception-2.2", "MIT WITH Autoconf-exception-2.0", "GPL-2.0-only WITH (Classpath-exception-2.0)",
+    // rejected
+     "", "   ", "nope", "MIT OR", "OR MIT", "MIT AND", "AND MIT", "MIT OR OR MIT",
+    "MIT WITH", "WITH MIT", "MIT WITH MIT", "MIT WITH nope", "MIT+ OR GPL-2.0+",
+    "LicenseRef-", "LicenseRef-a+", "DocumentRef-:LicenseRef-a", "DocumentRef-doc:MIT",
+    "MIT(mit)", "MIT OR(", "MIT)", "(MIT", "MIT;Apache-2.0", "MIT,Apache-2.0", "mit license",
+    "MIT OR MIT WITH", "WITH Classpath-exception-2.0", "GPL-2.0-only WITH Classpath-exception-2.0 WITH Bison-exception-2.2",
+    "LicenseRef-a OR LicenseRef-a", "()", "( )", "MIT WITH ()",
+  ]
+}
+
+///|
+fn license_pool() -> Array[Char] {
+  [
+    '(', ')', ' ', '+', '-', '.', ':', 'A', 'a', 'M', 'T', 'R', 'O', 'D', 'N', 'W',
+    'H', 'L', 'e', 'f', 's', 'c', 'n', '0', '9', ',',
+  ]
+}
+
+///|
+fn mutate_license(rng : Rng, source : String) -> String {
+  let pool = license_pool()
+  let chars = source.to_array()
+  let at = rng.below(chars.length())
+  let replacement = rng.pick_char(pool)
+  match rng.below(3) {
+    0 => {
+      let out = chars.copy()
+      out[at] = replacement
+      String::from_array(out)
+    }
+    1 => {
+      let out : Array[Char] = []
+      for i = 0; i < chars.length(); i = i + 1 {
+        if i != at {
+          out.push(chars[i])
+        }
+      }
+      String::from_array(out)
+    }
+    _ => {
+      let out : Array[Char] = []
+      for i = 0; i < chars.length(); i = i + 1 {
+        out.push(chars[i])
+        if i == at {
+          out.push(replacement)
+        }
+      }
+      String::from_array(out)
+    }
+  }
+}
+
+///|
+fn license_opt(raw : String) -> String? {
+  Some(@pyversion.canonicalize_license_expression(raw)) catch {
+    _ => None
+  }
+}
+
+///|
+/// Emit one license expression record.
+fn emit_license(source : String, sb : StringBuilder, raw : String) -> Unit {
+  sb.write_string("\{source}\tlicense\t\{escape_record(raw)}\t")
+  match license_opt(raw) {
+    Some(canonical) => sb.write_string("ok\t\{escape_record(canonical)}\n")
+    None => sb.write_string("bad\t-\n")
+  }
+}
+
+///|
 /// Emit one TOML conformance record.
 ///
 /// A rejected document reports only the rejection; an accepted one also reports
@@ -1394,6 +1493,40 @@ fn main {
   // 8. TOML 1.0 documents, checked against the reference reader's verdict.
   for entry in @fixtures.toml_cases {
     emit_toml("curated", sb, entry.0, entry.1, entry.2)
+  }
+  // 9. PEP 639 license expressions.
+  let curated_license_inputs = curated_licenses()
+  for raw in curated_license_inputs {
+    emit_license("curated", sb, raw)
+  }
+  let mutated_licenses : Array[String] = []
+  for i = 0; i < 4000; i = i + 1 {
+    if i % 2 == 0 {
+      let base = curated_license_inputs[rng.below(
+          curated_license_inputs.length(),
+        )]
+      if base.length() == 0 {
+        mutated_licenses.push(
+          String::from_array([rng.pick_char(license_pool())]),
+        )
+      } else {
+        mutated_licenses.push(mutate_license(rng, base))
+      }
+    } else {
+      // joining two expressions is a cheap way to produce long, usually broken
+      // token sequences that a character mutation rarely reaches
+      let left = curated_license_inputs[rng.below(
+          curated_license_inputs.length(),
+        )]
+      let right = curated_license_inputs[rng.below(
+          curated_license_inputs.length(),
+        )]
+      let joiner = if rng.below(2) == 0 { " OR " } else { " AND " }
+      mutated_licenses.push(left + joiner + right)
+    }
+  }
+  for raw in mutated_licenses {
+    emit_license("mutated", sb, raw)
   }
   println(sb.to_string())
 }

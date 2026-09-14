@@ -44,6 +44,10 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from packaging import __version__ as ORACLE_VERSION
+from packaging.licenses import (
+    InvalidLicenseExpression,
+    canonicalize_license_expression as reference_canonicalize_license,
+)
 from packaging.markers import InvalidMarker, Marker
 from packaging.markers import UndefinedComparison as MarkerUndefinedComparison
 from packaging.markers import UndefinedEnvironmentName as MarkerUndefinedEnvironmentName
@@ -81,6 +85,7 @@ ARITY = {
     "marker_env": 4,
     "marker_eval": 6,
     "toml": 6,
+    "license": 5,
 }
 
 EXIT_OK = 0
@@ -455,6 +460,29 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
             )
         return None
 
+    if kind == "license":
+        raw, status, canonical = parts[2], parts[3], parts[4]
+        try:
+            expected = reference_canonicalize_license(raw)
+        except InvalidLicenseExpression:
+            if status != "bad":
+                return (
+                    f"canonicalize_license_expression({raw!r}): moonbit accepts, "
+                    "packaging rejects"
+                )
+            return None
+        if status != "ok":
+            return (
+                f"canonicalize_license_expression({raw!r}): moonbit rejects, "
+                f"packaging returns {expected!r}"
+            )
+        if canonical != expected:
+            return (
+                f"canonicalize_license_expression({raw!r}): moonbit {canonical!r}, "
+                f"packaging {expected!r}"
+            )
+        return None
+
     if kind == "order":
         inputs_raw, sorted_raw = parts[2], parts[3]
         inputs = [oracle.version(item) for item in inputs_raw.split("|")]
@@ -580,6 +608,8 @@ def classify_difference(oracle: "Oracle", parts: list[str]) -> str:
         return "marker-environment"
     if kind == "toml":
         return "toml-grammar"
+    if kind == "license":
+        return "license-expression"
     return {"parse": "version-grammar", "spec": "specifier-grammar"}.get(kind, "ordering")
 
 
@@ -589,6 +619,7 @@ ESCAPED_FIELDS = {
     "marker": (2, 4),
     "marker_eval": (3, 5),
     "toml": (3, 5),
+    "license": (2, 4),
 }
 
 

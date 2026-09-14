@@ -10,6 +10,7 @@ pub(all) suberror VersionError {
   InvalidRequirement(String, Int)
   InvalidMarker(String, Int)
   InvalidToml(String, Int)
+  InvalidLicense(String, Int)
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -22,6 +23,7 @@ pub fn VersionError::diagnostic(self : VersionError) -> String {
     InvalidRequirement(code, pos) => "\{code} at \{pos}"
     InvalidMarker(code, pos) => "\{code} at \{pos}"
     InvalidToml(code, pos) => "\{code} at \{pos}"
+    InvalidLicense(code, pos) => "\{code} at \{pos}"
   }
 }
 
