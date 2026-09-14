@@ -1,5 +1,67 @@
 # Changelog
 
+## Unreleased — M8 (continued): PEP 751 differential corpus, per-value metadata records
+
+### Added
+
+- `tools/fetch_pylock_corpus.py` (1523 lines): the differential corpus for PEP 751,
+  written as a second reading of the specification. `packaging` has no
+  `pylock.toml` reader, so this is deliberately *our* reading rather than an
+  external oracle, and the module says so; what it does provide is a verdict per
+  document plus a projection of every member, dependency and file record, written
+  down once and imported by the harness so the two sides cannot drift apart.
+- `pylock_cases/` (105 documents) and a `pylock` record kind: 24 curated accepted
+  documents (the PEP's own example verbatim among them), 42 curated rejected ones
+  one rule each, 32 single-edit mutations, 7 declared divergences, and 95 lock
+  files derived from the real PEP 691 responses already in `index_corpus.mbt` —
+  the file records' names, URLs, sha256s, sizes and upload times are those
+  responses' own. 200 records, 0 mismatches.
+- A `pylock_divergence` record kind, so the declared divergences travel with the
+  corpus and are asserted in both directions rather than tolerated.
+- A `meta_values` record kind (915 records): name, version, keywords,
+  `provides-extra`, `requires-python`, the `Requires-Dist` count and summary
+  presence, compared one value at a time against `packaging`. The existing `meta`
+  record compares the verdict and the round trip, which cannot catch a wrong
+  *value*: `packaging` strips and normalizes on the way in, so a spelling this
+  library got wrong is normalized away by the very step meant to check it. A
+  list-valued field also carries a count record, so a short list is a difference
+  rather than a record that is simply absent.
+- Six mutations in `tools/mutation_probe.py` (31 total now): four for the lock
+  file — `lock-version` tolerance, source exclusivity, the fixed file-record
+  order, the URL-derived filename — and two for the metadata rules below. The
+  `Keywords` mutation is detected *only* through the new `meta_values` records.
+
+### Fixed
+
+- `Name` may not end in an underscore. `is_valid_name` ended with
+  `is_ascii_alphanumeric(c) || c == "_"`, so `Name: demo_`, `d_` and `1_` were
+  accepted where `packaging` reports `InvalidMetadata(field "name")`. An
+  underscore is legal *inside* a name, which is what makes this easy to get wrong.
+- `Provides-Extra` is validated by the same predicate and had the same hole.
+- `Keywords` parts are stripped with Python's `str.strip()`, not with RFC 5322's
+  WSP. Trimming with space and tab left the vertical tab and the form feed inside a
+  part, so `Keywords: a,<VT>b` yielded `["a", "<VT>b"]` where `packaging` yields
+  `["a", "b"]`. `strip_python_space` implements the set `str.strip()` uses.
+- The differential protocol escapes every control character now. The emitter
+  escaped backslash, tab, LF and CR only, so a raw vertical tab or form feed — a
+  record separator to anything reading the corpus by lines, and a *line break* to
+  the MoonBit lexer — split the record in half. Without this the new `Keywords`
+  cases could not be expressed at all, which is how the hole was found. Both
+  fixture generators escape the whole class as well when they write a document as
+  a literal, instead of only the characters with a short spelling.
+
+### Changed
+
+- `examples/metadata-check` reads a real `pylock.toml` instead of a stand-in table
+  of name/version pairs, parsing it with `Pylock::parse`, and reports how many
+  locked entries apply to the target and how many were locked for another
+  platform. Output is unchanged apart from the two new header lines, and still
+  byte-identical on all four backends (md5 `2cedc437f5b3`).
+- The corpus grew from 121 381 to **122 507** records, still 0 mismatches against
+  `packaging` 26.3, and the drift matrix is unchanged (24.2: 4474, 25.0: 2736,
+  26.0: 826, 26.3: 0).
+- Library source is 8644 lines, tests 6389 lines (251 blocks, all four backends).
+
 ## Unreleased — M5: PEP 639 license expressions
 
 ### Added
@@ -80,13 +142,17 @@
 - `pylock_test.mbt` (1323 lines): 32 blocks, 251 blocks per backend now. The
   example PEP 751 prints is parsed byte for byte, including its `[tool]` table and
   `[[packages.attestation-identities]]` entries, which this reader ignores.
-- Five documented divergences from the specification, each pinned by a block:
-  `created-by` may be absent and an empty value counts as absent; a redundant
-  `version` next to a source tree is accepted (the specification's MUST NOT is a
-  locker-side rule); a file record may omit `hashes` (the digest is then simply
-  unknown); `upload-time` is recorded verbatim rather than normalized to UTC; and
-  a `lock-version` other than `1.0` is rejected outright, where the specification
-  would have the reader warn.
+- Seven documented divergences from the specification, each pinned by a block and
+  registered in `pylock_cases/divergences.txt`: `created-by` may be absent and an
+  empty value counts as absent; a redundant `version` next to a source tree is
+  accepted (the specification's MUST NOT is a locker-side rule); a file record may
+  omit `hashes` (the digest is then simply unknown); `upload-time` is recorded
+  verbatim rather than normalized to UTC; a `lock-version` other than `1.0` is
+  rejected outright, where the specification would have the reader warn; and
+  `packages.version` is required on an entry that names files, where the
+  specification makes it a SHOULD. The last one was found while writing the
+  corpus -- the generator read the specification's `Required?` line as "optional"
+  and the harness reported the difference, which is the corpus doing its job.
 
 ### Measured, not assumed
 

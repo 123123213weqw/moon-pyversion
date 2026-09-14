@@ -104,8 +104,8 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 | `licenses.mbt` `[已有]` | `canonicalize_license_expression`、`is_valid_license_expression`、`canonicalize_license_file` | 场景 1 | 460 |
 | `metadata.mbt` `[已有]` | `Metadata::parse/requirements/requires_python/extras/is_compatible/diagnostics/to_string` | 场景 1（端到端） | 1336 |
 
-库源码合计 **8602 行**（不含测试与示例），测试 **6345 行**（`*_test.mbt`，
-251 个测试块 × 四后端），示例 2178（`diff`）+ 280（`metadata-check`）+ 570
+库源码合计 **8644 行**（不含测试与示例），测试 **6389 行**（`*_test.mbt`，
+251 个测试块 × 四后端），示例 2550（`diff`）+ 372（`metadata-check`）+ 570
 （`resolve`）+ 180（`basic`/`bench`）行，工具链 3677 行 Python。
 
 **`utils.mbt` 设计要点** `[已完成，见下]`（已用 packaging 26.3 核实）：
@@ -173,7 +173,7 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
   两类记录，共 **11 104 条**，其中真实文件名的 `pypi/file` 记录 900 条；
 - 对照 `packaging 26.3` **0 不一致**；
 - `tools/mutation_probe.py` 对故意注入的缺陷全部检出（M1 阶段为 7 处，
-  现为 25 处），证明语料对这部分行为有覆盖。
+  现为 31 处），证明语料对这部分行为有覆盖。
 
 `utils_test.mbt` 在开发中抓到一处真实缺陷：标签排序用了 MoonBit 默认的
 `String` 比较（先比长度），与 `packaging` 的 `sorted()`（按码点）不一致 ——
@@ -245,7 +245,7 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 - `Metadata::to_string` 是规范重排，`to_string(parse(x))` 是不动点，因此可以用
   "重新解析后取值一致"来做对照；
 - **验收证据是真实数据**：239 份真实 `METADATA`（真实 wheel 的 PEP 658
-  `.metadata` 边上文件，`fixtures/metadata_cache/` 是原始缓存）+ 42 条手工规则
+  `.metadata` 边上文件，`fixtures/metadata_cache/` 是原始缓存）+ 46 条手工规则
   样例，逐条对 `packaging.metadata.Metadata.from_email(validate=True)` 回放，
   **0 不一致**；另有 7 条声明分歧登记在 `metadata_cases/divergences.txt`，
   由 harness 双向断言。
@@ -278,18 +278,18 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 ### `[已完成]` 语料扩展与"有牙"验收
 
-- 语料从 87 916 条扩到 **121 381 条 / 121 382 行**：来源分布 curated 19 296、
+- 语料从 87 916 条扩到 **122 507 条 / 122 508 行**：来源分布 curated 19 296、
   curated_bad 12、generated 20 652、mutated 34 397、pypi 46 927、pypi_index 97；
   四后端逐字节一致。
-- `tools/mutation_probe.py` 从 7 处扩到 **25 处**故意缺陷（覆盖 M0–M7），
-  25/25 全部被语料检出；探针失败即实验失败。
+- `tools/mutation_probe.py` 从 7 处扩到 **31 处**故意缺陷（覆盖 M0–M8），
+  31/31 全部被语料检出；探针失败即实验失败。
 - 多 oracle 矩阵（24.2 / 25.0 / 26.0 / 26.3）按原因分类上游行为变更，
   固定版本 26.3 仍为 **0 差异**。
 
 ## 技术路线
 
 `[已有]` 版本解析用按 UTF-16 偏移移动的 ASCII 游标，不引入正则；整数组件经
-`BigInt`；比较按键序。四后端 CI。121 381 条语料差分对照 `packaging 26.3`，另有 25 处故意缺陷的变异探针证明对照有效。
+`BigInt`；比较按键序。四后端 CI。122 507 条语料差分对照 `packaging 26.3`，另有 31 处故意缺陷的变异探针证明对照有效。
 
 `[计划]` 新增模块沿用同一套技术路线与**同一套验收方法**，不新造轮子：
 
@@ -317,15 +317,17 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 ## 交付成果
 
-`[已有]` 源码 **8602 行**（不含测试）、测试 **6345 行**（251 个测试块 × 四后端
-全通过）、`examples/basic` `examples/diff`（2178 行确定性发射器）
-`examples/bench`、`tools/` 七个脚本（2829 行 Python）、`fixtures/` 真实语料
-（97 个 PyPI 包 + 83 个 TOML 文档 + 281 份核心元数据）、四后端 CI + 独立 differential 作业。
+`[已有]` 源码 **8644 行**（不含测试）、测试 **6389 行**（251 个测试块 × 四后端
+全通过）、`examples/basic` `examples/diff`（2550 行确定性发射器）
+`examples/bench`、`tools/` 九个脚本（5447 行 Python）、`fixtures/` 真实语料
+（97 个 PyPI 包 + 83 个 TOML 文档 + 285 份核心元数据 + 105 份锁文件）、四后端
+CI + 独立 differential 作业。
 
 `[计划]` 还差：
 
-- `[已完成]` `examples/metadata-check`：读真实 `METADATA` + 锁表 + 目标环境，
-  输出越界项、不适用项与无法解析项清单——场景 1 的可运行证据，四后端输出一致，
+- `[已完成]` `examples/metadata-check`：读真实 `METADATA` + 一份 `pylock.toml`
+  （`Pylock::parse`）+ 目标环境，输出越界项、不适用项与无法解析项清单，并报告
+  锁文件里有多少条是为另一个目标锁定的——场景 1 的可运行证据，四后端输出一致，
   CI 已纳入；
 - `[已完成]` `examples/resolve`（570 行）：一份 PEP 691 索引响应 + 目标标签表 +
   一个 wheelhouse 目录，输出 yank 策略、每个被拒文件的首条失败规则、候选排序与
@@ -336,6 +338,16 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
   `created-by` / `[[packages]]` 全部成员的必填性、类型与取值校验，每包
   `marker` 与 `requires-python` 的应用判断，以及 20 余条稳定的
   `InvalidPylock(code, ordinal)` 错误码。PEP 751 自己打印的示例文档逐字节可读。
+  差分语料同一轮补齐：**200 条 `pylock` 记录**（24 条手工接受 + 42 条手工拒绝 +
+  32 条单字符变异 + 7 条声明分歧 + 95 份由真实索引响应派生的锁文件），由
+  `tools/fetch_pylock_corpus.py` 里按规范另写的第二份读法给出裁决与投影。
+  PEP 751 **没有**现成的 Python 实现可对照，这一点写在
+  `docs/experiment-results.md` 6.9 里，不当作与 `packaging` 同级的证据；
+- `[已完成]` `meta_values` 记录（915 条）：核心元数据的**逐值**比对。原先的
+  `meta` 记录只比对裁决与重排往返，问不出"值对不对"——参考实现读入时就去空白、
+  规范化名称，库写错的拼写恰好被用来检查它的那一步抹平。M8 回放语料查出的三处
+  元数据缺陷（`Name` 可下划线结尾、`Provides-Extra` 同上、`Keywords` 分段未按
+  Python 去空白）就是这样一条 `meta` 记录都看不出，只能逐值比出来。
 
 ## 明确不做的范围
 

@@ -22,13 +22,15 @@ oracle 只在测试期运行，不出现在 MoonBit 库的依赖里（`moon.mod`
 | `generated` | 4000 个版本、700 条约束 | 按 PEP 440 文法随机组合生成，覆盖 curated 没想到的组合 |
 | `mutated` | 3000 个版本、1244 条约束 | 对上述合法串做单字符替换/删除/插入，外加固定垃圾串，用来压拒绝行为 |
 | `pypi` | 3000 个真实版本、500 条真实约束、600 条真实需求行、900 个真实文件名 | 来自 PyPI JSON API（`releases`、`Requires-Dist`、`Requires-Python`、`urls[].filename`），见 `fixtures/` |
+| `pypi`（元数据/索引） | 239 份真实 `METADATA`、97 份真实 PEP 691 索引响应 | 真实 wheel 的 PEP 658 边上文件；公开索引的 JSON 响应，见 `fixtures/metadata_corpus.mbt`、`fixtures/index_corpus.mbt` |
+| `curated`（文档类） | 83 个 TOML 文档、46 条元数据规则样例、21 个索引文档、105 份锁文件 | 规范本身：TOML 1.0、核心元数据、PEP 691、PEP 751 |
 
 `pypi` 语料由 `tools/fetch_pypi_corpus.py` 生成：抓取 97 个知名包的元数据，
 每包最多取 60 个版本（轮转、按字典序），去重排序后写成
 `fixtures/pypi_corpus.mbt`。抓取脚本同时写出 `fixtures/pypi_corpus.json`
 记录来源与每个包的抓取结果，便于核对。
 
-## 记录类型（六种）
+## 记录类型（23 种）
 
 | 记录 | 语义 |
 | --- | --- |
@@ -40,6 +42,21 @@ oracle 只在测试期运行，不出现在 MoonBit 库的依赖里（`moon.mod`
 | `order` | 对整批候选排序是否真的升序 |
 | `canon` | 名称规范化，以及版本键/显示两种形式 |
 | `file` | 分发文件名：wheel / sdist / 其他扩展名，各自解析结果 |
+| `req` | PEP 508 需求行：名称、extras、约束、URL、marker |
+| `marker` | 标记的接受与规范渲染 |
+| `marker_env` | 环境表定义（输入，不是断言） |
+| `marker_eval` | 标记在指定环境上的取值 |
+| `toml` | TOML 1.0 文档：参考读取器的裁决 + 库的规范重序列化 |
+| `license` | PEP 639 许可证表达式的规范化 |
+| `meta` | `METADATA` / `PKG-INFO`：裁决、错误码、规范重渲染 |
+| `meta_values` | 同一份文档的**逐值**比对（名称、版本、Keywords 分段、Provides-Extra、Requires-Python、Requires-Dist 条数、Summary 有无） |
+| `meta_divergence` | 声明分歧（输入，不是断言） |
+| `index` | PEP 691 文档：裁决 + 投影 |
+| `index_dir` | 目录扫描的分类与排序 |
+| `index_divergence` | 声明分歧（输入，不是断言） |
+| `resolve` | 候选选择与排序、每个被拒文件的**首条**失败规则 |
+| `pylock` | PEP 751 文档：裁决 + 投影（成员、文件记录、适用性） |
+| `pylock_divergence` | 声明分歧（输入，不是断言） |
 
 预发布模式 `auto`/`any`/`none` 分别对应 `packaging` 的 `None`/`True`/`False`，
 这是库对外暴露的 `prereleases? : Bool?` 参数。
@@ -83,8 +100,16 @@ tools/mutation_probe.py ─► 注入故意缺陷，断言上面的对照能报�
 
 ## 局限
 
-- oracle 是同一门语言的另一个实现，不是规范本身；两者同时误解规范的可能
-  性无法排除。
+- oracle 是另一份实现，不是规范本身；两者同时误解规范的可能性无法排除。
+- **不是所有记录都有外部 oracle**。`packaging` 覆盖版本、约束、文件名、
+  需求行、标记、许可证与核心元数据；TOML 的裁决来自 `tomli`；而
+  PEP 691 的索引文档、离线目录扫描、候选选择与 PEP 751 锁文件**没有**现成的
+  Python 参考实现，这几类记录对照的是**本仓库按规范另写的一份实现**（分别写在
+  `tools/fetch_index_corpus.py` 与 `tools/fetch_pylock_corpus.py` 里，PEP 751 的
+  那份连"对照物是别人写的"都做不到，见 experiment-results.md 6.9）。它们能
+  抓出"库与规范不一致"，抓不出"两份实现同时读错同一段规范"。这一点写在每类记录
+  的说明里，不当作等价于 0 不一致的强证据。
 - 语料是抽样的：PyPI 上的版本与约束远多于此处收录的量。
-- 只覆盖版本与约束本身；不覆盖包名规范化、环境标记、平台标签、依赖求解。
+- 平台标签只做**匹配与排序**，不做计算（标签表由调用方按 `sys_tags()` 顺序传入，
+  库不探测宿主平台）；依赖求解、下载与安装不做。
 - 计时（`examples/bench`）是单机单后端的墙钟数字，不是跨语言基准。
