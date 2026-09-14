@@ -107,7 +107,7 @@ fn parse_specifier(text : String) -> Specifier raise VersionError {
       has_arbitrary_separator(version_part) {
       raise VersionError::InvalidSpecifier("INVALID_ARBITRARY_VERSION", start)
     }
-    return { op, raw_version: version_part, version: None, wildcard: false }
+    return { op, raw_version: version_part, version: None, wildcard: false, }
   }
   if version_part.is_empty() {
     raise VersionError::InvalidSpecifier("EMPTY_VERSION", start)
@@ -140,7 +140,7 @@ fn parse_specifier(text : String) -> Specifier raise VersionError {
       "COMPATIBLE_RELEASE_NEEDS_TWO_SEGMENTS", start,
     )
   }
-  { op, raw_version: version_part, version: Some(v), wildcard }
+  { op, raw_version: version_part, version: Some(v), wildcard, }
 }
 
 ///|
@@ -199,7 +199,7 @@ pub fn SpecifierSet::parse(input : String) -> SpecifierSet raise VersionError {
   for i = 0; i < parts.length(); i = i + 1 {
     specs.push(parse_specifier(parts[i]))
   }
-  { specs, original: input }
+  { specs, original: input, }
 }
 
 ///|
@@ -269,8 +269,8 @@ fn compatible_contains(v : Version, spec_v : Version) -> Bool {
 
 ///|
 fn compare_without_local(left : Version, right : Version) -> Int {
-  let l = { ..left, local_segments: [] }
-  let r = { ..right, local_segments: [] }
+  let l = { ..left, local_segments: [], }
+  let r = { ..right, local_segments: [], }
   l.compare(r)
 }
 

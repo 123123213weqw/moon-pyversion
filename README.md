@@ -176,6 +176,10 @@ CPython `packaging 26.3`，**0 不一致**。TOML 记录另外对照参考实现
 另外 `tools/mutation_probe.py` 会向库里注入 16 处**故意缺陷**并断言对照能报错，
 16/16 全部检出 —— 即"0 不一致"不是因为对照失效。
 
+CI 在 wasm / wasm-gc / js / native 四后端执行 `fmt/check/build/test/run`，
+differential 作业固定 `packaging==26.3` 与 `tomli==2.4.1`（TOML fixture 的
+裁决来自后者），并断言读取器版本，避免对照工具随环境漂移。
+
 实验设计、数据和查出的真实缺陷见 [docs/experiment.md](docs/experiment.md) 与
 [docs/experiment-results.md](docs/experiment-results.md)。
 

@@ -600,7 +600,7 @@ fn MarkerParser::parse_clause(
   self.skip_space()
   let rhs = self.read_operand()
   self.skip_space()
-  { lhs, op, rhs }
+  { lhs, op, rhs, }
 }
 
 ///|
@@ -648,7 +648,7 @@ fn MarkerParser::parse_marker(self : MarkerParser) -> Marker raise VersionError 
 /// Parse a complete marker expression. Trailing input is an error, so
 /// `python_version == "3.8" extra` does not parse.
 pub fn Marker::parse(input : String) -> Marker raise VersionError {
-  let parser : MarkerParser = { chars: input.to_array(), pos: 0 }
+  let parser : MarkerParser = { chars: input.to_array(), pos: 0, }
   let marker = parser.parse_marker()
   parser.skip_space()
   if !parser.at_end() {
@@ -782,7 +782,7 @@ pub(all) struct MarkerEnvironment {
 
 ///|
 pub fn MarkerEnvironment::new() -> MarkerEnvironment {
-  { values: Map([]), names: Map([]) }
+  { values: Map([]), names: Map([]), }
 }
 
 ///|

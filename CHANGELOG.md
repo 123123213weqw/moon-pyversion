@@ -53,6 +53,21 @@
 
 ## Unreleased — tooling
 
+### Fixed
+
+- `tools/diff_packaging.py` picked up whichever TOML reader the host had, so CI
+  (Python 3.13, stdlib `tomllib`, strict TOML 1.0) judged the fixture's four
+  documented leniencies against a reader that does not implement them and
+  reported three false mismatches. The harness now prefers `tomli` — the reader
+  the fixture was generated with — falls back to `tomllib`, states which one it
+  used in the report and on stdout, and treats "both reject" as agreement
+  regardless of the reader. CI pins `tomli==2.4.1` and asserts the version.
+- The build toolchain and CI disagreed about formatting: `moon` 0.1.20260713
+  accepted `{ lhs, op, rhs }` where `moon` 0.1.20260904 (the release CI installs)
+  requires `{ lhs, op, rhs, }`, so `moon fmt --check` failed there. The sources
+  are formatted with the newer release and every claim in the docs is re-checked
+  against it; the trailing-comma rule is the only difference.
+
 ### Added
 
 - `tools/mutation_probe.py` grew from 7 to 16 injected defects, covering M2–M5:

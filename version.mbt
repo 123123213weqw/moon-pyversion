@@ -224,7 +224,7 @@ fn parse_version(input : String) -> Version raise VersionError {
   if source.is_empty() {
     raise VersionError::InvalidVersion("EMPTY_VERSION", 0)
   }
-  let cursor = { source, pos: 0 }
+  let cursor = { source, pos: 0, }
 
   if cursor.peek() == 118 || cursor.peek() == 86 {
     cursor.advance()
@@ -315,7 +315,7 @@ fn parse_version(input : String) -> Version raise VersionError {
       } else {
         raw_segment
       }
-      local_segments.push({ text, numeric })
+      local_segments.push({ text, numeric, })
       if is_separator(cursor.peek()) {
         cursor.advance()
         if cursor.peek() == -1 || !is_alnum(cursor.peek()) {

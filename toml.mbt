@@ -53,12 +53,12 @@ priv enum MNode {
 
 ///|
 fn new_table() -> MTable {
-  { entries: [] }
+  { entries: [], }
 }
 
 ///|
 fn new_entry(node : MNode) -> MEntry {
-  { node, explicit: false }
+  { node, explicit: false, }
 }
 
 ///|
@@ -163,7 +163,7 @@ priv struct Parser {
 ///|
 fn new_parser(src : String) -> Parser {
   let root = new_table()
-  { src, pos: 0, root, current_path: [], pending: [] }
+  { src, pos: 0, root, current_path: [], pending: [], }
 }
 
 ///|

@@ -136,7 +136,7 @@ pub fn canonicalize_version(
   match parse_version_opt(version) {
     Some(v) =>
       if strip_trailing_zero {
-        Version::to_string({ ..v, release: trim_release(v.release) })
+        Version::to_string({ ..v, release: trim_release(v.release), })
       } else {
         Version::to_string(v)
       }
@@ -243,7 +243,7 @@ pub fn parse_wheel_filename(
     None
   }
   let tags = parse_tag_set(parts[parts.length() - 1])
-  { name, version, build, tags }
+  { name, version, build, tags, }
 }
 
 ///|
@@ -364,5 +364,5 @@ pub fn parse_sdist_filename(
     Some(v) => v
     None => raise VersionError::InvalidFilename("SDIST_VERSION", 0)
   }
-  { name, version }
+  { name, version, }
 }

@@ -31,7 +31,10 @@ jobs:
   differential:
     # The library is written against packaging 26.3, so that release is the
     # oracle that must agree. The corpus emitter is deterministic, so the same
-    # inputs are used here and in the multi-oracle matrix below.
+    # inputs are used here and in the multi-oracle matrix below. `tomli` is
+    # pinned because the TOML verdicts in the fixture come from it: it is the
+    # reader that implements the three relaxations the corpus records as
+    # documented divergences, and the harness prefers it over `tomllib`.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,9 +45,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - run: python -m pip install packaging==26.3
+      - run: python -m pip install packaging==26.3 tomli==2.4.1
       - name: Every backend must emit the same corpus
         run: python -B tools/target_parity.py --json parity.json
+      - name: The TOML reference reader must be the one the fixture came from
+        run: python -c "import tomli; assert tomli.__version__ == '2.4.1', tomli.__version__; print('tomli', tomli.__version__)"
       - name: Differential comparison against packaging 26.3
         run: python -B tools/diff_packaging.py --oracle-version 26.3 --json report-26.3.json
       - name: Corpus must be byte identical across runs

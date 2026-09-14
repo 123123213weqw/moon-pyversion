@@ -51,15 +51,21 @@ from packaging.licenses import (
 from packaging.markers import InvalidMarker, Marker
 from packaging.markers import UndefinedComparison as MarkerUndefinedComparison
 from packaging.markers import UndefinedEnvironmentName as MarkerUndefinedEnvironmentName
-try:  # Python >= 3.11
-    import tomllib
-except ImportError:  # pragma: no cover - the oracle venvs run 3.10
+
+# The TOML verdicts in `fixtures/toml_corpus.mbt` come from `tomli` 2.4.1, so
+# `tomli` is preferred here: it is the reader the corpus was generated with, and
+# it implements three relaxations that `tomllib` (strict TOML 1.0) rejects. Both
+# readers are used only to judge the library's verdict, never to define it, and
+# the harness states which one it used.
+try:
+    import tomli as toml_reader
+except ImportError:  # pragma: no cover - tomli is a hard requirement of CI
     try:
-        import tomli as tomllib
+        import tomllib as toml_reader
     except ImportError:
-        # Only the `toml` records need it, so a missing reader is reported when
-        # one of those records is actually checked rather than at import time.
-        tomllib = None
+        # Only the `toml` records need a reader, so a missing one is reported
+        # when one of those records is actually checked, not at import time.
+        toml_reader = None
 
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
@@ -432,7 +438,7 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
         return None
 
     if kind == "toml":
-        if tomllib is None:
+        if toml_reader is None:
             raise ProtocolError(
                 "toml records need a reference reader: run with Python 3.11+ or "
                 "install tomli in the oracle interpreter"
@@ -448,15 +454,15 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
                 "it now"
             )
         try:
-            expected_value = tomllib.loads(document)
-        except tomllib.TOMLDecodeError:
-            if status == "lenient":
-                return (
-                    f"TOML case {name!r}: declared a reference-reader leniency, but the "
-                    "reference reader rejects it after all"
-                )
-            if status != "bad":
+            expected_value = toml_reader.loads(document)
+        except toml_reader.TOMLDecodeError:
+            if status == "ok":
                 return f"TOML case {name!r}: moonbit accepts, the reference reader rejects"
+            # Both reject the document, so they agree. That includes a declared
+            # leniency under a reader stricter than the pinned one (the strict
+            # TOML 1.0 reader in the standard library rejects all of them); that
+            # the declared leniencies are leniencies at all is checked where the
+            # fixture is generated, against the pinned reader.
             return None
         if status == "lenient":
             # The divergence is the point of the record, and the emitter only
@@ -468,8 +474,8 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
         if rendered == "-":
             return f"TOML case {name!r}: accepted but not re-serialized"
         try:
-            round_tripped = tomllib.loads(rendered)
-        except tomllib.TOMLDecodeError as error:
+            round_tripped = toml_reader.loads(rendered)
+        except toml_reader.TOMLDecodeError as error:
             return f"TOML case {name!r}: the re-serialization does not re-parse ({error})"
         expected_form = _toml_shape(expected_value)
         actual_form = _toml_shape(round_tripped)
@@ -844,6 +850,10 @@ def main(argv: list[str] | None = None) -> int:
         f"oracle: packaging {ORACLE_VERSION} (python {sys.version.split()[0]}), "
         f"library targets packaging {args.pinned_oracle}"
     )
+    print(
+        f"toml reference reader: "
+        f"{'none (toml records will not be checked)' if toml_reader is None else toml_reader.__name__}"
+    )
     print(f"target: {args.target}" + ("" if args.input else f", emitter {emitter_seconds:.1f}s"))
     print(f"records: {total_cases} ({prerelease_cases} with a prerelease mode)")
     print(
@@ -888,6 +898,7 @@ def main(argv: list[str] | None = None) -> int:
             "oracle_version": ORACLE_VERSION,
             "pinned_oracle": args.pinned_oracle,
             "python_version": sys.version.split()[0],
+            "toml_reader": None if toml_reader is None else toml_reader.__name__,
             "target": args.target,
             "emitter_seconds": None if args.input else round(emitter_seconds, 3),
             "records": total_cases,

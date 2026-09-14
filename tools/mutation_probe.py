@@ -56,7 +56,7 @@ MUTATIONS = [
     {
         "name": "version-key-keeps-trailing-zeros",
         "file": "utils.mbt",
-        "old": "        Version::to_string({ ..v, release: trim_release(v.release) })",
+        "old": "        Version::to_string({ ..v, release: trim_release(v.release), })",
         "new": "        Version::to_string(v)",
         "covers": "canonicalize_version strips trailing release zeros",
     },
@@ -245,7 +245,10 @@ def main(argv: list[str] | None = None) -> int:
             target = root / mutation["file"]
             original = target.read_text(encoding="utf-8")
             if mutation["old"] not in original:
-                print(f"{mutation['name']:<44} {'-':>10}  SKIPPED (anchor not found)")
+                print(
+                    f"{mutation['name']:<44} {'-':>10}  SKIPPED (anchor not found: "
+                    "`moon fmt` may have rewritten it)"
+                )
                 undetected.append(mutation["name"])
                 continue
             target.write_text(original.replace(mutation["old"], mutation["new"], 1), encoding="utf-8")
