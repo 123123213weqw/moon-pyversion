@@ -180,7 +180,7 @@ restrictions"）。
 | `moon check/build/test --deny-warn`（wasm / wasm-gc / js / native） | 全部通过，每个后端 **251 个测试块全部通过**（合计 1004） |
 | `moon run examples/basic`（四后端） | 通过 |
 | `moon run examples/diff`（四后端） | 121 382 行语料，四端字节一致 |
-| `moon run examples/metadata-check`（四后端） | 四端字节一致（md5 `1834d5459527`） |
+| `moon run examples/metadata-check`（四后端） | 四端字节一致（md5 `2cedc437f5b3`） |
 | `moon run examples/resolve`（四后端） | 四端字节一致（md5 `e58c1ff44ab6`） |
 
 ## 6.5 各阶段新增能力的覆盖
@@ -271,10 +271,14 @@ TOML 的对照方式与其他记录不同，值得单独说明：参考实现给
 ## 6.7 场景 1 的端到端输出
 
 `examples/metadata-check` 把上面这些能力串成一个可运行产物：读真实 `METADATA`
-（取自语料），对锁表与固定环境逐条判定，输出 `ok` / `OUT OF RANGE` /
-`not applicable` / `not locked` / `UNPARSABLE` 与汇总。四份真实文档各自的用法：
+（取自语料）和一份 `pylock.toml`（由库自己的 `Pylock::parse` 解析，M8），
+对锁定版本与固定环境逐条判定，输出 `ok` / `OUT OF RANGE` / `not applicable` /
+`not locked` / `UNPARSABLE` 与汇总。四份真实文档各自的用法：
 
 ```
+lock file: pylock.toml, lock-version 1.0, 10 entries, 9 for this target, 1 for another; target: linux, CPython 3.11.9
+   lock targets: sys_platform == 'linux'; extras the lock covers: 1, dependency groups: 2
+
 == flask-0.12.5
    requires-python: (none)
    note: deprecated: Home-page is superseded by Project-URL
@@ -298,7 +302,9 @@ TOML 的对照方式与其他记录不同，值得单独说明：参考实现给
 `werkzeug<1.0,>=0.7`，而锁里是 2.0.0）；`requests-2.24.0` 声明
 `Metadata-Version: 2.0`，这不是核心元数据规范定义过的版本，库与参考实现都拒绝
 ——真实数据上跑出了失败路径，而不是只跑通路径。四个后端的输出逐字节一致
-（四后端 md5 一致：`1834d5459527`）。
+（四后端 md5 一致：`2cedc437f5b3`）。锁文件里 `colorama` 带
+`marker = "sys_platform == 'win32'"`，因此它被算作"为另一个目标锁定"而不是
+"缺失依赖"——这条区分由 PEP 751 的 `marker` 承担，也是锁文件解析必须进库的原因。
 
 输入是编译进去的：库只依赖 `moonbitlang/core`，core 没有文件系统包，示例因此
 不从磁盘读文件（把常量换成文件或网络响应即可）。这一点在示例的注释里写明，不

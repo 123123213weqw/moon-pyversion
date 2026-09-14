@@ -21,8 +21,15 @@
 /// demonstration, this example takes its documents from the `fixtures` package
 /// — the same 239 **real** `METADATA` files that the differential corpus uses,
 /// taken from the PEP 658 `.metadata` sidecars of real PyPI wheels — and a small
-/// fixed lock table. Swapping the two constants at the bottom for a file or a
+/// `pylock.toml` document written out below. Swapping the two for a file or a
 /// network response is the only change an application needs.
+///
+/// The lock file is not a stand-in table: it is parsed by this library's own
+/// `Pylock::parse` (PEP 751), so the example also shows the lock-file half of the
+/// picture — which locked projects apply to this environment at all, and which
+/// were recorded for another target. A lock written for Windows is not a broken
+/// lock on Linux; it is a lock for a different platform, and the report says so
+/// instead of calling every entry in it a conflict.
 ///
 /// Everything here is deterministic: no clock, no environment, no I/O. The
 /// output is byte identical on wasm, wasm-gc, js and native.
@@ -204,22 +211,101 @@ fn report(
 }
 
 ///|
-/// The lock table. A real tool would read `pylock.toml` (or a
-/// `requirements.txt`); this is a fixed sample so the output is reproducible,
-/// and it deliberately pins two versions that satisfy their requirement and two
-/// that do not, plus one project that is only required on another platform.
-fn lock_table() -> Array[(String, String)] {
-  [
-    ("requests", "2.31.0"),
-    ("werkzeug", "2.0.0"),
-    ("jinja2", "3.1.4"),
-    ("click", "8.1.7"),
-    ("pytest", "8.3.5"),
-    ("markupsafe", "2.1.5"),
-    ("itsdangerous", "2.2.0"),
-    ("blinker", "1.8.2"),
-    ("colorama", "0.4.6"),
+/// The lock file this report reads, as a `pylock.toml` document (PEP 751). It is
+/// written out rather than fetched so the output is reproducible; the pinned
+/// versions are the ones the report explains -- one that satisfies its
+/// requirement, one that does not, one project that is only required on another
+/// platform -- and the file records the target it was locked for through
+/// `environments` and a per-package `marker`.
+fn lock_document() -> String {
+  let lines : Array[String] = [
+    "lock-version = \"1.0\"",
+    "environments = [\"sys_platform == 'linux'\"]",
+    "extras = [\"test\"]",
+    "dependency-groups = [\"docs\", \"lint\"]",
+    "default-groups = [\"docs\"]",
+    "created-by = \"moon-pyversion metadata-check\"",
+    "",
+    "[[packages]]",
+    "name = \"requests\"",
+    "version = \"2.31.0\"",
+    "",
+    "[[packages]]",
+    "name = \"werkzeug\"",
+    "version = \"2.0.0\"",
+    "",
+    "[[packages]]",
+    "name = \"jinja2\"",
+    "version = \"3.1.4\"",
+    "",
+    "[[packages]]",
+    "name = \"click\"",
+    "version = \"8.1.7\"",
+    "",
+    "[[packages]]",
+    "name = \"pytest\"",
+    "version = \"8.3.5\"",
+    "",
+    "[[packages]]",
+    "name = \"markupsafe\"",
+    "version = \"2.1.5\"",
+    "",
+    "[[packages]]",
+    "name = \"itsdangerous\"",
+    "version = \"2.2.0\"",
+    "",
+    "[[packages]]",
+    "name = \"blinker\"",
+    "version = \"1.8.2\"",
+    "",
+    "[[packages]]",
+    "name = \"colorama\"",
+    "version = \"0.4.6\"",
+    "marker = \"sys_platform == 'win32'\"",
+    "",
+    "[[packages]]",
+    "name = \"demo-linux-only\"",
+    "version = \"1.0.0\"",
+    "marker = \"sys_platform == 'linux' and python_version >= '3.8'\"",
+    "",
   ]
+  lines.join("\n")
+}
+
+///|
+/// The locked projects that apply to `environment`, as `(normalized name,
+/// version)`, in document order, plus the number of entries the lock records for
+/// another target.
+///
+/// The document is parsed with `Pylock::parse`, and applicability is the lock's
+/// own question: an entry recorded for another platform is *not applicable*
+/// here, which is why it is not reported as a missing or conflicting
+/// requirement. An entry without a marker applies everywhere.
+fn applicable_lock(
+  document : String,
+  environment : @pyversion.MarkerEnvironment,
+) -> (Array[(String, String)], Int) {
+  let lock = @pyversion.Pylock::parse(document) catch {
+    _ => abort("the lock document this example compiles in must parse")
+  }
+  let table : Array[(String, String)] = []
+  let mut skipped = 0
+  for entry in lock.packages() {
+    let applies = entry.is_applicable(environment) catch { _ => false }
+    match entry.version {
+      Some(version) =>
+        if applies {
+          table.push((
+            @pyversion.canonicalize_name(entry.name),
+            version.to_string(),
+          ))
+        } else {
+          skipped = skipped + 1
+        }
+      None => ()
+    }
+  }
+  (table, skipped)
 }
 
 ///|
@@ -263,10 +349,19 @@ fn selected_documents() -> Array[(String, String)] {
 
 ///|
 fn main {
-  let lock = lock_table()
+  let environment = target_environment()
+  let lock_file = lock_document()
+  let (lock, for_another_target) = applicable_lock(lock_file, environment)
   let documents = selected_documents()
+  let parsed = @pyversion.Pylock::parse(lock_file) catch {
+    _ => abort("the lock document this example compiles in must parse")
+  }
   println(
-    "lock file: \{lock.length()} pinned projects; target: linux, CPython 3.11.9",
+    "lock file: pylock.toml, lock-version \{parsed.lock_version()}, \{parsed.packages().length()} entries, \{lock.length()} for this target, \{for_another_target} for another; target: linux, CPython 3.11.9",
+  )
+  let targets = parsed.environments().join(", ")
+  println(
+    "   lock targets: \{targets}; extras the lock covers: \{parsed.extras().length()}, dependency groups: \{parsed.dependency_groups().length()}",
   )
   println("")
   let mut problems = 0

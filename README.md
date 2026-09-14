@@ -200,14 +200,18 @@ differential 作业固定 `packaging==26.3` 与 `tomli==2.4.1`（TOML fixture �
 
 ## 可运行示例：依赖清单检查
 
-`examples/metadata-check` 就是场景 1 的端到端证据：读入真实 `METADATA`、一个锁
-文件和一个目标环境，输出"哪些依赖越界、哪些对本环境不适用、哪些根本没能解析"。
-它对四份**真实 PyPI `METADATA`** 会给出：
+`examples/metadata-check` 就是场景 1 的端到端证据：读入真实 `METADATA`、一份
+`pylock.toml`（由库自己的 `Pylock::parse` 读取）和一个目标环境，输出"哪些依赖
+越界、哪些对本环境不适用、哪些根本没能解析"。它对四份**真实 PyPI `METADATA`**
+会给出：
 
 ```sh
 moon run examples/metadata-check --target js
 ```
 ```text
+lock file: pylock.toml, lock-version 1.0, 10 entries, 9 for this target, 1 for another; target: linux, CPython 3.11.9
+   lock targets: sys_platform == 'linux'; extras the lock covers: 1, dependency groups: 2
+
 == flask-0.12.5
    Flask 0.12.5 (metadata 2.1)
    note: deprecated: Home-page is superseded by Project-URL
@@ -223,8 +227,13 @@ moon run examples/metadata-check --target js
 ```
 
 输入是编译进去的而不是从磁盘读的：库只依赖 `moonbitlang/core`，而 core 没有
-文件系统包，示例宁可保持四后端可移植也不为此引入依赖；文档来源与语料完全一致
-（真实 wheel 的 PEP 658 边上文件），把两个常量换成文件或网络响应即可。
+文件系统包，示例宁可保持四后端可移植也不为此引入依赖；`METADATA` 来源与语料完全
+一致（真实 wheel 的 PEP 658 边上文件）。把 `lock_document()` 与 `selected_documents()`
+换成读文件或网络响应，就是应用要写的全部代码。
+
+锁文件里那条 `colorama` 带 `marker = "sys_platform == 'win32'"`：它在 Linux 上
+**不适用**，报告把它算作"为另一个目标锁定"（`1 for another`）而不是"缺失依赖"。
+这正是场景 1 需要的区分。
 
 ## 可运行示例：从索引到可安装文件
 
