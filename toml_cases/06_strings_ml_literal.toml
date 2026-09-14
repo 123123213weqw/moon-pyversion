@@ -1,0 +1,6 @@
+a = '''
+first
+second'''
+b = '''single line'''
+c = '''has '' two quotes'''
+d = '''C:\path\x'''

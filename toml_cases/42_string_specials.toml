@@ -1,0 +1,12 @@
+empty = ""
+space = " "
+newline_via_escape = "a\nb"
+long_ml = """
+first
+second
+third
+"""
+literal_ml = '''
+has "quotes"
+and # hash
+'''

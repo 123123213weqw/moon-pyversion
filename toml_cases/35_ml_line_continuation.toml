@@ -1,0 +1,9 @@
+a = """\
+   The quick brown \
+   fox jumps over \
+   the lazy dog.\
+   """
+b = """one \
+   two"""
+c = """\
+   x"""

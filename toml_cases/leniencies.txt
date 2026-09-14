@@ -1,0 +1,14 @@
+# Cases where TOML 1.0.0 requires a rejection but the reference reader accepts.
+#
+# One case name per line; blank lines and `#` comments are ignored. The corpus
+# generator asserts that the reference reader really does accept each of these,
+# so the list cannot silently go stale, and the differential harness asserts the
+# exact divergence (the library rejects while the reference accepts) instead of
+# tolerating it.
+#
+# tomli 2.4.1 skips newlines and comments inside an inline table, allows a
+# trailing comma there, and decodes the `\xHH` escape. All three are TOML 1.1
+# additions rather than TOML 1.0 rules. This library implements TOML 1.0.
+93_err_inline_trailing_comma
+94_err_inline_newline
+9Y_err_hex_escape

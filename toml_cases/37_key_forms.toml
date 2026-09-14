@@ -1,0 +1,8 @@
+bare = 1
+bare-key = 2
+bare_key = 3
+1234 = 4
+- = 5
+_ = 6
+"127.0.0.1" = 7
+'key with spaces' = 8

@@ -426,17 +426,8 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
         try:
             expected_value = tomllib.loads(document)
         except tomllib.TOMLDecodeError:
-            if status == "lenient":
-                return (
-                    f"TOML case {name!r}: declared a reference-reader leniency, but the "
-                    "reference reader rejects it after all"
-                )
             if status != "bad":
                 return f"TOML case {name!r}: moonbit accepts, the reference reader rejects"
-            return None
-        if status == "lenient":
-            # The divergence is the point of the record, so both halves of it
-            # must hold: the reference accepts and the library does not.
             return None
         if status != "ok":
             return f"TOML case {name!r}: moonbit rejects, the reference reader accepts"

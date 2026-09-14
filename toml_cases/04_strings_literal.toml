@@ -1,0 +1,5 @@
+a = ''
+b = 'C:\Users\nodejs'
+c = 'no \n escape'
+d = "literal # not comment"
+e = 'quoted "double" inside'

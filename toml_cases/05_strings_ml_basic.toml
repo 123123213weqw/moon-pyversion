@@ -1,0 +1,6 @@
+a = """
+line one
+line two"""
+b = """ends with quote\""""
+c = """has \"literal\" quotes"""
+d = """no newline at start"""

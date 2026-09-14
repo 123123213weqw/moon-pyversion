@@ -1,0 +1,6 @@
+# leading comment
+a = 1 # trailing comment
+# another line
+
+b = 2#comment without space
+c = "# not a comment"

@@ -15,6 +15,7 @@
 /// - `<source>\tmarker\t<raw>\t<ok|bad>\t<canonical rendering or ->`
 /// - `<source>\tmarker_env\t<name>\t<key=value;...>` (input, not a check)
 /// - `<source>\tmarker_eval\t<env name>\t<raw>\t<ok|bad|err>\t<true|false or error kind>`
+/// - `<source>\ttoml\t<case name>\t<document>\t<ok|bad>\t<re-serialization or ->`
 ///
 /// `mode` is `auto` (the library default policy), `any` (prereleases forced
 /// on) or `none` (prereleases forced off); the oracle maps them onto
@@ -1019,6 +1020,52 @@ fn mutate_marker(rng : Rng, source : String) -> String {
 }
 
 ///|
+/// Emit one TOML conformance record.
+///
+/// A rejected document reports only the rejection; an accepted one also reports
+/// the library's canonical re-serialization. The oracle re-parses that text and
+/// compares it, value by value, against its own parse of the original, which
+/// checks the grammar, the values and the round trip in one record.
+///
+/// `lenient` marks the small set of documents TOML 1.0 requires us to reject
+/// while the reference reader accepts them. Reporting the divergence explicitly
+/// keeps it asserted in both directions instead of tolerated.
+fn emit_toml(
+  source : String,
+  sb : StringBuilder,
+  name : String,
+  document : String,
+  expected_accept : Bool,
+) -> Unit {
+  sb.write_string(
+    "\{source}\ttoml\t\{escape_record(name)}\t\{escape_record(document)}\t",
+  )
+  match toml_parse_opt(document) {
+    Some(table) =>
+      if expected_accept {
+        sb.write_string("ok\t\{escape_record(table.to_string())}\n")
+      } else {
+        // the oracle rejects this document, so reporting a rendering would make
+        // the record ambiguous
+        sb.write_string("ok\t-\n")
+      }
+    None =>
+      if @fixtures.toml_leniencies.contains(name) {
+        sb.write_string("lenient\t-\n")
+      } else {
+        sb.write_string("bad\t-\n")
+      }
+  }
+}
+
+///|
+fn toml_parse_opt(document : String) -> @pyversion.Toml? {
+  Some(@pyversion.Toml::parse(document)) catch {
+    _ => None
+  }
+}
+
+///|
 /// Requirement lines that exercise the PEP 508 grammar at its edges: the two
 /// operand forms (`name specifier` and `name @ url`), extras, markers, and a
 /// batch of lines that `packaging` rejects.
@@ -1343,6 +1390,10 @@ fn main {
     emit_marker("mutated", sb, raw)
     emit_marker_eval("mutated", sb, environments[0].0, environments[0].2, raw)
     emit_marker_eval("mutated", sb, environments[1].0, environments[1].2, raw)
+  }
+  // 8. TOML 1.0 documents, checked against the reference reader's verdict.
+  for entry in @fixtures.toml_cases {
+    emit_toml("curated", sb, entry.0, entry.1, entry.2)
   }
   println(sb.to_string())
 }

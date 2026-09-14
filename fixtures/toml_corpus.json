@@ -1,0 +1,418 @@
+{
+  "accepted_count": 48,
+  "case_count": 81,
+  "cases": [
+    {
+      "accepted": true,
+      "canonical": "table:{}",
+      "name": "01_empty"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{str=str:hello,int=int:42,float=float:3.25,bool=bool:true,bool2=bool:false,dt=datetime:1979-05-27 07:32:00+00:00}",
+      "name": "02_scalars"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=str:,b=str:plain,c=str:with \"quotes\" inside,d=str:tab\there,e=str:back\\\\slash,f=str:quote at end \",g=str:unicode: \u00e9 \u4e2d}",
+      "name": "03_strings_basic"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=str:,b=str:C:\\\\Users\\\\nodejs,c=str:no \\\\n escape,d=str:literal # not comment,e=str:quoted \"double\" inside}",
+      "name": "04_strings_literal"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=str:line one\\nline two,b=str:ends with quote\",c=str:has \"literal\" quotes,d=str:no newline at start}",
+      "name": "05_strings_ml_basic"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=str:first\\nsecond,b=str:single line,c=str:has '' two quotes,d=str:C:\\\\path\\\\x}",
+      "name": "06_strings_ml_literal"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{nl=str:\\n,tab=str:\t,cr=str:\r,bs=str:\\\\,quote=str:\",b=str:\b,f=str:\f,u=str:A,u2=str:\u00e9,U=str:\ud83d\ude00}",
+      "name": "07_escapes"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{emoji=str:\ud83d\ude00,accent=str:\u00e9,cjk=str:\u4e2d\u6587,mixed=str:a\u00e9b\ud83d\ude00c,raw=str:\u65e5\u672c\u8a9e \ud14d\uc2a4\ud2b8}",
+      "name": "08_unicode_escapes"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=int:0,b=int:1,c=int:-1,d=int:1,e=int:1234567890,f=int:1000000,g=int:2147483647,h=int:2147483647,i=int:493,j=int:170,k=int:0,l=int:2147483647,m=int:-2147483648}",
+      "name": "09_integers"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=float:1.0,b=float:3.1415,c=float:-0.01,d=float:5e+22,e=float:1000000.0,f=float:-0.02,g=float:6.626e-34,h=float:224617.445991228,i=float:0.0,j=float:-0.0,k=float:1.0}",
+      "name": "10_floats"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=float:inf,b=float:inf,c=float:-inf,d=float:nan,e=float:nan}",
+      "name": "11_special_floats"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{t=bool:true,f=bool:false,nested_true=bool:true}",
+      "name": "12_booleans"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{odt1=datetime:1979-05-27 07:32:00+00:00,odt2=datetime:1979-05-27 00:32:00-07:00,odt3=datetime:1979-05-27 00:32:00.999999-07:00,odt4=datetime:1979-05-27 07:32:00+00:00,odt5=datetime:1979-05-27 07:32:00+00:00,ldt1=datetime:1979-05-27 07:32:00,ldt2=datetime:1979-05-27 00:32:00.500000,ld1=datetime:1979-05-27,lt1=datetime:07:32:00,lt2=datetime:00:32:00.999999,lt3=datetime:23:59:59}",
+      "name": "13_datetimes"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=array:[],b=array:[int:1,int:2,int:3],c=array:[str:x,str:y],d=array:[bool:true,bool:false],e=array:[int:1,str:two,float:3.0,bool:true],f=array:[datetime:1979-05-27],g=array:[array:[int:1,int:2],array:[int:3,int:4]],h=array:[table:{x=int:1},table:{y=int:2}]}",
+      "name": "14_arrays"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=array:[array:[array:[array:[int:1]]]],b=array:[array:[int:1,int:2],array:[int:3]],c=array:[array:[],array:[]],d=array:[int:1,array:[int:2,array:[int:3,array:[int:4]]]]}",
+      "name": "15_arrays_nested"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=array:[int:1,int:2,int:3],b=array:[str:x,str:y,str:z],c=array:[int:1]}",
+      "name": "16_arrays_multiline"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=table:{},b=table:{x=int:1},c=table:{x=int:1,y=int:2},d=table:{name=str:x,ver=str:1.0},e=table:{nested=table:{a=int:1}},f=table:{arr=array:[int:1,int:2]}}",
+      "name": "17_inline_tables"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=table:{b=table:{c=table:{d=int:1}}},b=table:{x=int:1,y=table:{z=int:2},w=array:[int:1,table:{q=int:2}]},c=table:{dotted=table:{key=int:1}}}",
+      "name": "18_inline_nested"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=table:{x=int:1,y=int:2}}",
+      "name": "19_tables"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=table:{x=int:1,b=table:{y=int:2,c=table:{z=int:3}}}}",
+      "name": "20_tables_nested"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{fruit=table:{apple=table:{color=str:red},orange=table:{color=str:orange}},animal=table:{kind=str:cat}}",
+      "name": "21_tables_out_of_order"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=table:{b=table:{c=int:1,d=int:2},e=int:3},name=table:{first=str:x,last=str:y},\"quoted.key\"=table:{inner=int:1}}",
+      "name": "22_dotted_keys"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{fruit=table:{apple=table:{color=str:red,taste=table:{sweet=bool:true},texture=table:{smooth=bool:true}}}}",
+      "name": "23_dotted_key_subtable"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{products=array:[table:{name=str:Hammer,sku=int:738594937},table:{},table:{name=str:Nail,sku=int:284758393,color=str:gray}]}",
+      "name": "24_array_of_tables"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=table:{b=array:[table:{x=int:1},table:{x=int:2}]}}",
+      "name": "25_aot_nested"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=array:[table:{x=int:1,b=table:{y=int:2}},table:{x=int:3,b=table:{y=int:4}}]}",
+      "name": "26_aot_subtables"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "27_quoted_keys"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=int:1,b=int:2,c=str:# not a comment}",
+      "name": "28_comments"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{build-system=table:{requires=array:[str:setuptools>=61.0,str:wheel],build-backend=str:setuptools.build_meta},project=table:{name=str:example-package,version=str:0.0.1,description=str:A small example package,readme=str:README.md,requires-python=str:>=3.8,keywords=array:[str:sample,str:setuptools],classifiers=array:[str:Programming Language :: Python :: 3,str:License :: OSI Approved :: MIT License],dependencies=array:[str:requests>=2.28,str:click],optional-dependencies=table:{test=array:[str:pytest>=7.0],dev=array:[str:ruff,str:mypy>=1.0]},urls=table:{Homepage=str:https://github.com/example/example,\"Bug Tracker\"=str:https://github.com/example/example/issues},scripts=table:{example=str:example:main}},tool=table:{black=table:{line-length=int:88,target-version=array:[str:py38,str:py39]},ruff=table:{line-length=int:88,lint=table:{select=array:[str:E,str:F,str:I],ignore=array:[]}},pytest=table:{ini_options=table:{addopts=str:-ra -q,testpaths=array:[str:tests]}},mypy=table:{python_version=str:3.11,warn_unused_ignores=bool:true},poetry=table:{name=str:poetry-demo,version=str:0.1.0,authors=array:[str:X <x@example.com>]}}}",
+      "name": "29_pyproject_like"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{lock-version=str:1.1,python-versions=str:>=3.9,content-hash=str:abc123,package=array:[table:{name=str:certifi,version=str:2023.7.22,description=str:Python package for providing Mozilla's CA Bundle.,optional=bool:false,python-versions=str:>=3.6,files=array:[table:{file=str:certifi-2023.7.22-py3-none-any.whl,hash=str:sha256:92d6037539857d8206b8f6ae472e8b77db8058fec5937a1ef3f54304089edbb9},table:{file=str:certifi-2023.7.22.tar.gz,hash=str:sha256:539cc1d13202e33ca466e88b2807e29f4c13049d6d87031a3c110744495cb082}],dependencies=table:{chardet=str:>=3.0.2}},table:{name=str:requests,version=str:2.31.0,optional=bool:false,dependencies=table:{certifi=str:>=2017.4.17,charset-normalizer=str:>=2,<4,idna=str:>=2.5,<4,urllib3=str:>=1.21.1,<3},extras=table:{socks=array:[str:PySocks (>=1.5.6,!=1.5.7)],use-chardet-on-py3=array:[str:chardet (>=3.0.2,<6)]}}],metadata=table:{lock-version=str:2.0,python-versions=str:>=3.9,content-hash=str:def456}}",
+      "name": "30_pylock_like"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=int:1,b=str:two,t=table:{c=int:3}}",
+      "name": "31_crlf"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=int:1,b=int:2,s=table:{c=int:3}}",
+      "name": "32_ws_edges"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=array:[],b=table:{},c=array:[array:[]],d=array:[table:{}],e=table:{f=table:{}}}",
+      "name": "33_empty_containers"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=int:123,b=int:1000000000,c=int:18,d=int:5,e=int:493,f=float:10.55,g=float:10000000000.0,h=float:100000000000.0}",
+      "name": "34_numbers_underscores"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=str:The quick brown fox jumps over the lazy dog.,b=str:one two,c=str:x}",
+      "name": "35_ml_line_continuation"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{points=array:[table:{x=int:1,y=int:2},table:{x=int:3,y=int:4}]}",
+      "name": "36_array_inline_tables"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{bare=int:1,bare-key=int:2,bare_key=int:3,1234=int:4,-=int:5,_=int:6,\"127.0.0.1\"=int:7,\"key with spaces\"=int:8}",
+      "name": "37_key_forms"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=int:1,b=int:2}",
+      "name": "38_no_trailing_newline"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=int:1,b=int:2}",
+      "name": "39_comment_only_lines"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=table:{b=int:1,c=table:{d=int:2}}}",
+      "name": "40_table_after_dotted_root"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{title=str:root value,count=int:3,owner=table:{name=str:x},servers=array:[table:{host=str:a},table:{host=str:b}]}",
+      "name": "41_top_level_and_tables"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{empty=str:,space=str: ,newline_via_escape=str:a\\nb,long_ml=str:first\\nsecond\\nthird\\n,literal_ml=str:has \"quotes\"\\nand # hash\\n}",
+      "name": "42_string_specials"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=table:{b=int:1},c=table:{b=int:1},d=table:{e=table:{f=int:1},g=table:{f=int:1}}}",
+      "name": "43_keys_duplicated_in_sections"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{p=array:[table:{data=table:{a=int:1,b=array:[int:1,int:2]}}]}",
+      "name": "44_inline_table_in_aot"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{tool=table:{x=table:{a=table:{b=table:{c=table:{d=int:1,e=table:{f=int:2}}}},list=array:[table:{n=int:1},table:{n=int:2,sub=table:{m=int:3}}]}}}",
+      "name": "45_deep_mix"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{mixed=array:[int:1,str:x,bool:true,datetime:1979-05-27,array:[int:2],table:{b=int:3}]}",
+      "name": "46_arrays_mixed"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "90_err_dup_key"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "91_err_bad_escape"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "92_err_unterminated_string"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=table:{b=int:1}}",
+      "name": "93_err_inline_trailing_comma"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=table:{b=int:1,c=int:2}}",
+      "name": "94_err_inline_newline"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "95_err_redefine_table"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "96_err_value_then_table"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "97_err_inline_extend"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "98_err_leading_zero"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "99_err_bad_underscore"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9A_err_invalid_value"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9B_err_dup_dotted"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9C_err_surrogate_escape"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9D_err_unclosed_array"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9E_err_no_newline_after_stmt"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9F_err_bad_datetime"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9G_err_newline_in_basic_string"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9H_err_aot_then_table"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9I_err_dup_inline_key"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9J_err_hex_float"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9K_err_dotted_then_table_header"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9L_err_bare_key_only"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9M_err_table_reopen_dotted_root"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9N_err_empty_table_header"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9O_err_inline_dotted_frozen"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9P_err_table_then_aot"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9Q_err_float_leading_dot"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9R_err_bare_key_unicode"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9S_err_aot_no_close"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9T_err_underscore_lead"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9U_err_trailing_dot_key"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9V_err_dup_table_after_aot_sub"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9W_err_key_no_value"
+    },
+    {
+      "accepted": false,
+      "canonical": "",
+      "name": "9X_err_inline_after_table_value"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{a=str:A}",
+      "name": "9Y_err_hex_escape"
+    }
+  ],
+  "leniencies": [
+    "93_err_inline_trailing_comma",
+    "94_err_inline_newline",
+    "9Y_err_hex_escape"
+  ],
+  "reference": "tomli 2.4.1",
+  "rejected_count": 33
+}

@@ -9,6 +9,7 @@ pub(all) suberror VersionError {
   InvalidFilename(String, Int)
   InvalidRequirement(String, Int)
   InvalidMarker(String, Int)
+  InvalidToml(String, Int)
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -20,6 +21,7 @@ pub fn VersionError::diagnostic(self : VersionError) -> String {
     InvalidFilename(code, pos) => "\{code} at \{pos}"
     InvalidRequirement(code, pos) => "\{code} at \{pos}"
     InvalidMarker(code, pos) => "\{code} at \{pos}"
+    InvalidToml(code, pos) => "\{code} at \{pos}"
   }
 }
 

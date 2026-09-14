@@ -1,0 +1,14 @@
+[tool.x]
+a.b.c.d = 1
+
+[tool.x.a.b.c.e]
+f = 2
+
+[[tool.x.list]]
+n = 1
+
+[[tool.x.list]]
+n = 2
+
+[tool.x.list.sub]
+m = 3

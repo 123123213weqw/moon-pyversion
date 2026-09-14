@@ -1,0 +1,7 @@
+a = ""
+b = "plain"
+c = "with \"quotes\" inside"
+d = "tab\there"
+e = "back\\slash"
+f = "quote at end \""
+g = "unicode: \u00e9 \u4e2d"

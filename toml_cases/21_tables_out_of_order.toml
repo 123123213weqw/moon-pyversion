@@ -1,0 +1,8 @@
+[fruit.apple]
+color = "red"
+
+[animal]
+kind = "cat"
+
+[fruit.orange]
+color = "orange"

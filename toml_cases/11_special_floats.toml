@@ -1,0 +1,5 @@
+a = inf
+b = +inf
+c = -inf
+d = nan
+e = +nan

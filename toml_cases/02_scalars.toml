@@ -1,0 +1,6 @@
+str = "hello"
+int = 42
+float = 3.25
+bool = true
+bool2 = false
+dt = 1979-05-27T07:32:00Z

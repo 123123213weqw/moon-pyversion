@@ -1,0 +1,6 @@
+a.b.c = 1
+a.b.d = 2
+a.e = 3
+name.first = "x"
+name.last = "y"
+"quoted.key".inner = 1

@@ -1,0 +1,12 @@
+a = [
+  1, # first
+  2,
+  3,   # third
+]
+b = [
+  "x", "y",
+  "z"
+]
+c = [ # leading comment
+  1
+]

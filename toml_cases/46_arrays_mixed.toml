@@ -1,0 +1,2 @@
+# TOML 1.0.0 removed the 0.5 rule that array members share a type.
+mixed = [1, "x", true, 1979-05-27, [2], {b = 3}]

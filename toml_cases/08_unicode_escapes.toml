@@ -1,0 +1,5 @@
+emoji = "\U0001F600"
+accent = "\u00E9"
+cjk = "\u4E2D\u6587"
+mixed = "a\u00e9b\U0001F600c"
+raw = "日本語 텍스트"
