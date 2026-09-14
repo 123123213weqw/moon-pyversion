@@ -146,6 +146,12 @@ python -B tools/fetch_pypi_corpus.py
   大小写折叠、`LicenseRef-`/`DocumentRef-`、200 层嵌套上限、许可证文件路径校验；
 - TOML 1.0（`toml.mbt`）：四种字符串、四种整数进制、日期时间、数组、内联表、
   表与表数组、点号键、规范重序列化；
+- PEP 751 锁文件（`pylock.mbt`）：`pylock.toml` 的逐成员校验（`lock-version`
+  必须是 `1.0`，`environments` 里的每项必须是合法标记，`[[packages]]` 的
+  `name` / `version` / 来源互斥、`[[packages.dependencies]]`、`[packages.vcs]` /
+  `directory` / `archive` / `sdist` / `wheels`），以及
+  `is_applicable` / `applicable_packages` / `accepts_environment` 这几条“在我的
+  环境下装哪些包”的判断；
 - 打包元数据辅助（`utils.mbt`，对齐 packaging 26.3）：
   `canonicalize_name`（PEP 503 名称规范化）、`canonicalize_version`
   （PEP 625 两种形式：索引键与显示形式）、`parse_wheel_filename`

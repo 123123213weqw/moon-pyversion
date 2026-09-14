@@ -13,6 +13,7 @@ pub(all) suberror VersionError {
   InvalidLicense(String, Int)
   InvalidMetadata(String, Int)
   InvalidIndex(String, Int)
+  InvalidPylock(String, Int)
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -28,6 +29,7 @@ pub fn VersionError::diagnostic(self : VersionError) -> String {
     InvalidLicense(code, pos) => "\{code} at \{pos}"
     InvalidMetadata(code, pos) => "\{code} at \{pos}"
     InvalidIndex(code, pos) => "\{code} at \{pos}"
+    InvalidPylock(code, pos) => "\{code} at \{pos}"
   }
 }
 

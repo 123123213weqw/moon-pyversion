@@ -104,8 +104,8 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 | `licenses.mbt` `[已有]` | `canonicalize_license_expression`、`is_valid_license_expression`、`canonicalize_license_file` | 场景 1 | 460 |
 | `metadata.mbt` `[已有]` | `Metadata::parse/requirements/requires_python/extras/is_compatible/diagnostics/to_string` | 场景 1（端到端） | 1336 |
 
-库源码合计 **7386 行**（不含测试与示例），测试 **5022 行**（`*_test.mbt`，
-219 个测试块 × 四后端），示例 2178（`diff`）+ 280（`metadata-check`）+ 570
+库源码合计 **8602 行**（不含测试与示例），测试 **6345 行**（`*_test.mbt`，
+251 个测试块 × 四后端），示例 2178（`diff`）+ 280（`metadata-check`）+ 570
 （`resolve`）+ 180（`basic`/`bench`）行，工具链 3677 行 Python。
 
 **`utils.mbt` 设计要点** `[已完成，见下]`（已用 packaging 26.3 核实）：
@@ -317,8 +317,8 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 ## 交付成果
 
-`[已有]` 源码 **7386 行**（不含测试）、测试 **5022 行**（219 个测试块 × 四后端
-全通过）、`examples/basic` `examples/diff`（1570 行确定性发射器）
+`[已有]` 源码 **8602 行**（不含测试）、测试 **6345 行**（251 个测试块 × 四后端
+全通过）、`examples/basic` `examples/diff`（2178 行确定性发射器）
 `examples/bench`、`tools/` 七个脚本（2829 行 Python）、`fixtures/` 真实语料
 （97 个 PyPI 包 + 83 个 TOML 文档 + 281 份核心元数据）、四后端 CI + 独立 differential 作业。
 
@@ -330,7 +330,12 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 - `[已完成]` `examples/resolve`（570 行）：一份 PEP 691 索引响应 + 目标标签表 +
   一个 wheelhouse 目录，输出 yank 策略、每个被拒文件的首条失败规则、候选排序与
   最终选择——场景 2 的可运行证据，四后端输出一致，CI 已纳入（含逐后端比对）；
-- `pylock.mbt`（`docs/plan.md` 的 M8）。
+- `[已完成]` `pylock.mbt`（1214 行 / 32 个测试块，`docs/plan.md` 的 M8）：
+  `pylock.toml`（PEP 751）的读取与校验——`lock-version` / `environments` /
+  `requires-python` / `extras` / `dependency-groups` / `default-groups` /
+  `created-by` / `[[packages]]` 全部成员的必填性、类型与取值校验，每包
+  `marker` 与 `requires-python` 的应用判断，以及 20 余条稳定的
+  `InvalidPylock(code, ordinal)` 错误码。PEP 751 自己打印的示例文档逐字节可读。
 
 ## 明确不做的范围
 

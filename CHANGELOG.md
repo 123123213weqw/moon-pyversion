@@ -51,6 +51,55 @@
   diagnostic, distinct from an unterminated table.
 - `Toml::to_string` emitted a leading blank line.
 
+## Unreleased — M8: PEP 751 lock files
+
+### Added
+
+- `pylock.mbt` (1214 lines): a reader and validator for `pylock.toml`, the file
+  PEP 751 defines. Every member the specification names is read and checked --
+  `lock-version` (which must be exactly `"1.0"`), `environments`, `requires-python`,
+  `extras`, `dependency-groups`, `default-groups`, `created-by`, `[[packages]]` with
+  `name`, `version`, `marker`, `requires-python`, `[[packages.dependencies]]`,
+  `[packages.vcs]`, `[packages.directory]`, `[packages.archive]`,
+  `[packages.sdist]`, `[[packages.wheels]]` and `packages.index`. The `[tool]`
+  tables are ignored, as a reader is required to do.
+  - Rejections are `VersionError::InvalidPylock(code, ordinal)` with stable
+    codes built from the member they name (`<MEMBER>_REQUIRED`, `_TYPE`,
+    `_NOT_TABLE`, `_NOT_ARRAY`, `_INVALID`, `_EMPTY`), so a caller can tell
+    `[packages.vcs] type` from `packages.vcs` itself. `ordinal` is the structural
+    index of the offending `[[packages]]` entry, or `0` for a document-level
+    problem, matching `InvalidIndex`.
+  - The source-exclusivity rule is enforced: a package entry may record one of
+    `vcs`, `directory`, `archive`, a local `path` (the draft spelling) or a file
+    list, and two of them is `PACKAGE_SOURCE_CONFLICT`.
+  - `Pylock::is_applicable`, `Pylock::applicable_packages` and
+    `Pylock::accepts_environment` answer "which entries apply here" for a
+    caller-supplied `MarkerEnvironment`, and raise exactly where
+    `Marker::evaluate` raises, so an environment that cannot answer a marker is
+    reported rather than guessed at.
+- `pylock_test.mbt` (1323 lines): 32 blocks, 251 blocks per backend now. The
+  example PEP 751 prints is parsed byte for byte, including its `[tool]` table and
+  `[[packages.attestation-identities]]` entries, which this reader ignores.
+- Five documented divergences from the specification, each pinned by a block:
+  `created-by` may be absent and an empty value counts as absent; a redundant
+  `version` next to a source tree is accepted (the specification's MUST NOT is a
+  locker-side rule); a file record may omit `hashes` (the digest is then simply
+  unknown); `upload-time` is recorded verbatim rather than normalized to UTC; and
+  a `lock-version` other than `1.0` is rejected outright, where the specification
+  would have the reader warn.
+
+### Measured, not assumed
+
+Three expectations in the first draft of `pylock_test.mbt` were wrong and the
+mistakes were caught by running the suite, not by reading it: `sys_platform ===
+'linux'` and `'docs' in extras` are *valid* PEP 508 markers and `>=3.9,` is a
+valid PEP 440 specifier set, all three confirmed against `packaging` 26.3
+(`Marker`, `SpecifierSet`) before the assertions were corrected. Two further
+blocks were checking the test helper rather than the library: a fragment written
+as a raw block has no trailing newline, so concatenating two of them produced one
+malformed line, and `created-by` was being written twice, so a type error showed
+up as a duplicate key.
+
 ## Unreleased — M7: offline index and candidate resolution
 
 ### Added

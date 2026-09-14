@@ -20,6 +20,7 @@
 - `licenses.mbt`：PEP 639 许可证表达式与许可证文件路径；
 - `metadata.mbt`：核心元数据（PEP 566/621/639/643/685/753）；
 - `index.mbt`：严格 JSON、PEP 691 索引响应、离线目录扫描与候选解析；
+- `pylock.mbt`：`pylock.toml`（PEP 751）读取与校验；
 - `*_test.mbt`：官方样例、错误拒绝、比较边例、specifier 操作符、
   预发布规则、生成式比较属性测试。
 
@@ -124,7 +125,7 @@ Unicode 感知的正则。PEP 427 要求 wheel 文件名是转义后的 ASCII，
 
 `moon test` 覆盖官方规范化样例、非法输入、比较边例、各操作符、
 预发布规则、通配符、`~=` 以及固定合法版本集上的反自反/反对称/传递性，
-共 219 个测试块，在 wasm、wasm-gc、js、native 四目标全部通过。
+共 251 个测试块，在 wasm、wasm-gc、js、native 四目标全部通过。
 CI 在四个目标执行 `fmt/check/build/test/run`。
 
 另有独立差分实验：`examples/diff` 生成 121 381 条确定性记录（手工语料、
