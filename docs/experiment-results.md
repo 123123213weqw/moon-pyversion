@@ -15,10 +15,11 @@
 | **合计** | **10132** | **2491** | **13427** | **60870** | **993** | **3** | **6159** | **4945** | **4662** | **4575** | **8520** | **83** | **4086** | **281** |
 
 另有 5 条 `marker_env`（环境定义，不是断言）与 7 条 `meta_divergence`
-（声明分歧，不是断言），合计 **121 239 条记录 / 121 240 行语料**，其中
+（声明分歧，不是断言），合计 **121 381 条记录 / 121 382 行语料**，其中
 **61 863** 条带显式预发布模式（`auto`/`any`/`none`）。
 
-- 来源分布：curated 19 259、generated 20 652、mutated 34 397、pypi 46 927。
+- 来源分布：curated 19 296、curated_bad 12、generated 20 652、mutated 34 397、
+  pypi 46 927、pypi_index 97。
 - oracle 侧接受的**互不相同**的版本字符串 11 035 个、约束集合 1 595 个。
 - pypi 来源：97 个包的 PyPI 元数据，**3000 个版本、500 条约束、600 条真实
   `Requires-Dist` 原文、900 个真实分发文件名**，详见
@@ -29,6 +30,9 @@
 - M2–M5 又加了几类：`req`（PEP 508 依赖行）、`marker` + `marker_eval`（标记
   文法与求值）、`toml`（TOML 1.0 文档）、`license`（PEP 639 表达式）。`marker_eval`
   是在 5 套完整环境上各评一次，因此条数明显多于 `marker`。
+- M7 加 `index`（PEP 691 映射）、`index_dir`（离线目录扫描）与 `resolve`
+  （候选解析）：21 个手工文档 + **97 份真实 PEP 691 索引响应**（从公共索引的
+  JSON API 抓取；超过 20 个文件或 40 个版本的响应被截到该长度，fixture 里写明）。
 - M6 加 `meta`：**42 条手工规则样例 + 239 份真实 `METADATA`**，后者是从 PyPI
   上真实 wheel 的 PEP 658 `.metadata` 边上文件抓下来的（`fixtures/metadata_cache/`
   是原始下载缓存，不入库；`fixtures/metadata_corpus.json` 记录每份文档的大小与
@@ -41,10 +45,10 @@
 ```
 oracle: packaging 26.3 (python 3.10.12), library targets packaging 26.3
 toml reference reader: tomli
-records: 121239 (61863 with a prerelease mode)
+records: 121381 (61863 with a prerelease mode)
 mismatches per source, kind and mode:
   none
-OK: 121239 records agree with packaging 26.3
+OK: 121381 records agree with packaging 26.3
 ```
 
 退出码 0。**0 不一致**。
@@ -120,7 +124,7 @@ restrictions"）。
 ## 5.5 语料是否有牙：变异探针
 
 0 不一致只有在"对照能失败"的前提下才有意义。`tools/mutation_probe.py` 向库
-里注入 20 处**故意缺陷**（涵盖 M0–M6 的行为），重跑语料并断言 harness 报错：
+里注入 25 处**故意缺陷**（涵盖 M0–M7 的行为），重跑语料并断言 harness 报错：
 
 | 注入的缺陷 | 检出条数 |
 | --- | ---: |
@@ -144,8 +148,13 @@ restrictions"）。
 | `Requires-Dist` 的值不再解析 | 4 |
 | PEP 639 的 `License-Expression` 与 `License` 冲突被放行 | 1 |
 | PEP 639 的 `License-Expression` 与 `License ::` 分类器冲突被放行 | 1 |
+| 重复的 JSON 成员名被接受（真实分歧消失） | 1 |
+| 目录扫描退回默认 `String` 顺序（按长度） | 1 |
+| 解析器忽略 PEP 425 标签 | 3 |
+| 解析器忽略 `Requires-Python` | 10 |
+| 解析器忽略预发布策略 | 12 |
 
-20/20 全部检出。两个 TOML 探针各只检出 1 条，是**故意**的：它们的现象只在
+25/25 全部检出。两个 TOML 探针各只检出 1 条，是**故意**的：它们的现象只在
 单个语料样例上出现，如果未来那条样例被改坏，检出数会掉到 0，探针就会失败。
 
 两条 `License-Expression` 冲突探针各只检出 1 条，同样是因为只有一个语料样例
@@ -165,9 +174,9 @@ restrictions"）。
 | 检查 | 结果 |
 | --- | --- |
 | `moon fmt --check` | 通过 |
-| `moon check/build/test --deny-warn`（wasm / wasm-gc / js / native） | 全部通过，每个后端 **167 个测试块全部通过**（合计 668） |
+| `moon check/build/test --deny-warn`（wasm / wasm-gc / js / native） | 全部通过，每个后端 **219 个测试块全部通过**（合计 876） |
 | `moon run examples/basic`（四后端） | 通过 |
-| `moon run examples/diff`（四后端） | 121 240 行语料，四端字节一致 |
+| `moon run examples/diff`（四后端） | 121 382 行语料，四端字节一致 |
 
 ## 6.5 各阶段新增能力的覆盖
 
@@ -189,9 +198,13 @@ restrictions"）。
 | `filter` | 993 | `SpecifierSet.filter` | curated + generated + pypi |
 | `toml` | 83 | 参考实现 `tomli`（接受/拒绝 + 重序列化） | 83 个 TOML 文档 |
 | `meta` | 281 | `Metadata.from_email(data, validate=True)` | 42 条手工规则样例 + 239 份真实 PyPI `METADATA` |
+| `index` | 118 | 规范本身（写成一处投影，Python 侧独立重算） | 21 条手工文档 + 97 份真实 PEP 691 响应 |
+| `index_dir` | 5 | 规范本身（`parse_wheel_filename` / `parse_sdist_filename` + 排序规则） | 5 个目录清单 |
+| `resolve` | 18 | 用 `packaging` 重写的候选选择与排序 | 18 组（需求 × 标签 × 解释器 × 预发布策略） |
 | `order` | 3 | `Version` 全序 | curated + generated + pypi |
 | `marker_env` | 5 | —（环境定义，非断言） | 5 套完整环境 |
 | `meta_divergence` | 7 | —（声明分歧，非断言） | curated |
+| `index_divergence` | 1 | —（声明分歧，非断言） | curated |
 
 TOML 的对照方式与其他记录不同，值得单独说明：参考实现给出"接受/拒绝"的裁决，
 库另外给出自己的规范重序列化文本，harness 把这段文本用参考实现**重新解析**
@@ -301,14 +314,15 @@ TOML 的对照方式与其他记录不同，值得单独说明：参考实现给
 ## 8. 这次实验**没有**证明什么
 
 - 不证明与 PEP 440 规范本身完全一致：oracle 是另一份实现，不是规范。
-- 不证明覆盖全部现实输入：121 239 条是一次抽样，PyPI 的真实版本远多于 3000 个；
+- 不证明覆盖全部现实输入：121 381 条是一次抽样，PyPI 的真实版本远多于 3000 个；
   真实 `METADATA` 只覆盖 239 份（有 PEP 658 边上文件的那些），且丢弃了 12 000
   字符以上的文档。
 - 不覆盖平台兼容性标签的匹配与排序、不覆盖依赖求解与冲突回溯。
 - TOML、许可证表达式与核心元数据的对照各用了一个参考实现（`tomli` 2.4.1、
-  `packaging.licenses`、`packaging.metadata`），三者都不是规范文本本身；TOML 与
-  元数据的差异分别在 `toml_cases/leniencies.txt` 与
-  `metadata_cases/divergences.txt` 中逐条登记。
+  `packaging.licenses`、`packaging.metadata`），PEP 691 的对照则是"把规范写成
+  一处投影、在两份实现里各算一遍"，四者都不是规范文本本身；TOML、元数据与索引的
+  差异分别在 `toml_cases/leniencies.txt`、`metadata_cases/divergences.txt` 与
+  `index_cases/divergences.txt` 中逐条登记。
 - 标记求值只对照了 5 套环境；`packaging` 在缺键时会回落到**宿主进程**的真实
   环境值，本库拒绝这个回落（不读运行时环境），因此"缺键"这一类行为是
   设计上的差异而非等价性结论。

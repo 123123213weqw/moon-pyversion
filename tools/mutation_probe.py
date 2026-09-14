@@ -229,6 +229,57 @@ MUTATIONS = [
         "covers": "every `Requires-Dist` value is parsed",
     },
     {
+        # The corpus has a duplicate-name document, declared as a deliberate
+        # divergence: the library rejects it while `json` keeps the last member. A
+        # library that starts accepting it makes the two answers equal, which the
+        # harness reports.
+        "name": "index-duplicate-json-keys-allowed",
+        "file": "index.mbt",
+        "old": """      if members[j].0 == key {
+        raise json_error("JSON_DUPLICATE_KEY", chars, i)
+      }""",
+        "new": """      if false {
+        raise json_error("JSON_DUPLICATE_KEY", chars, i)
+      }""",
+        "covers": "a repeated JSON member name is rejected, unlike `json`",
+    },
+    {
+        "name": "index-scan-sorts-by-default-string-order",
+        "file": "index.mbt",
+        "old": """  files.sort_by(fn(a, b) {
+    let by_name = String::lexical_compare(a.name, b.name)""",
+        "new": """  files.sort_by(fn(a, b) {
+    let by_name = a.name.compare(b.name)""",
+        "covers": "a directory scan orders names by code point, not by length",
+    },
+    {
+        "name": "resolver-ignores-tags",
+        "file": "index.mbt",
+        "old": """  } else if file.kind is WheelFile && tag_priority(file, tags) == tags.length() {
+    Some("tags")""",
+        "new": """  } else if false {
+    Some("tags")""",
+        "covers": "a wheel for another platform is rejected",
+    },
+    {
+        "name": "resolver-ignores-requires-python",
+        "file": "index.mbt",
+        "old": """  } else if !requires_python_ok(file, python) {
+    Some("requires-python")""",
+        "new": """  } else if false {
+    Some("requires-python")""",
+        "covers": "a file whose Requires-Python excludes the interpreter is rejected",
+    },
+    {
+        "name": "resolver-prerelease-policy-ignored",
+        "file": "index.mbt",
+        "old": """  } else if !in_versions(allowed, file.version) {
+    Some("prerelease")""",
+        "new": """  } else if false {
+    Some("prerelease")""",
+        "covers": "the prerelease policy is applied to resolved candidates",
+    },
+    {
         "name": "prerelease-policy-always-allows",
         "file": "specifier.mbt",
         "old": """  let allow_pre = prereleases.unwrap_or(true)

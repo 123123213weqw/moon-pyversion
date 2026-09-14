@@ -104,8 +104,8 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 | `licenses.mbt` `[已有]` | `canonicalize_license_expression`、`is_valid_license_expression`、`canonicalize_license_file` | 场景 1 | 460 |
 | `metadata.mbt` `[已有]` | `Metadata::parse/requirements/requires_python/extras/is_compatible/diagnostics/to_string` | 场景 1（端到端） | 1336 |
 
-库源码合计 **6128 行**（不含测试与示例），测试 **3172 行**（`*_test.mbt`，
-167 个测试块 × 四后端），示例 1645 + 245 行，工具链 2829 行 Python。
+库源码合计 **7384 行**（不含测试与示例），测试 **5022 行**（`*_test.mbt`，
+219 个测试块 × 四后端），示例 1900 + 245 行，工具链 3677 行 Python。
 
 **`utils.mbt` 设计要点** `[已完成，见下]`（已用 packaging 26.3 核实）：
 
@@ -256,19 +256,39 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 （"读一份真实 METADATA"）的目标，因此改成：空值等价于缺席，解析失败只写进
 `diagnostics`，文档照常可用。
 
+### `[已完成]` M7 落地情况
+
+`index.mbt`（1256 行）把场景 2 补完：
+
+- `parse_json`：严格 RFC 8259 读取器，数字保留源文本（不经过浮点），嵌套有上限，
+  **重复成员名报 `JSON_DUPLICATE_KEY`** —— RFC 8259 只说名字"应当"唯一，这里按
+  "必须"处理，因为被遮蔽的 `url` 或 `hashes` 正是索引消费者最不能漏掉的东西；
+- `SimpleIndex::parse` / `wheels` / `sdists`：PEP 691 映射；既不是 wheel 也不是
+  sdist 的条目报 `INDEX_UNKNOWN_DIST`，而不是被静默丢掉；
+- `LocalIndex::scan`：目录扫描，列目录的函数**由调用方注入**（core 没有文件系统
+  包），非分发文件一律忽略——与索引那条规则故意相反；
+- `resolve_candidates` / `select_best` / `explain_rejection`：名称、约束、一次性
+  算完的预发布策略、`Requires-Python`、PEP 425 标签四项过滤，排序为版本降序 →
+  wheel 先于 sdist → 标签优先级 → PEP 427 build 号 → 文件名；最后一步是**额外
+  加的**，因为 pip 把并列交给服务端顺序，而写锁文件的解析器必须确定；
+- 验收证据：**97 份真实 PEP 691 索引响应** + 21 条手工文档 + 5 个目录清单 +
+  18 组候选解析，全部在 Python 侧用 `packaging` 独立重算后逐条比对，**0 不一致**；
+  另有 1 条声明分歧（重复 JSON 成员名）双向断言。
+
 ### `[已完成]` 语料扩展与"有牙"验收
 
-- 语料从 87 916 条扩到 **121 239 条 / 121 240 行**：来源分布 curated 19 259、
-  generated 20 652、mutated 34 397、pypi 46 927；四后端逐字节一致。
-- `tools/mutation_probe.py` 从 7 处扩到 **20 处**故意缺陷（覆盖 M0–M6），
-  20/20 全部被语料检出；探针失败即实验失败。
+- 语料从 87 916 条扩到 **121 381 条 / 121 382 行**：来源分布 curated 19 296、
+  curated_bad 12、generated 20 652、mutated 34 397、pypi 46 927、pypi_index 97；
+  四后端逐字节一致。
+- `tools/mutation_probe.py` 从 7 处扩到 **25 处**故意缺陷（覆盖 M0–M7），
+  25/25 全部被语料检出；探针失败即实验失败。
 - 多 oracle 矩阵（24.2 / 25.0 / 26.0 / 26.3）按原因分类上游行为变更，
   固定版本 26.3 仍为 **0 差异**。
 
 ## 技术路线
 
 `[已有]` 版本解析用按 UTF-16 偏移移动的 ASCII 游标，不引入正则；整数组件经
-`BigInt`；比较按键序。四后端 CI。121 239 条语料差分对照 `packaging 26.3`，另有 20 处故意缺陷的变异探针证明对照有效。
+`BigInt`；比较按键序。四后端 CI。121 381 条语料差分对照 `packaging 26.3`，另有 25 处故意缺陷的变异探针证明对照有效。
 
 `[计划]` 新增模块沿用同一套技术路线与**同一套验收方法**，不新造轮子：
 
@@ -306,7 +326,7 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 - `[已完成]` `examples/metadata-check`：读真实 `METADATA` + 锁表 + 目标环境，
   输出越界项、不适用项与无法解析项清单——场景 1 的可运行证据，四后端输出一致，
   CI 已纳入；
-- `metadata.mbt` 与 `index.mbt` / `pylock.mbt`（`docs/plan.md` 的 M6/M7）。
+- `pylock.mbt`（`docs/plan.md` 的 M8）。
 
 ## 明确不做的范围
 

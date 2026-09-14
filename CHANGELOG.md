@@ -51,6 +51,46 @@
   diagnostic, distinct from an unterminated table.
 - `Toml::to_string` emitted a leading blank line.
 
+## Unreleased — M7: offline index and candidate resolution
+
+### Added
+
+- `index.mbt` (1256 lines): a strict RFC 8259 JSON reader, the PEP 691
+  simple-repository mapping, an offline directory scan and the candidate
+  resolver.
+  - The JSON reader rejects duplicate member names (`JSON_DUPLICATE_KEY`) where
+    RFC 8259 only says names *SHOULD* be unique: a shadowed `url` or `hashes`
+    member is exactly the kind of thing a PEP 691 consumer must never miss.
+    Numbers keep their source text, so nothing depends on floating point.
+  - `SimpleIndex::parse` maps a response, `SimpleIndex::wheels` / `sdists` split
+    it, and an entry that is neither a wheel nor an sdist is a defect
+    (`INDEX_UNKNOWN_DIST`) rather than something to drop.
+  - `LocalIndex::scan` takes an injected `DirectoryLister`, because
+    `moonbitlang/core` has no filesystem package; a name that is not a
+    distribution is ignored, which is the opposite of the index rule on purpose.
+  - `resolve_candidates`, `select_best` and `explain_rejection` implement pip's
+    selection: name, specifier, prerelease policy over all name-matching versions
+    at once, `Requires-Python`, and PEP 425 tag intersection, ordered by version,
+    wheel-before-sdist, tag priority, PEP 427 build number and finally the file
+    name -- the last step being an addition, because pip leaves a tie to server
+    order and a resolver that writes lock files must be deterministic.
+- `VersionError::InvalidIndex(String, Int)`, plus its `diagnostic` arm.
+- `index_test.mbt`: 52 blocks covering the JSON reader, the mapping, the scan and
+  the resolver, asserting error codes. The suite is 219 blocks per backend.
+- `tools/fetch_index_corpus.py` and `index_cases/`: 21 curated documents (nine the
+  specification accepts, twelve it rejects) and 97 real PEP 691 responses from a
+  public index, fetched through the JSON API. Responses larger than 20 files or
+  40 versions are reduced to those heads, which the fixture states.
+- `index_cases/divergences.txt`: the one document where this library deliberately
+  answers differently from Python's `json` (a duplicate member name), with the
+  reason. The generator checks the reference's half, the harness both.
+- Three record kinds: `index` (verdict plus the PEP 691 projection, re-derived
+  independently in Python from the specification), `index_dir` (the scan's
+  classification of an injected listing) and `resolve` (the selected files in
+  order and the reason each other file was rejected, recomputed in Python with
+  `packaging`). Plus the `index_divergence` input record. Corpus grows from
+  121 239 to 121 381 records, still 0 mismatches.
+
 ## Unreleased — M6: core metadata
 
 ### Added

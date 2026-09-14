@@ -24,7 +24,13 @@ https://github.com/123123213weqw/moon-pyversion
 
 1. **依赖清单检查** `[库内环节已完成，示例待做]`：`Metadata::parse` 读一份 `METADATA` / `PKG-INFO`（RFC 822 表头 + 正文，按 PEP 566 及 621 / 639 / 643 / 685 / 753 校验），`Metadata::requirements` 把 `Requires-Dist` 逐条交给 `Requirement::parse`，环境标记由 `Marker::evaluate` 在**调用方传入的**环境表上求值（库不读运行时环境，因此同一份清单在任何机器上得到同样的结论），再对锁定版本逐个调用 `SpecifierSet::contains`，输出越界项与不适用项清单。约束非法时返回稳定的 `VersionError`（含字段与偏移），便于定位；`Metadata::diagnostics` 另外报告"可用但已被规范取代"的字段。`pyproject.toml` / `pylock.toml` 里的约束可用内置的 TOML 1.0 读取器取出，PEP 639 的许可证表达式与许可证文件路径也一并能校验。这份能力对 **239 份真实 PyPI `METADATA`**（真实 wheel 的 PEP 658 边上文件）逐条对照过 `packaging.metadata`，0 不一致。这条链路已经包成可运行示例 `examples/metadata-check`：四份真实 `METADATA` +
 锁表 + 目标环境，输出逐条判定与汇总，四后端输出一致，CI 每次运行。
-2. **离线包索引筛选** `[解析与筛选已完成，索引扫描待做]`：库已能用 `parse_wheel_filename` / `parse_sdist_filename` 从分发文件名解析出名称与版本（含真实 PyPI 文件名，900 条对照通过），并可用 `canonicalize_name` / `canonicalize_version` 得到归组与查找用的键形式；随后把候选版本数组交给 `SpecifierSet::filter`，按 `>=1.0, !=1.4.*, <2.0` 之类的约束筛出可用集合，默认优先正式版、在没有任何匹配正式版时才回退到预发布，也可用 `prereleases=Some(false)` 显式排除预发布，从而减少无谓的下载与构建尝试。索引响应（PEP 691 的 JSON 形式）与本地目录扫描尚未实现，见 `docs/plan.md` 的 M7。
+2. **离线包索引筛选** `[已完成]`：库已能用 `parse_wheel_filename` / `parse_sdist_filename` 从分发文件名解析出名称与版本（含真实 PyPI 文件名，900 条对照通过），并可用 `canonicalize_name` / `canonicalize_version` 得到归组与查找用的键形式；随后把候选版本数组交给 `SpecifierSet::filter`，按 `>=1.0, !=1.4.*, <2.0` 之类的约束筛出可用集合，默认优先正式版、在没有任何匹配正式版时才回退到预发布，也可用 `prereleases=Some(false)` 显式排除预发布，从而减少无谓的下载与构建尝试。索引响应（PEP 691 的 JSON 形式）与本地目录扫描也已经实现：`SimpleIndex::parse`
+读索引文档，`LocalIndex::scan` 扫一个目录（列目录的函数由调用方注入，因为
+`moonbitlang/core` 没有文件系统包），`resolve_candidates` / `select_best` /
+`explain_rejection` 按名称、约束、预发布策略、`Requires-Python` 与 PEP 425 标签
+筛出可安装的文件并给出一条确定的排序，同时说清其余每个文件是被哪条规则排除的。
+这条链路对 **97 份真实索引响应**与 18 组候选解析与 `packaging` 逐条比对过，
+0 不一致。
 3. **升级候选评估**：解析当前版本与候选版本，用 `compare` 排序并筛出落在目标区间内的候选，生成待测试短名单。本库明确不保证 API 兼容性、安全性与依赖可解性——它给的是“满足版本约束”这一层结论，是否真的可以升级仍由人工与集成测试决定。
 
 ## 核心功能
@@ -37,23 +43,25 @@ https://github.com/123123213weqw/moon-pyversion
 
 **配置文件读取**：内置 TOML 1.0 解析器与规范重序列化器（`Toml::parse` / `get_*` / `to_string`），覆盖四种字符串、四种整数进制、浮点与特殊值、五种日期时间形状、数组、内联表、表与表数组、点号键，并保留文档顺序。
 
+**索引与候选解析**：`parse_json`（严格 RFC 8259）、`SimpleIndex::parse` / `wheels` / `sdists`（PEP 691）、`LocalIndex::scan` / `packages` / `files_for`（离线目录扫描，列目录函数注入）、`resolve_candidates` / `select_best` / `explain_rejection`（按名称、约束、预发布策略、`Requires-Python`、PEP 425 标签筛选与确定排序）。
+
 **核心元数据**：`Metadata::parse` / `to_string`（PEP 566）：表头折行展开、版本门槛、字段的引入版本与多值/单值规则、`Requires-Dist`、`Requires-Python`、`Provides-Extra` 规范化、`Project-URL` 标签、许可证表达式与许可证文件路径、邮件地址列表、1.x 的废弃字段；拒绝时给出稳定错误码与偏移。`Metadata::requirements` / `requires_python` / `extras` / `is_compatible` / `diagnostics` 提供上层需要的视图。
 
 **许可证**：`canonicalize_license_expression` / `is_valid_license_expression` / `canonicalize_license_file`（PEP 639），含 699 个许可证标识符与 79 个例外的查表、ASCII 大小写折叠、`LicenseRef-` / `DocumentRef-` 形式与嵌套上限。
 
-库源码合计 6128 行（不含测试），测试 3172 行（167 个测试块）。
+库源码合计 7384 行（不含测试），测试 5022 行（219 个测试块）。
 
 ## 技术路线
 
 版本与约束解析器是按 UTF-16 偏移移动的 ASCII 游标，不引入正则依赖；所有整数组件经 `BigInt` 解析，避免组件溢出。TOML 整数是 `Int64`（TOML 语义就是 64 位有符号），因此 `0xDEADBEEF` 在 wasm32 后端也能通过。比较按键序进行：epoch → 补齐后的 release → pre 相位与序号 → post → dev → local 分段。规范化为公开形式（去前导零、统一 `a`/`b`/`rc`/`.post`/`.dev`、`-`/`_` 归一、local 小写），release 段数保留，因此 `1.0` 与 `1.0.0` 输出不同但比较相等。所有约束以 AND 组合；`~=` 取含下界、上界由倒数第二个 release 段加一构成。库不使用任何第三方依赖，只依赖 `moonbitlang/core`，也不读时钟、环境变量或网络，因此同一输入在四个后端得到逐字节相同的输出。
 
-CI 在 wasm / wasm-gc / js / native 四后端执行格式化检查、构建、测试与示例；另一个作业生成 **121 239 条**确定性语料（手工边界、按文法生成、单字符变异、97 个真实 PyPI 包的元数据、239 份真实 `METADATA`）并逐条回放给 CPython `packaging==26.3` 做独立黑盒对照，同时用参考实现 `tomli` 对照 TOML 的接受/拒绝与往返一致性，并在多个 packaging 版本上输出差异分类矩阵（仅作行为参照，不引入其运行时代码）。固定 26.3 是实测选定的：24.2 / 25.0 / 26.0 上分别有数千条差异，全部对应上游已发布的行为变更。
+CI 在 wasm / wasm-gc / js / native 四后端执行格式化检查、构建、测试与示例；另一个作业生成 **121 381 条**确定性语料（手工边界、按文法生成、单字符变异、97 个真实 PyPI 包的元数据、239 份真实 `METADATA`）并逐条回放给 CPython `packaging==26.3` 做独立黑盒对照，同时用参考实现 `tomli` 对照 TOML 的接受/拒绝与往返一致性，并在多个 packaging 版本上输出差异分类矩阵（仅作行为参照，不引入其运行时代码）。固定 26.3 是实测选定的：24.2 / 25.0 / 26.0 上分别有数千条差异，全部对应上游已发布的行为变更。
 
 ## 预计交付成果
 
-公开可复现的 MoonBit 源码与 Apache-2.0 许可证；中文 README 与英文 API 契约；`examples/basic`、`examples/diff`（确定性语料发射器，1645 行）、`examples/metadata-check`（依赖清单检查，场景 1 的端到端证据）、`examples/bench`（吞吐）四个可运行示例；覆盖核心路径的 **167 个测试块**（含 PEP 440 官方规范化样例、非法输入拒绝、比较边例、各操作符、预发布规则、标记求值、需求行文法、TOML 一致性、许可证表达式，以及固定版本集上的反自反/反对称/传递性属性测试），四个后端全部通过；`tools/` 下的差分实验工具链（`diff_packaging.py`、`target_parity.py`、`oracle_matrix.py`、`fetch_pypi_corpus.py`、`fetch_toml_corpus.py`、`fetch_metadata_corpus.py`、`mutation_probe.py`）与 `fixtures/` 真实语料（97 个 PyPI 包、83 个 TOML 文档、281 份核心元数据）；四后端 CI；MoonCakes 发布。
+公开可复现的 MoonBit 源码与 Apache-2.0 许可证；中文 README 与英文 API 契约；`examples/basic`、`examples/diff`（确定性语料发射器，1645 行）、`examples/metadata-check`（依赖清单检查，场景 1 的端到端证据）、`examples/bench`（吞吐）四个可运行示例；覆盖核心路径的 **219 个测试块**（含 PEP 440 官方规范化样例、非法输入拒绝、比较边例、各操作符、预发布规则、标记求值、需求行文法、TOML 一致性、许可证表达式，以及固定版本集上的反自反/反对称/传递性属性测试），四个后端全部通过；`tools/` 下的差分实验工具链（`diff_packaging.py`、`target_parity.py`、`oracle_matrix.py`、`fetch_pypi_corpus.py`、`fetch_toml_corpus.py`、`fetch_metadata_corpus.py`、`mutation_probe.py`）与 `fixtures/` 真实语料（97 个 PyPI 包、83 个 TOML 文档、281 份核心元数据）；四后端 CI；MoonCakes 发布。
 
-实验不只报告“0 不一致”，还报告**对照本身能不能失败**：`tools/mutation_probe.py` 向库里注入 20 处故意缺陷（名称规范化、标签排序、版本键形式、wheel/sdist 名称切分、local 段比较、标记规范化与词汇表、依赖行标记校验、SPDX 大小写、TOML 内联表与多行字符串与整数宽度、预发布策略），20/20 全部被语料检出。语料中的 4 个 TOML 样例是参考实现的放宽（TOML 1.1 的内联表换行与尾随逗号、`\xHH` 转义、任意精度整数），库按 TOML 1.0 拒绝，这处分歧在两个方向上都被断言。
+实验不只报告“0 不一致”，还报告**对照本身能不能失败**：`tools/mutation_probe.py` 向库里注入 25 处故意缺陷（名称规范化、标签排序、版本键形式、wheel/sdist 名称切分、local 段比较、标记规范化与词汇表、依赖行标记校验、SPDX 大小写、TOML 内联表与多行字符串与整数宽度、预发布策略），25/25 全部被语料检出。语料中的 4 个 TOML 样例是参考实现的放宽（TOML 1.1 的内联表换行与尾随逗号、`\xHH` 转义、任意精度整数），库按 TOML 1.0 拒绝，这处分歧在两个方向上都被断言。
 
 ## 明确不做的范围
 

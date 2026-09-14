@@ -4,3 +4,6 @@ _build/
 *.mbti
 .scratch/
 fixtures/metadata_cache/
+fixtures/index_cache/
+__pycache__/
+*.pyc

@@ -1,0 +1,525 @@
+{
+  "accept": "application/vnd.pypi.simple.v1+json",
+  "curated_accepted": [
+    "01_minimal",
+    "02_files_full",
+    "03_yanked_true",
+    "04_no_hashes_content",
+    "05_unknown_members",
+    "06_unicode",
+    "07_meta_only",
+    "08_no_meta"
+  ],
+  "curated_rejected": [
+    "90_bad_json",
+    "91_no_name",
+    "92_name_not_string",
+    "93_files_not_array",
+    "94_file_not_object",
+    "95_missing_filename",
+    "96_hashes_not_object",
+    "97_requires_python_type",
+    "98_size_type",
+    "99_versions_type",
+    "9B_trailing_content",
+    "9C_yanked_type"
+  ],
+  "divergences": [
+    "9A_duplicate_name"
+  ],
+  "documents": [
+    {
+      "bytes": 7847,
+      "name": "accelerate",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7549,
+      "name": "aiohttp",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7386,
+      "name": "alembic",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7333,
+      "name": "ansible",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7576,
+      "name": "attrs",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7860,
+      "name": "beautifulsoup4",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7627,
+      "name": "black",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7611,
+      "name": "boto3",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7525,
+      "name": "botocore",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8106,
+      "name": "build",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7336,
+      "name": "celery",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7741,
+      "name": "certifi",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7925,
+      "name": "charset-normalizer",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7486,
+      "name": "click",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7623,
+      "name": "coverage",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7923,
+      "name": "cryptography",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7375,
+      "name": "dash",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7637,
+      "name": "datasets",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7665,
+      "name": "django",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7600,
+      "name": "docker",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7836,
+      "name": "docutils",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7716,
+      "name": "fastapi",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7348,
+      "name": "filelock",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7493,
+      "name": "flask",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7461,
+      "name": "flit",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8145,
+      "name": "google-cloud-storage",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7515,
+      "name": "gradio",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8009,
+      "name": "grpcio",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7611,
+      "name": "httplib2",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7687,
+      "name": "httpx",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7471,
+      "name": "hypothesis",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7318,
+      "name": "idna",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8486,
+      "name": "importlib-metadata",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7473,
+      "name": "ipython",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7503,
+      "name": "itsdangerous",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7584,
+      "name": "jinja2",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7779,
+      "name": "jupyterlab",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7563,
+      "name": "kafka-python",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7924,
+      "name": "kubernetes",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8791,
+      "name": "lightgbm",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7378,
+      "name": "lxml",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7549,
+      "name": "markupsafe",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7809,
+      "name": "marshmallow",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8131,
+      "name": "matplotlib",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7201,
+      "name": "mypy",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7578,
+      "name": "notebook",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3157,
+      "name": "numpy-financial",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8925,
+      "name": "numpy",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7992,
+      "name": "opencv-python",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7626,
+      "name": "packaging",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7757,
+      "name": "pandas",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7526,
+      "name": "paramiko",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7362,
+      "name": "pillow",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7110,
+      "name": "pip",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8332,
+      "name": "platformdirs",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7296,
+      "name": "plotly",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8450,
+      "name": "poetry",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7803,
+      "name": "protobuf",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7852,
+      "name": "psycopg2-binary",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7594,
+      "name": "pydantic",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7316,
+      "name": "pygments",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7778,
+      "name": "pymongo",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7543,
+      "name": "pyparsing",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7215,
+      "name": "pytest",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7524,
+      "name": "python-dateutil",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7642,
+      "name": "python-dotenv",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7145,
+      "name": "pytz",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7614,
+      "name": "pyyaml",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7346,
+      "name": "redis",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7458,
+      "name": "requests",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7587,
+      "name": "rich",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8990,
+      "name": "ruff",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7845,
+      "name": "scikit-learn",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8268,
+      "name": "scipy",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7444,
+      "name": "scrapy",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7699,
+      "name": "seaborn",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7448,
+      "name": "setuptools",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7577,
+      "name": "six",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7373,
+      "name": "sphinx",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7405,
+      "name": "sqlalchemy",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7483,
+      "name": "starlette",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9070,
+      "name": "statsmodels",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8042,
+      "name": "streamlit",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8615,
+      "name": "tensorflow",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7433,
+      "name": "tomli",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8394,
+      "name": "torch",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7181,
+      "name": "tox",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7404,
+      "name": "tqdm",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7814,
+      "name": "transformers",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7607,
+      "name": "twine",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8157,
+      "name": "typing-extensions",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7511,
+      "name": "urllib3",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7374,
+      "name": "uvicorn",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7672,
+      "name": "werkzeug",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7616,
+      "name": "wheel",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7353,
+      "name": "wrapt",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7446,
+      "name": "xgboost",
+      "source": "pypi"
+    }
+  ],
+  "index": "https://pypi.tuna.tsinghua.edu.cn/simple/{name}/",
+  "max_document": 400000,
+  "pypi_count": 97,
+  "skipped": {
+    "count": 97,
+    "offline": true,
+    "reduced": 96
+  }
+}

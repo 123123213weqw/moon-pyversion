@@ -1,0 +1,17 @@
+# Documents where this library deliberately answers differently from Python's
+# `json` module, which is the reference for "does the simple-index
+# specification accept this document".
+#
+# One entry per line: `<case name> accept|reject`, where the second word is what
+# the reference does with the document. The generator asserts the reference
+# really answers that way, and the differential harness asserts that this
+# library answers the other way and that the reference's answer still holds, so
+# a divergence that stops being one fails the run instead of being tolerated.
+#
+# 9A_duplicate_name
+#   RFC 8259 §4 says the names within an object "SHOULD be unique", and leaves
+#   the behaviour of a duplicate unspecified; `json` keeps the last one. This
+#   library rejects the document, because silently dropping the earlier member
+#   is how a wrong URL or digest gets accepted without anyone noticing, and
+#   PEP 691 puts nothing in a response that is safe to lose.
+9A_duplicate_name accept

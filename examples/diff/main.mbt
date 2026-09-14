@@ -19,6 +19,11 @@
 /// - `<source>\tlicense\t<raw>\t<ok|bad>\t<canonical expression or ->`
 /// - `<source>\tmeta\t<case name>\t<document>\t<ok|bad>\t<error code or ->\t<canonical re-rendering or ->`
 /// - `<source>\tmeta_divergence\t<case name>\t<accept|reject>` (input, not a check)
+/// - `<source>\tindex\t<case name>\t<document>\t<ok|bad>\t<projection or error code>`
+/// - `<source>\tindex_divergence\t<case name>\t<accept|reject>` (input, not a check)
+/// - `<source>\tresolve\t<requirement>\t<files as f@rp;...>\t<tags as a|b>\t<python or ->\t<mode>\t<kept as a|b>\t<rejected as f=reason|...>`
+/// - `<source>\tindex_dir\t<directory>\t<entries as a|b>\t<ok|bad>\t<projection or error code>`
+/// - `<source>\tresolve\t<requirement>\t<tags as a|b>\t<python or ->\t<mode>\t<kept as a|b>\t<rejected as f=reason|...>`
 ///
 /// `mode` is `auto` (the library default policy), `any` (prereleases forced
 /// on) or `none` (prereleases forced off); the oracle maps them onto
@@ -1216,6 +1221,508 @@ fn metadata_error_code(document : String) -> String {
 }
 
 ///|
+/// Escape one field of an index projection.
+///
+/// The projection is a flat string whose separators are `;`, `|`, `,` and `=`,
+/// and any of those can occur inside a JSON string (a `url`, a `yanked` reason).
+/// Escaping them here keeps the encoding injective, so two different documents
+/// cannot produce the same projection. `tools/fetch_index_corpus.py` applies the
+/// same transformation when it computes the projection independently.
+fn escape_projection(text : String) -> String {
+  let out = StringBuilder()
+  for c in text {
+    if c == '\\' {
+      out.write_string("\\\\")
+    } else if c == '|' {
+      out.write_string("\\p")
+    } else if c == ';' {
+      out.write_string("\\s")
+    } else if c == ',' {
+      out.write_string("\\c")
+    } else if c == '=' {
+      out.write_string("\\e")
+    } else {
+      out.write_char(c)
+    }
+  }
+  out.to_string()
+}
+
+///|
+/// The PEP 691 mapping of one parsed response, written out the way the reference
+/// implementation in `tools/fetch_index_corpus.py` writes it.
+///
+/// Both sides derive this from the document independently -- this function from
+/// the parsed `SimpleIndex`, the Python one from `json.loads` plus the rules of
+/// the specification -- and a record is only accepted when the two strings are
+/// equal, so the mapping itself is what is being compared.
+fn index_projection(index : @pyversion.SimpleIndex) -> String {
+  let out = StringBuilder()
+  out.write_string("name=" + escape_projection(index.name()))
+  let api_version = match index.api_version() {
+    Some(text) => text
+    None => ""
+  }
+  out.write_string(";api-version=" + escape_projection(api_version))
+  out.write_string(";versions=\{index.versions().length()}")
+  let files = index.files()
+  out.write_string(";files=\{files.length()}")
+  for file in files {
+    out.write_string(";file:" + escape_projection(file.filename))
+    out.write_string("|" + escape_projection(file.url))
+    // the `hashes` member is a map: rendered in algorithm order, as the
+    // reference implementation's `sorted()` does
+    out.write_string("|" + render_hashes(file.hashes))
+    let requires_python = match file.requires_python {
+      Some(text) => text
+      None => ""
+    }
+    out.write_string("|" + escape_projection(requires_python))
+    out.write_string("|" + escape_projection(render_yanked(file.yanked)))
+    let size = match file.size {
+      Some(count) => count.to_string()
+      None => ""
+    }
+    out.write_string("|" + size)
+    let upload_time = match file.upload_time {
+      Some(text) => text
+      None => ""
+    }
+    out.write_string("|" + escape_projection(upload_time))
+  }
+  out.to_string()
+}
+
+///|
+fn render_hashes(hashes : Array[(String, String)]) -> String {
+  let keys : Array[String] = []
+  let map : Map[String, String] = Map([])
+  for entry in hashes {
+    map[entry.0] = entry.1
+    keys.push(entry.0)
+  }
+  let sorted = keys.copy()
+  sorted.sort_by(fn(a, b) { String::lexical_compare(a, b) })
+  let out = StringBuilder()
+  let mut first = true
+  for key in sorted {
+    // a repeated algorithm keeps its last value on both sides
+    if map.get(key) is Some(digest) {
+      if !first {
+        out.write_string(",")
+      }
+      out.write_string(escape_projection(key) + "=" + escape_projection(digest))
+      first = false
+    }
+  }
+  out.to_string()
+}
+
+///|
+fn render_yanked(yanked : @pyversion.SimpleYanked) -> String {
+  match yanked {
+    NotYanked => "not-yanked"
+    Yanked(reason) => "yanked:" + reason
+  }
+}
+
+///|
+/// Emit one PEP 691 simple-index record.
+///
+/// A document the index specification accepts also reports the projection above;
+/// a rejected one reports the stable error code. The harness parses the same
+/// document with `json` and re-derives the projection, so both the verdict and
+/// the mapping are compared.
+fn emit_index(
+  source : String,
+  sb : StringBuilder,
+  name : String,
+  document : String,
+) -> Unit {
+  sb.write_string(
+    "\{source}\tindex\t\{escape_record(name)}\t\{escape_record(document)}\t",
+  )
+  match index_opt(document) {
+    Some(index) =>
+      sb.write_string("ok\t\{escape_record(index_projection(index))}\n")
+    None =>
+      sb.write_string("bad\t\{escape_record(index_error_code(document))}\n")
+  }
+}
+
+///|
+fn index_opt(document : String) -> @pyversion.SimpleIndex? {
+  Some(@pyversion.SimpleIndex::parse(document)) catch {
+    _ => None
+  }
+}
+
+///|
+fn index_error_code(document : String) -> String {
+  try {
+    ignore(@pyversion.SimpleIndex::parse(document))
+    "<no error>"
+  } catch {
+    @pyversion.InvalidIndex(code, _) => code
+    _ => "OTHER_ERROR"
+  }
+}
+
+///|
+/// Emit the declared PEP 691 divergences: documents this library deliberately
+/// answers differently from Python's `json`, and in which direction. They are
+/// inputs rather than checks, so the harness can assert that the two answers
+/// really do differ.
+fn emit_index_divergences(sb : StringBuilder) -> Unit {
+  for entry in @fixtures.index_divergences {
+    let expectation = if entry.1 { "accept" } else { "reject" }
+    sb.write_string(
+      "curated\tindex_divergence\t\{escape_record(entry.0)}\t\{expectation}\n",
+    )
+  }
+}
+
+///|
+/// One `IndexFile` for a distribution filename, built the way the resolver's
+/// callers build them: the name is PEP 503 normalized and the version comes from
+/// the file name. `None` when the name is not a distribution name at all.
+fn index_file_of(
+  filename : String,
+  requires_python : String?,
+) -> @pyversion.IndexFile? {
+  match wheel_name_opt(filename) {
+    Some(wheel) =>
+      Some({
+        filename,
+        path: filename,
+        kind: @pyversion.WheelFile,
+        name: @pyversion.canonicalize_name(wheel.name),
+        version: wheel.version,
+        requires_python,
+      })
+    None =>
+      match sdist_name_opt(filename) {
+        Some(sdist) =>
+          Some({
+            filename,
+            path: filename,
+            kind: @pyversion.SdistFile,
+            name: @pyversion.canonicalize_name(sdist.name),
+            version: sdist.version,
+            requires_python,
+          })
+        None => None
+      }
+  }
+}
+
+///|
+fn wheel_name_opt(filename : String) -> @pyversion.WheelFilename? {
+  Some(@pyversion.parse_wheel_filename(filename)) catch {
+    _ => None
+  }
+}
+
+///|
+fn sdist_name_opt(filename : String) -> @pyversion.SdistFilename? {
+  Some(@pyversion.parse_sdist_filename(filename)) catch {
+    _ => None
+  }
+}
+
+///|
+/// `filename@requires-python`, the self-contained encoding of a candidate set,
+/// so the harness recomputes the resolver's answer from the record alone.
+fn render_candidate(filename : String, requires_python : String?) -> String {
+  let constraint = match requires_python {
+    Some(text) => text
+    None => "-"
+  }
+  escape_projection(filename) + "@" + escape_projection(constraint)
+}
+
+///|
+/// Emit one resolver record.
+///
+/// The record carries its own inputs -- the requirement, the candidate files
+/// with their `Requires-Python` constraints, the ordered tag list, the
+/// interpreter and the prerelease mode -- so the harness recomputes the answer
+/// from the record rather than from a shared list. Both sides therefore have to
+/// agree on the selection *and* the order, and a rejected file also carries the
+/// rule that rejected it.
+fn emit_resolve(
+  source : String,
+  sb : StringBuilder,
+  requirement_text : String,
+  candidates : Array[(String, String?)],
+  tags : Array[String],
+  python : String?,
+  mode : String,
+) -> Unit {
+  sb.write_string("\{source}\tresolve\t\{escape_record(requirement_text)}\t")
+  let files : Array[String] = []
+  for candidate in candidates {
+    files.push(render_candidate(candidate.0, candidate.1))
+  }
+  sb.write_string(escape_record(join_fields(files)) + "\t")
+  sb.write_string(escape_record(join_fields(tags)) + "\t")
+  let interpreter = match python {
+    Some(text) => text
+    None => "-"
+  }
+  sb.write_string(escape_record(interpreter) + "\t" + mode + "\t")
+  match resolve_inputs(requirement_text, candidates, tags, python, mode) {
+    None => sb.write_string("bad\t-\t-\n")
+    Some(inputs) => {
+      let (kept, rejections) = inputs
+      let names : Array[String] = []
+      for file in kept {
+        names.push(file.filename)
+      }
+      sb.write_string(escape_record(join_fields(names)) + "\t")
+      let reasons : Array[String] = []
+      for entry in rejections {
+        reasons.push(escape_projection(entry.0) + "=" + entry.1)
+      }
+      sb.write_string(escape_record(join_fields(reasons)) + "\n")
+    }
+  }
+}
+
+///|
+/// `Some((candidates in order, rejections))` for one resolver record, or `None`
+/// when the requirement or a filename does not parse -- which the harness reads
+/// as a rejected record rather than as an empty answer.
+fn resolve_inputs(
+  requirement_text : String,
+  candidates : Array[(String, String?)],
+  tags : Array[String],
+  python : String?,
+  mode : String,
+) -> (Array[@pyversion.IndexFile], Array[(String, String)])? {
+  let requirement = @pyversion.Requirement::parse(requirement_text) catch {
+    _ => return None
+  }
+  let files : Array[@pyversion.IndexFile] = []
+  for candidate in candidates {
+    match index_file_of(candidate.0, candidate.1) {
+      Some(file) => files.push(file)
+      None => return None
+    }
+  }
+  let interpreter = match python {
+    Some(text) =>
+      match parse_opt(text) {
+        Some(version) => Some(version)
+        None => return None
+      }
+    None => None
+  }
+  let prereleases = mode_to_prereleases(mode)
+  let rejected = @pyversion.explain_rejection(
+    files,
+    requirement,
+    tags,
+    interpreter,
+    prereleases~,
+  )
+  let kept = @pyversion.resolve_candidates(
+    files,
+    requirement,
+    tags,
+    interpreter,
+    prereleases~,
+  )
+  Some((kept, rejected))
+}
+
+///|
+fn mode_to_prereleases(mode : String) -> Bool? {
+  match mode {
+    "any" => Some(true)
+    "none" => Some(false)
+    _ => None
+  }
+}
+
+///|
+/// The resolver records: a requirement, a candidate set with `Requires-Python`
+/// constraints, an ordered tag list (most specific first, as
+/// `packaging.tags.sys_tags()` orders it), an interpreter, and a prerelease
+/// mode. The sets are small but every rule of the resolver is reachable: a name
+/// from another project, a version out of range, a prerelease dropped by the
+/// policy, a constraint that excludes the interpreter, a wheel for another
+/// platform, a wheel that outranks an sdist of the same version, a build tag
+/// tie-break, and the same version published twice.
+fn resolver_cases() -> Array[
+  (String, Array[(String, String?)], Array[String], String?, String),
+] {
+  let tags : Array[String] = [
+    "cp312-cp312-manylinux_2_17_x86_64", "cp312-abi3-manylinux_2_17_x86_64", "cp312-none-manylinux_2_17_x86_64",
+    "py3-none-any", "py2.py3-none-any", "cp312-cp312-win_amd64",
+  ]
+  let linux_only : Array[String] = [
+    "cp312-cp312-manylinux_2_17_x86_64", "py3-none-any",
+  ]
+  let wheels : Array[(String, String?)] = [
+    ("demo-1.0-py3-none-any.whl", None),
+    ("demo-1.0.tar.gz", None),
+    ("demo-1.1-py3-none-any.whl", None),
+    ("demo-1.1-cp312-cp312-win_amd64.whl", None),
+    ("demo-2.0rc1-py3-none-any.whl", None),
+    ("demo-2.0-py3-none-any.whl", None),
+    ("demo-2.0-1-py3-none-any.whl", None),
+    ("demo-2.0-2-py3-none-any.whl", None),
+    ("demo-2.0.tar.gz", None),
+    ("other-3.0-py3-none-any.whl", None),
+    ("demo-3.0-py3-none-any.whl", Some(">=3.13")),
+    ("demo-3.0-py3-none-any.whl", Some("nonsense")),
+    ("demo-0.9-py3-none-any.whl", None),
+    ("demo-1.0+local-py3-none-any.whl", None),
+  ]
+  [
+    ("demo", wheels, tags, Some("3.12.3"), "auto"),
+    ("demo", wheels, tags, Some("3.12.3"), "any"),
+    ("demo", wheels, tags, Some("3.12.3"), "none"),
+    ("demo", wheels, linux_only, Some("3.12.3"), "auto"),
+    ("demo>=1.1", wheels, tags, Some("3.12.3"), "auto"),
+    ("demo==1.0", wheels, tags, Some("3.12.3"), "auto"),
+    ("demo~=1.0", wheels, tags, Some("3.12.3"), "auto"),
+    ("demo!=1.1", wheels, tags, Some("3.12.3"), "auto"),
+    ("demo==2.0.*", wheels, tags, Some("3.12.3"), "auto"),
+    ("demo", wheels, tags, None, "auto"),
+    ("demo", wheels, tags, Some("3.13.0"), "auto"),
+    ("demo", wheels, ["py3-none-any"], Some("3.12.3"), "auto"),
+    ("demo", wheels, [], Some("3.12.3"), "auto"),
+    ("demo[extra]>=1.0", wheels, tags, Some("3.12.3"), "auto"),
+    ("other", wheels, tags, Some("3.12.3"), "auto"),
+    ("missing", wheels, tags, Some("3.12.3"), "auto"),
+    ("demo", [], tags, Some("3.12.3"), "auto"),
+    ("demo ; python_version >= '3.12'", wheels, tags, Some("3.12.3"), "auto"),
+  ]
+}
+
+///|
+/// Emit one directory-scan record.
+///
+/// The listing is injected -- `moonbitlang/core` has no filesystem package -- so
+/// the same record is reproducible everywhere, and the harness replays the same
+/// entry list with its own filename parsers. The projection lists every
+/// recognized distribution as `name|version|kind|filename`, in the order the
+/// scanner returns them, which is the order both sides have to agree on.
+fn emit_index_dir(
+  source : String,
+  sb : StringBuilder,
+  directory : String,
+  entries : Array[String],
+) -> Unit {
+  sb.write_string(
+    "\{source}\tindex_dir\t\{escape_record(directory)}\t\{escape_record(join_fields(entries))}\t",
+  )
+  match index_dir_opt(directory, entries) {
+    Some(index) =>
+      sb.write_string("ok\t\{escape_record(index_dir_projection(index))}\n")
+    None => sb.write_string("bad\tINDEX_UNCLASSIFIED\n")
+  }
+}
+
+///|
+fn index_dir_opt(
+  directory : String,
+  entries : Array[String],
+) -> @pyversion.LocalIndex? {
+  Some(@pyversion.LocalIndex::scan(directory, lister=fn(_) { entries })) catch {
+    _ => None
+  }
+}
+
+///|
+fn index_dir_projection(index : @pyversion.LocalIndex) -> String {
+  let out = StringBuilder()
+  out.write_string("directory=" + escape_projection(index.directory))
+  let files = index.files
+  out.write_string(";files=\{files.length()}")
+  for file in files {
+    let kind = match file.kind {
+      WheelFile => "wheel"
+      SdistFile => "sdist"
+    }
+    out.write_string(
+      ";file:" +
+      escape_projection(file.name) +
+      "|" +
+      escape_projection(file.version.to_string()) +
+      "|" +
+      kind +
+      "|" +
+      escape_projection(file.filename),
+    )
+  }
+  out.to_string()
+}
+
+///|
+/// Join record fields with `|`, escaping the separator.
+fn join_fields(values : Array[String]) -> String {
+  let out = StringBuilder()
+  for i = 0; i < values.length(); i = i + 1 {
+    if i > 0 {
+      out.write_string("|")
+    }
+    out.write_string(escape_projection(values[i]))
+  }
+  out.to_string()
+}
+
+///|
+/// The directory listings the scanner records run on. The names are the ones a
+/// real download directory holds: wheels with and without a build tag, wheels
+/// for other platforms, sdists, and files that are not distributions at all
+/// (a README, a lock file, a partial download, a directory).
+fn index_directories() -> Array[(String, Array[String])] {
+  [
+    (
+      "/srv/wheels",
+      [
+        "README.txt", "requirements.txt", "pip.conf", "sha256sums", "Flask-3.0.2.tar.gz",
+        "Flask-3.0.3-py3-none-any.whl", "Flask-3.0.4-1-py3-none-any.whl", "flask-3.0.4-py3-none-any.whl",
+        "zope.interface-6.0.zip", "zope.interface-6.1-cp312-cp312-win_amd64.whl",
+        "numpy-1.26.3.tar.gz", "numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.whl",
+        "pkg-a-1.0.0.dev1-py3-none-any.whl", "pkg_a-1.0.0.tar.gz", "pkg-a-2.0.0-py3-none-any.whl",
+      ],
+    ),
+    (
+      // the names here are chosen so that MoonBit's default `String` order -- which
+      // compares length first -- and code point order disagree: "b" sorts before
+      // "ab" by length and after it by code point.
+      "/srv/names",
+      [
+        "b-1.0.tar.gz", "ab-1.0.tar.gz", "zzz-1.0.tar.gz", "a-b-1.0.tar.gz", "ab_2-1.0.tar.gz",
+        "Ab-2.0.tar.gz",
+      ],
+    ),
+    ("/srv/empty", []),
+    (
+      "/srv/odd",
+      [
+        "broken-1.0.whl", "1.0.tar.gz", "-1.0-py3-none-any.whl", "demo.tar.gz", "demo-1.0.whl",
+        "demo-1.0-py3-none-any.whl.part", "demo-1.0-py3-none-any.whl", "Demo-1.0-py3-none-any.whl",
+        "demo-1.0.tar.gz", "demo-1.0.zip", "demo-1.0.zip.sha256",
+      ],
+    ),
+    (
+      // a subdirectory whose name looks like a distribution: a scan classifies by
+      // name only, never stat-ing the entry
+      "/srv/tricky",
+      [
+        "demo-1.0-py3-none-any.whl", "demo-2.0.tar.gz/", "..", ".", "demo-1.0+local-py3-none-any.whl",
+        "demo-1.0.post1.tar.gz",
+      ],
+    ),
+  ]
+}
+
+///|
 /// Emit one TOML conformance record.
 ///
 /// A rejected document reports only the rejection; an accepted one also reports
@@ -1640,6 +2147,32 @@ fn main {
   }
   for entry in @fixtures.metadata_pypi_cases {
     emit_metadata("pypi", sb, entry.0, entry.1)
+  }
+  // 11. PEP 691 simple-index documents: the curated cases the specification
+  //     accepts, the ones it requires a client to reject, and real responses from
+  //     a public index.
+  emit_index_divergences(sb)
+  for entry in @fixtures.index_cases {
+    emit_index("curated", sb, entry.0, entry.1)
+  }
+  for entry in @fixtures.index_divergence_cases {
+    emit_index("curated", sb, entry.0, entry.1)
+  }
+  for entry in @fixtures.index_bad_cases {
+    emit_index("curated_bad", sb, entry.0, entry.1)
+  }
+  for entry in @fixtures.index_pypi_cases {
+    emit_index("pypi_index", sb, entry.0, entry.1)
+  }
+  // 12. Offline directory scans. The listing is injected, so the record is the
+  //     scanner's classification of a fixed entry list.
+  for entry in index_directories() {
+    emit_index_dir("curated", sb, entry.0, entry.1)
+  }
+  // 13. Candidate resolution: which files a requirement selects, in which order,
+  //     and why the rest were rejected.
+  for entry in resolver_cases() {
+    emit_resolve("curated", sb, entry.0, entry.1, entry.2, entry.3, entry.4)
   }
   println(sb.to_string())
 }

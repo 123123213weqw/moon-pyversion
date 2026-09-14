@@ -41,6 +41,7 @@ import subprocess
 import sys
 import time
 from collections import Counter, defaultdict
+from functools import cmp_to_key
 from pathlib import Path
 
 from packaging import __version__ as ORACLE_VERSION
@@ -66,6 +67,16 @@ except ImportError:  # pragma: no cover - tomli is a hard requirement of CI
         # Only the `toml` records need a reader, so a missing one is reported
         # when one of those records is actually checked, not at import time.
         toml_reader = None
+
+# The PEP 691 mapping is written down once, in the corpus generator, and imported
+# here so the two sides of an `index` record cannot drift apart. That module only
+# imports the standard library at module level.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from fetch_index_corpus import (  # noqa: E402
+    escape_field,
+    project_document,
+    unescape_field,
+)
 
 from packaging.metadata import Metadata as ReferenceMetadata
 from packaging.requirements import InvalidRequirement, Requirement
@@ -100,6 +111,10 @@ ARITY = {
     "license": 5,
     "meta": 7,
     "meta_divergence": 4,
+    "index": 6,
+    "index_dir": 6,
+    "index_divergence": 4,
+    "resolve": 9,
 }
 
 EXIT_OK = 0
@@ -559,6 +574,133 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
             )
         return None
 
+    if kind == "index_divergence":
+        name, expectation = parts[2], parts[3]
+        if expectation not in ("accept", "reject"):
+            return f"index_divergence {name!r} has an unknown expectation {expectation!r}"
+        if name in index_divergence_expectations:
+            return f"index_divergence {name!r} declared twice"
+        index_divergence_expectations[name] = expectation == "accept"
+        return None
+
+    if kind == "resolve":
+        (
+            requirement_text,
+            files_text,
+            tags_text,
+            python_text,
+            mode,
+            kept_text,
+            rejected_text,
+        ) = parts[2], parts[3], parts[4], parts[5], parts[6], parts[7], parts[8]
+        if mode not in MODES:
+            return f"resolve {requirement_text!r}: unknown prerelease mode {mode!r}"
+        if kept_text == "-" and rejected_text == "-":
+            # the emitter reports `bad` when the requirement or a filename did
+            # not parse, which is the same answer the checks below produce
+            try:
+                Requirement(requirement_text)
+                for entry in split_fields(files_text):
+                    filename, _, _constraint = unescape_field(entry).partition("@")
+                    reference_kind(filename)
+                if python_text != "-":
+                    Version(python_text)
+            except (InvalidRequirement, InvalidVersion, ValueError):
+                return None
+            return (
+                f"resolve {requirement_text!r}: moonbit reports an unparsable input, "
+                "but every part parses independently"
+            )
+        try:
+            expected_kept, expected_rejected = resolve_reference(
+                requirement_text, files_text, tags_text, python_text, mode
+            )
+        except (InvalidRequirement, InvalidVersion, ValueError) as error:
+            return (
+                f"resolve {requirement_text!r}: the emitter answered, but an input "
+                f"does not parse ({type(error).__name__}: {error})"
+            )
+        kept = split_fields(kept_text)
+        if kept != expected_kept:
+            return (
+                f"resolve {requirement_text!r} (tags {tags_text!r}, python "
+                f"{python_text!r}, mode {mode!r}): the selection differs\n"
+                f"      expected {expected_kept}\n      got      {kept}"
+            )
+        rejected = split_fields(rejected_text)
+        if rejected != expected_rejected:
+            return (
+                f"resolve {requirement_text!r} (tags {tags_text!r}, python "
+                f"{python_text!r}, mode {mode!r}): the rejection reasons differ\n"
+                f"      expected {expected_rejected}\n      got      {rejected}"
+            )
+        return None
+
+    if kind == "index":
+        name, document, status, detail = parts[2], parts[3], parts[4], parts[5]
+        try:
+            parsed = json.loads(document)
+            expected = project_document(parsed)
+            expected_ok = True
+        except (json.JSONDecodeError, ValueError) as error:
+            expected = None
+            expected_ok = False
+            expected_detail = f"{type(error).__name__}: {error}"
+        library_ok = status == "ok"
+        declared = index_divergence_expectations.get(name)
+        if declared is not None:
+            # The divergence is the point of the record: the two answers must
+            # differ, and the reference must answer the way the fixture says. A
+            # library that quietly grew as permissive as `json` fails here.
+            if library_ok == expected_ok:
+                return (
+                    f"index case {name!r}: declared a divergence, but both sides "
+                    f"{'accept' if library_ok else 'reject'} it"
+                )
+            if expected_ok != declared:
+                return (
+                    f"index case {name!r}: declared divergence says the reference "
+                    f"{'accepts' if declared else 'rejects'} it, but it "
+                    f"{'accepts' if expected_ok else 'rejects'} it ({expected_detail})"
+                )
+            return None
+        if library_ok != expected_ok:
+            if expected_ok:
+                return (
+                    f"index case {name!r}: moonbit rejects ({detail}), the simple-index "
+                    "specification accepts the document"
+                )
+            return (
+                f"index case {name!r}: moonbit accepts, the specification rejects the "
+                f"document ({expected_detail})"
+            )
+        if not expected_ok:
+            # Both reject. The error kinds are not compared: PEP 691 has no schema,
+            # so the library names its own codes.
+            return None
+        if detail != expected:
+            return (
+                f"index case {name!r}: the projection differs\n"
+                f"      expected {expected}\n      got      {detail}"
+            )
+        return None
+
+    if kind == "index_dir":
+        directory, entries_text, status, detail = parts[2], parts[3], parts[4], parts[5]
+        entries = [unescape_field(part) for part in entries_text.split("|")] if entries_text else []
+        expected = local_index_projection(directory, entries)
+        if status != "ok":
+            return (
+                f"index_dir {directory!r}: moonbit rejects the listing ({detail}), the "
+                "reference computation accepts it"
+            )
+        if detail != expected:
+            return (
+                f"index_dir {directory!r}: the projection differs\n"
+                f"      expected {expected}\n      got      {detail}"
+            )
+        return None
+
     if kind == "license":
         raw, status, canonical = parts[2], parts[3], parts[4]
         try:
@@ -598,6 +740,203 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
         return None
 
     raise ProtocolError(f"unknown record kind {kind!r}")
+
+
+def split_fields(text: str) -> list[str]:
+    """Undo `join_fields`: split on the separator, then unescape each part."""
+    return [unescape_field(part) for part in text.split("|")] if text else []
+
+
+def reference_kind(filename: str) -> str:
+    """`"wheel"`, `"sdist"`, or a raise for a name that is neither."""
+    try:
+        parse_wheel_filename(filename)
+        return "wheel"
+    except (InvalidWheelFilename, ValueError):
+        parse_sdist_filename(filename)
+        return "sdist"
+
+
+def resolve_reference(
+    requirement_text: str,
+    files_text: str,
+    tags_text: str,
+    python_text: str,
+    mode: str,
+) -> tuple[list[str], list[str]]:
+    """The resolver's answer, computed here from the record alone.
+
+    This is a second implementation of the rules `resolve_candidates` and
+    `explain_rejection` document, written from the specification and from pip's
+    own behaviour rather than from the MoonBit code:
+
+    * a file is kept when its PEP 503 normalized name matches, its version is in
+      range (prereleases forced on for that first test, so the policy is what
+      decides, not the range), the version survives the prerelease policy
+      computed with `SpecifierSet.filter` over all name-matching versions at
+      once, `requires-python` admits the interpreter whenever both are known, and
+      a wheel has a tag in `tags`;
+    * the reasons are the first rule that fails, in the order
+      `name`, `version`, `prerelease`, `requires-python`, `tags`;
+    * the order is version descending, then a wheel before an sdist, then the
+      wheel with the more preferred tag, then the larger PEP 427 build number,
+      then the filename in code point order.
+    """
+    requirement = Requirement(requirement_text)
+    tags = split_fields(tags_text)
+    python = None if python_text == "-" else Version(python_text)
+    prereleases = {"auto": None, "any": True, "none": False}[mode]
+    files = []
+    for entry in split_fields(files_text):
+        filename, _, constraint = unescape_field(entry).partition("@")
+        kind = reference_kind(filename)
+        if kind == "wheel":
+            name, version, build, _file_tags = parse_wheel_filename(filename)
+            # packaging reports "no build tag" as the empty tuple (and, in older
+            # releases, as the empty string); both mean absent.
+            if not build:
+                build = None
+            # packaging 26.3's `Tag` is not iterable, so the `interpreter-abi-
+            # platform` spelling this library reports is built from its parts.
+            file_tags = {
+                f"{tag.interpreter}-{tag.abi}-{tag.platform}" for tag in _file_tags
+            }
+        else:
+            name, version = parse_sdist_filename(filename)
+            build = None
+            file_tags = set()
+        files.append(
+            {
+                "filename": filename,
+                "name": canonicalize_name(name),
+                "version": version,
+                "kind": kind,
+                "tags": file_tags,
+                "build": build,
+                "requires_python": None if constraint == "-" else constraint,
+            }
+        )
+    wanted = canonicalize_name(requirement.name)
+    # The policy is computed over the distinct name-matching versions, exactly as
+    # `SpecifierSet.filter` would over a candidate list.
+    distinct = []
+    for entry in files:
+        if entry["name"] != wanted:
+            continue
+        if not any(entry["version"] == seen for seen in distinct):
+            distinct.append(entry["version"])
+    # `filter` is lazy: it returns a generator, which a first `any(...)` would
+    # exhaust and leave empty for every later check.
+    allowed = list(requirement.specifier.filter(distinct, prereleases=prereleases))
+
+    def in_allowed(version):
+        return any(version == candidate for candidate in allowed)
+
+    def priority(entry):
+        best = len(tags)
+        for tag in entry["tags"]:
+            for index, supported in enumerate(tags):
+                if supported == tag and index < best:
+                    best = index
+        return best
+
+    def requires_python_ok(entry):
+        if entry["requires_python"] is None or python is None:
+            return True
+        try:
+            specifiers = SpecifierSet(entry["requires_python"])
+        except InvalidSpecifier:
+            # pip logs "Ignoring invalid Requires-Python" and keeps the file
+            return True
+        return specifiers.contains(python)
+
+    def reason(entry):
+        if entry["name"] != wanted:
+            return "name"
+        if not requirement.specifier.contains(entry["version"], prereleases=True):
+            return "version"
+        if not in_allowed(entry["version"]):
+            return "prerelease"
+        if not requires_python_ok(entry):
+            return "requires-python"
+        if entry["kind"] == "wheel" and priority(entry) == len(tags):
+            return "tags"
+        return None
+
+    # A version's rank: sorting the distinct versions with PEP 440 comparison and
+    # ranking them gives an integer that can be negated inside a single ascending
+    # `sorted`, which a nested `Version._key` tuple cannot.
+    distinct_versions = sorted(
+        {entry["version"] for entry in files},
+        key=cmp_to_key(lambda a, b: (a > b) - (a < b)),
+    )
+    rank = {version: index for index, version in enumerate(distinct_versions)}
+
+    def sort_key(entry):
+        # build: pip sorts with `max()` on (int, str) for a tagged wheel and the
+        # empty tuple otherwise, so a larger number wins and a tagged wheel
+        # outranks an untagged one. Negating an integer and using a reversed
+        # string keeps a single ascending `sorted` correct.
+        if entry["build"] is None:
+            build = (1, "")
+        elif isinstance(entry["build"], tuple):
+            number, rest = entry["build"]
+            build = (0, -number, tuple(-ord(c) for c in rest))
+        else:  # a bare string, which older releases returned
+            build = (0, 0, tuple(-ord(c) for c in str(entry["build"])))
+        wheel = 0 if entry["kind"] == "wheel" else 1
+        tag = priority(entry) if entry["kind"] == "wheel" else len(tags)
+        return (-rank[entry["version"]], wheel, tag) + build + (entry["filename"],)
+
+    kept = []
+    rejected = []
+    for entry in files:
+        why = reason(entry)
+        if why is None:
+            kept.append(entry)
+        else:
+            rejected.append(f"{escape_field(entry['filename'])}={why}")
+    kept.sort(key=sort_key)
+    return [entry["filename"] for entry in kept], rejected
+
+
+def local_index_projection(directory: str, entries: list[str]) -> str:
+    """The offline scanner's classification of one directory, computed here.
+
+    The rules are the ones `LocalIndex::scan` documents: a file is indexed when
+    its name parses as a PEP 427 wheel or a PEP 625 sdist and every other entry
+    is ignored; the result is ordered by normalized name and then by file name in
+    code point order. The two implementations parse the same names with
+    independent parsers -- this one uses `packaging.utils`, the library its own --
+    so an agreement here is evidence about the parsers, not about a shared helper.
+    """
+    indexed = []
+    for entry in entries:
+        try:
+            name, version, _build, _tags = parse_wheel_filename(entry)
+            kind = "wheel"
+        except (InvalidWheelFilename, ValueError):
+            try:
+                name, version = parse_sdist_filename(entry)
+                kind = "sdist"
+            except (InvalidSdistFilename, ValueError):
+                continue
+        indexed.append((canonicalize_name(name), str(version), kind, entry))
+    indexed.sort(key=lambda item: (item[0], item[3]))
+    parts = [f"directory={escape_field(directory)}", f"files={len(indexed)}"]
+    for name, version, kind, filename in indexed:
+        parts.append(
+            "file:"
+            + "|".join(
+                [
+                    escape_field(name),
+                    escape_field(version),
+                    kind,
+                    escape_field(filename),
+                ]
+            )
+        )
+    return ";".join(parts)
 
 
 def _metadata_shape(metadata: object) -> str:
@@ -765,6 +1104,14 @@ def classify_difference(oracle: "Oracle", parts: list[str]) -> str:
         return "metadata-rules"
     if kind == "meta_divergence":
         return "metadata-divergence"
+    if kind == "index":
+        return "index-mapping"
+    if kind == "index_dir":
+        return "index-scan"
+    if kind == "index_divergence":
+        return "index-divergence"
+    if kind == "resolve":
+        return "candidate-resolution"
     return {"parse": "version-grammar", "spec": "specifier-grammar"}.get(kind, "ordering")
 
 
@@ -781,12 +1128,19 @@ ORACLE_CRASHED = "the reference implementation raised {error}"
 # second table inside this harness.
 divergence_expectations: dict[str, bool] = {}
 
+# The same idea for PEP 691 documents: case name -> does the reference (Python's
+# `json` module plus the specification's rules) accept it.
+index_divergence_expectations: dict[str, bool] = {}
+
 ESCAPED_FIELDS = {
     "marker": (2, 4),
     "marker_eval": (3, 5),
     "toml": (3, 5),
     "license": (2, 4),
     "meta": (3, 6),
+    "index": (3, 5),
+    "index_dir": (3, 5),
+    "resolve": (3, 4, 5, 6, 7, 8),
 }
 
 
@@ -948,6 +1302,7 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_OK
 
     divergence_expectations.clear()
+    index_divergence_expectations.clear()
     oracle = Oracle()
     cases: Counter = Counter()
     mismatches: Counter = Counter()
@@ -1061,6 +1416,7 @@ def main(argv: list[str] | None = None) -> int:
             "python_version": sys.version.split()[0],
             "toml_reader": None if toml_reader is None else toml_reader.__name__,
             "metadata_divergences": sorted(divergence_expectations),
+            "index_divergences": sorted(index_divergence_expectations),
             "target": args.target,
             "emitter_seconds": None if args.input else round(emitter_seconds, 3),
             "records": total_cases,

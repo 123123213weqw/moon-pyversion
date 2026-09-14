@@ -92,12 +92,13 @@ MoonBit 想消费 Python 生态（离线镜像、锁文件、包元数据）时�
 | M4 | `toml.mbt` | TOML 1.0 读取与规范重序列化（`pyproject.toml` / `pylock.toml`） | 场景 1、2 | 1580 | M1 | `[已完成]`（计划外新增） |
 | M5 | `licenses.mbt` | PEP 639 许可证表达式与许可证文件路径 | 场景 1 | 460 | — | `[已完成]`（计划外新增） |
 | M6 | `metadata.mbt` | METADATA / PKG-INFO 头部 | 场景 1 端到端 | 1336 | M2 M3 M5 | `[已完成]` |
-| M7 | `index.mbt` | 离线索引目录扫描 + PEP 691 JSON | 场景 2 端到端 | ~450 | M1 M2 | `[计划]` |
+| M7 | `index.mbt` | 离线索引目录扫描 + PEP 691 JSON + 候选解析 | 场景 2 端到端 | 1256 | M1 M2 | `[已完成]` |
 | M8 | `pylock.mbt` | `pylock.toml` 解析（PEP 751） | 场景 1、2 | ~500 | M2 M4 | `[计划]` |
 | M9 | `examples/metadata-check` | 依赖检查报告（可运行产物） | 场景 1 | 220 | M6 | `[已完成]` |
 
-实际落地（截至 M6）：库源码 **6128 行**、测试 **3172 行**（167 个测试块）、
-差分语料 **121 239 条**。M6 的验收证据是 **239 份真实 PyPI `METADATA`**（取自
+实际落地（截至 M7）：库源码 **7384 行**、测试 **5022 行**（219 个测试块）、
+差分语料 **121 381 条**。M7 的验收证据是 **97 份真实 PEP 691 索引响应**加上
+21 条手工文档与 18 组候选解析，全部独立重算后逐条比对；另有 1 条声明分歧。M6 的验收证据是 **239 份真实 PyPI `METADATA`**（取自
 真实 wheel 的 PEP 658 边上文件）加上 42 条手工规则样例，全部对
 `packaging.metadata` 回放，另有 7 条声明分歧（方向逐条登记）。原计划按 `metadata.mbt` 一个文件推进，施工中发现
 `METADATA` 与锁文件都要先有 TOML 读取能力，且 PEP 639 在 26.3 里已单独成
@@ -118,7 +119,8 @@ M6。里程碑编号变化不影响验收门禁，也不影响已交付能力的
 | `toml` | TOML 文档 → 接受/拒绝 + 重序列化后重新解析 | 参考实现 `tomli` | M4 |
 | `meta_divergence` | 声明分歧的样例名与参考实现的方向（输入，非断言） | — | M6 |
 | `meta` | METADATA 原文 → 裁决 + 错误码 + 规范重排 | `Metadata.from_email(validate=True)`（+ 声明分歧） | M6 |
-| `index` | simple index JSON → (name, version) 列表 | `parse_sdist/wheel_filename` | M7 |
+| `index_dir` | 目录清单 → 识别出的分发（名称、版本、类型、文件名，按序） | 规范（`parse_sdist/wheel_filename` + 排序规则） | M7 |
+| `resolve` | 需求 × 标签 × 解释器 × 预发布策略 → 保留清单与逐条拒绝原因 | 用 `packaging` 重写的候选选择与排序 | M7 |
 
 真实语料**几乎免费**：`tools/fetch_pypi_corpus.py` 已经在抓 `Requires-Dist` 原文，
 PyPI JSON 的 `urls[].filename` 直接给出真实分发文件名、`requires_dist` 给出真实
@@ -134,6 +136,8 @@ PyPI JSON 的 `urls[].filename` 直接给出真实分发文件名、`requires_di
   如实记录为边界，不掩饰；
 - **M4/M5 提前**：`METADATA` 与锁文件都要先能读 TOML，许可证又有独立的参考
   实现可对照，先做这两块能让后面的 `metadata.mbt` 直接复用；
+- **M7 已完成**：`index.mbt` 让场景 2 从"能解析文件名"变成"能从索引或目录里
+  选出可安装的那个文件，并说清其余为什么不行"；
 - **M9 最后**，它是把前面所有能力串成"可运行项目"的那一步。
 
 每完成一个里程碑：更新 [roadmap.md](roadmap.md) 的 `[已有]` 标注，

@@ -12,6 +12,7 @@ pub(all) suberror VersionError {
   InvalidToml(String, Int)
   InvalidLicense(String, Int)
   InvalidMetadata(String, Int)
+  InvalidIndex(String, Int)
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -26,6 +27,7 @@ pub fn VersionError::diagnostic(self : VersionError) -> String {
     InvalidToml(code, pos) => "\{code} at \{pos}"
     InvalidLicense(code, pos) => "\{code} at \{pos}"
     InvalidMetadata(code, pos) => "\{code} at \{pos}"
+    InvalidIndex(code, pos) => "\{code} at \{pos}"
   }
 }
 
