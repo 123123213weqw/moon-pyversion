@@ -117,7 +117,7 @@ Unicode 感知的正则。PEP 427 要求 wheel 文件名是转义后的 ASCII，
 
 `moon test` 覆盖官方规范化样例、非法输入、比较边例、各操作符、
 预发布规则、通配符、`~=` 以及固定合法版本集上的反自反/反对称/传递性，
-共 120 个测试块，在 wasm、wasm-gc、js、native 四目标全部通过。
+共 167 个测试块，在 wasm、wasm-gc、js、native 四目标全部通过。
 CI 在四个目标执行 `fmt/check/build/test/run`。
 
 另有独立差分实验：`examples/diff` 生成 121 239 条确定性记录（手工语料、

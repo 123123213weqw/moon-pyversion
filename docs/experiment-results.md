@@ -165,7 +165,7 @@ restrictions"）。
 | 检查 | 结果 |
 | --- | --- |
 | `moon fmt --check` | 通过 |
-| `moon check/build/test --deny-warn`（wasm / wasm-gc / js / native） | 全部通过，每个后端 **120 个测试块全部通过**（合计 480） |
+| `moon check/build/test --deny-warn`（wasm / wasm-gc / js / native） | 全部通过，每个后端 **167 个测试块全部通过**（合计 668） |
 | `moon run examples/basic`（四后端） | 通过 |
 | `moon run examples/diff`（四后端） | 121 240 行语料，四端字节一致 |
 

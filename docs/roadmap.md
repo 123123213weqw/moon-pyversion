@@ -104,8 +104,8 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 | `licenses.mbt` `[已有]` | `canonicalize_license_expression`、`is_valid_license_expression`、`canonicalize_license_file` | 场景 1 | 460 |
 | `metadata.mbt` `[已有]` | `Metadata::parse/requirements/requires_python/extras/is_compatible/diagnostics/to_string` | 场景 1（端到端） | 1336 |
 
-库源码合计 **6128 行**（不含测试与示例），测试 **1851 行**（`*_test.mbt`，
-120 个测试块 × 四后端），示例 1645 + 245 行，工具链 2829 行 Python。
+库源码合计 **6128 行**（不含测试与示例），测试 **3172 行**（`*_test.mbt`，
+167 个测试块 × 四后端），示例 1645 + 245 行，工具链 2829 行 Python。
 
 **`utils.mbt` 设计要点** `[已完成，见下]`（已用 packaging 26.3 核实）：
 
@@ -296,7 +296,7 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 ## 交付成果
 
-`[已有]` 源码 **6128 行**（不含测试）、测试 **1851 行**（120 个测试块 × 四后端
+`[已有]` 源码 **6128 行**（不含测试）、测试 **3172 行**（167 个测试块 × 四后端
 全通过）、`examples/basic` `examples/diff`（1570 行确定性发射器）
 `examples/bench`、`tools/` 七个脚本（2829 行 Python）、`fixtures/` 真实语料
 （97 个 PyPI 包 + 83 个 TOML 文档 + 281 份核心元数据）、四后端 CI + 独立 differential 作业。

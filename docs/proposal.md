@@ -41,7 +41,7 @@ https://github.com/123123213weqw/moon-pyversion
 
 **许可证**：`canonicalize_license_expression` / `is_valid_license_expression` / `canonicalize_license_file`（PEP 639），含 699 个许可证标识符与 79 个例外的查表、ASCII 大小写折叠、`LicenseRef-` / `DocumentRef-` 形式与嵌套上限。
 
-库源码合计 6128 行（不含测试），测试 1851 行（120 个测试块）。
+库源码合计 6128 行（不含测试），测试 3172 行（167 个测试块）。
 
 ## 技术路线
 
@@ -51,7 +51,7 @@ CI 在 wasm / wasm-gc / js / native 四后端执行格式化检查、构建、�
 
 ## 预计交付成果
 
-公开可复现的 MoonBit 源码与 Apache-2.0 许可证；中文 README 与英文 API 契约；`examples/basic`、`examples/diff`（确定性语料发射器，1645 行）、`examples/metadata-check`（依赖清单检查，场景 1 的端到端证据）、`examples/bench`（吞吐）四个可运行示例；覆盖核心路径的 **120 个测试块**（含 PEP 440 官方规范化样例、非法输入拒绝、比较边例、各操作符、预发布规则、标记求值、需求行文法、TOML 一致性、许可证表达式，以及固定版本集上的反自反/反对称/传递性属性测试），四个后端全部通过；`tools/` 下的差分实验工具链（`diff_packaging.py`、`target_parity.py`、`oracle_matrix.py`、`fetch_pypi_corpus.py`、`fetch_toml_corpus.py`、`mutation_probe.py`）与 `fixtures/` 真实语料（97 个 PyPI 包、83 个 TOML 文档）；四后端 CI；MoonCakes 发布。
+公开可复现的 MoonBit 源码与 Apache-2.0 许可证；中文 README 与英文 API 契约；`examples/basic`、`examples/diff`（确定性语料发射器，1645 行）、`examples/metadata-check`（依赖清单检查，场景 1 的端到端证据）、`examples/bench`（吞吐）四个可运行示例；覆盖核心路径的 **167 个测试块**（含 PEP 440 官方规范化样例、非法输入拒绝、比较边例、各操作符、预发布规则、标记求值、需求行文法、TOML 一致性、许可证表达式，以及固定版本集上的反自反/反对称/传递性属性测试），四个后端全部通过；`tools/` 下的差分实验工具链（`diff_packaging.py`、`target_parity.py`、`oracle_matrix.py`、`fetch_pypi_corpus.py`、`fetch_toml_corpus.py`、`fetch_metadata_corpus.py`、`mutation_probe.py`）与 `fixtures/` 真实语料（97 个 PyPI 包、83 个 TOML 文档、281 份核心元数据）；四后端 CI；MoonCakes 发布。
 
 实验不只报告“0 不一致”，还报告**对照本身能不能失败**：`tools/mutation_probe.py` 向库里注入 20 处故意缺陷（名称规范化、标签排序、版本键形式、wheel/sdist 名称切分、local 段比较、标记规范化与词汇表、依赖行标记校验、SPDX 大小写、TOML 内联表与多行字符串与整数宽度、预发布策略），20/20 全部被语料检出。语料中的 4 个 TOML 样例是参考实现的放宽（TOML 1.1 的内联表换行与尾随逗号、`\xHH` 转义、任意精度整数），库按 TOML 1.0 拒绝，这处分歧在两个方向上都被断言。
 

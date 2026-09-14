@@ -66,6 +66,10 @@
   `diagnostics` / `to_string`: the canonical re-rendering re-parses to the same
   metadata, which is what the round trip check below relies on.
 - `VersionError::InvalidMetadata(String, Int)`, plus its `diagnostic` arm.
+- `metadata_test.mbt`: 47 blocks pinned against `packaging` 26.3, one per rule,
+  asserting the error code as well as the rejection, plus a corpus block that
+  replays 40 measured documents. The suite is 167 blocks on each of the four
+  backends.
 - `tools/fetch_metadata_corpus.py` and `metadata_cases/`: 42 curated rule cases
   and 239 real `METADATA` documents fetched from the PEP 658 `.metadata` sidecars
   of real PyPI wheels (593 downloaded, the rest dropped for size, counted in
