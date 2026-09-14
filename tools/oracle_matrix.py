@@ -104,6 +104,20 @@ def main(argv: list[str] | None = None) -> int:
                 text=True,
                 check=False,
             )
+            # A missing report means the sub-run never got as far as writing
+            # one, which is an environment or protocol problem rather than a
+            # difference between two releases. Reading the file first would turn
+            # that into a bare FileNotFoundError and hide the actual message, so
+            # the sub-run's output is reported before the report is read.
+            if not report_path.exists():
+                sys.stderr.write(completed.stderr[-4000:])
+                sys.stderr.write(completed.stdout[-2000:])
+                print(
+                    f"oracle {version} ({python}) produced no report: "
+                    f"exit {completed.returncode}",
+                    file=sys.stderr,
+                )
+                return 2
             report = json.loads(report_path.read_text(encoding="utf-8"))
             rows.append(
                 {

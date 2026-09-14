@@ -62,6 +62,16 @@
   the fixture was generated with — falls back to `tomllib`, states which one it
   used in the report and on stdout, and treats "both reject" as agreement
   regardless of the reader. CI pins `tomli==2.4.1` and asserts the version.
+- `tools/oracle_matrix.py` read each per-oracle report without checking that it
+  exists, so a sub-run that died turned into a bare `FileNotFoundError` that hid
+  the real message, and the drift table silently lost those rows. It now reports
+  the sub-run's stderr and exit status instead.
+- `tools/diff_packaging.py` no longer dies when the reference implementation
+  itself raises: packaging 25.0 and older hand an invalid escape sequence to
+  `ast.parse` and raise `SyntaxError` where 26.3 raises `InvalidMarker`. Those
+  records (27-28 of them) are now reported as a difference with the cause
+  `oracle-crash`, so every oracle replays all 120 951 records and older releases
+  produce a complete drift table.
 - The build toolchain and CI disagreed about formatting: `moon` 0.1.20260713
   accepted `{ lhs, op, rhs }` where `moon` 0.1.20260904 (the release CI installs)
   requires `{ lhs, op, rhs, }`, so `moon fmt --check` failed there. The sources

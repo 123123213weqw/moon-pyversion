@@ -62,13 +62,16 @@ js 输出与捕获文件 md5 一致（`99c0790ae384a1098effcc486dddd223`），�
 
 | packaging | records | differences | fatal | causes |
 | --- | ---: | ---: | ---: | --- |
-| 24.2 | 116612 | 3765 | 0 | auto-prerelease-admission x1749, exclusive-ordered-comparison x209, filename-grammar x148, compatible-release-range x3, marker-evaluation x1562, marker-grammar x94 |
-| 25.0 | 116612 | 2323 | 0 | auto-prerelease-admission x1749, exclusive-ordered-comparison x209, filename-grammar x148, compatible-release-range x3, marker-evaluation x163, marker-grammar x51 |
-| 26.0 | 116612 | 505 | 0 | exclusive-ordered-comparison x209, filename-grammar x148, compatible-release-range x3, marker-evaluation x95, marker-grammar x50 |
+| 24.2 | 120951 | 4472 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, license-expression x153, marker-evaluation x1998, marker-grammar x184, oracle-crash x28 |
+| 25.0 | 120951 | 2734 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, license-expression x153, marker-evaluation x357, marker-grammar x87, oracle-crash x28 |
+| 26.0 | 120951 | 825 | 0 | compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, license-expression x66, marker-evaluation x285, marker-grammar x87, oracle-crash x27 |
 | **26.3（目标版本）** | 120951 | **0** | **0** | — |
 
-旧版本能回放的记录数更少（116 612），因为 `marker`/`marker_eval` 的
-`context` 参数和部分标记写法在旧版本上还不存在；这些记录只对固定版本回放。
+四个 oracle 都能回放全部 120 951 条记录，fatal 都是 0（旧版本按 `--tolerate-drift`
+记为容忍漂移）。`oracle-crash` 是新增的一类原因：27–28 条记录上**旧版本自己抛异常**
+（把非法的转义序列交给 `ast.parse`，抛 `SyntaxError`，而 26.3 会抛
+`InvalidMarker`）。这类记录以前会让整轮回放中断、连报告都写不出来——现在被
+当成"参考实现在这条输入上失败"，按差异统计并给出原因，而不是让工具崩掉。
 
 
 差异全部落在三个已发布的上游行为变更上，各给一个最小复现：

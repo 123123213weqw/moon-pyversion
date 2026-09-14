@@ -641,6 +641,11 @@ def classify_difference(oracle: "Oracle", parts: list[str]) -> str:
 
 # Marker fields are escaped by the emitter because a marker value may contain a
 # tab or a newline once its quotes are decoded.
+# `check_record` returns this when calling the reference implementation raised
+# instead of answering. It is kept as a string so it travels through the same
+# sample and report paths as every other difference.
+ORACLE_CRASHED = "the reference implementation raised {error}"
+
 ESCAPED_FIELDS = {
     "marker": (2, 4),
     "marker_eval": (3, 5),
@@ -824,11 +829,30 @@ def main(argv: list[str] | None = None) -> int:
             cases[(source, kind, mode)] += 1
             if mode != "-":
                 prerelease_cases += 1
-            problem = check_record(oracle, parts)
+            try:
+                problem = check_record(oracle, parts)
+            except ProtocolError:
+                raise
+            except Exception as error:  # noqa: BLE001 - the oracle failed, see below
+                # A release other than the pinned one can fail on an input the
+                # pinned one rejects cleanly: packaging 25.0 hands an invalid
+                # escape sequence to `ast.parse` and raises `SyntaxError` where
+                # 26.3 raises `InvalidMarker`. That is a difference in what the
+                # reference implementation accepts, so it is reported as one
+                # rather than killing the run and leaving no report behind.
+                problem = ORACLE_CRASHED.format(
+                    error=f"{type(error).__name__}: {error}"
+                )
             if problem is None:
                 continue
             key = (source, kind, mode)
-            causes[classify_difference(oracle, parts)] += 1
+            if problem.startswith(ORACLE_CRASHED.split("{")[0]):
+                causes["oracle-crash"] += 1
+            else:
+                try:
+                    causes[classify_difference(oracle, parts)] += 1
+                except Exception:  # noqa: BLE001 - classifying needs the oracle too
+                    causes["oracle-crash"] += 1
             if drift_is_expected:
                 drift[key] += 1
                 if len(drift_samples[key]) < args.max_samples:
