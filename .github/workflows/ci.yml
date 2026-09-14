@@ -28,6 +28,7 @@ jobs:
       - run: moon test --target ${{ matrix.target }} --deny-warn
       - run: moon run examples/basic --target ${{ matrix.target }}
       - run: moon run examples/metadata-check --target ${{ matrix.target }}
+      - run: moon run examples/resolve --target ${{ matrix.target }}
 
   differential:
     # The library is written against packaging 26.3, so that release is the
@@ -58,6 +59,22 @@ jobs:
           moon run examples/diff --target js > corpus-a.tsv
           moon run examples/diff --target js > corpus-b.tsv
           cmp corpus-a.tsv corpus-b.tsv
+      - name: Every backend must print the same scenario report
+        # The two scenario examples are reports a user reads, so "the same
+        # answer everywhere" is part of the claim they demonstrate. The verify
+        # job above only proves that each backend runs them.
+        run: |
+          for target in wasm wasm-gc js native; do
+            moon run examples/metadata-check --target $target > dependency-check-$target.txt
+            moon run examples/resolve --target $target > candidate-resolution-$target.txt
+          done
+          for report in dependency-check candidate-resolution; do
+            cmp $report-wasm.txt $report-wasm-gc.txt
+            cmp $report-wasm.txt $report-js.txt
+            cmp $report-wasm.txt $report-native.txt
+            echo "$report: identical on wasm, wasm-gc, js and native"
+          done
+
       - name: The corpus must detect deliberate defects
         run: python -B tools/mutation_probe.py --oracle python
       - name: Prerelease and compatible-release drift against packaging < 26.3

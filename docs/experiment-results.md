@@ -180,6 +180,8 @@ restrictions"）。
 | `moon check/build/test --deny-warn`（wasm / wasm-gc / js / native） | 全部通过，每个后端 **219 个测试块全部通过**（合计 876） |
 | `moon run examples/basic`（四后端） | 通过 |
 | `moon run examples/diff`（四后端） | 121 382 行语料，四端字节一致 |
+| `moon run examples/metadata-check`（四后端） | 四端字节一致（md5 `1834d5459527`） |
+| `moon run examples/resolve`（四后端） | 四端字节一致（md5 `e58c1ff44ab6`） |
 
 ## 6.5 各阶段新增能力的覆盖
 
@@ -301,6 +303,52 @@ TOML 的对照方式与其他记录不同，值得单独说明：参考实现给
 输入是编译进去的：库只依赖 `moonbitlang/core`，core 没有文件系统包，示例因此
 不从磁盘读文件（把常量换成文件或网络响应即可）。这一点在示例的注释里写明，不
 含糊。
+
+## 6.8 场景 2 的端到端输出
+
+`examples/resolve`（570 行）是场景 2 的可运行产物：一份 PEP 691 索引响应 + 一张
+目标平台标签表 + 一个 wheelhouse 目录，输出 yank 策略、每个被拒文件的**首条**失败
+规则、候选排序与最终选择。下面是压缩后的实际输出（只删掉了重复行）：
+
+```
+== an index response
+   demo_light, api-version 1.1: 14 entries, 13 installable, 1 not a distribution file
+   versions (PEP 700): 0.9.0 1.0.0 1.1.0 1.2.0rc1 1.2.0 1.2.1 1.3.0b1 1.4.0 2.0.0
+   demo_light-0.8.0.tar.bz2: INDEX_UNKNOWN_DIST
+target: CPython 3.10.12, x86_64 linux, 12 tags, most specific first
+== requirement  demo-light>=1.0,!=1.1.0
+   12 file(s) of demo-light, 1 of another project, 11 offered to the resolver
+   yanked, dropped: demo_light-1.2.0rc1-py3-none-any.whl / demo_light-1.4.0-py3-none-any.whl
+   rejected 6 of 11:
+      name             1     e.g. other_thing-1.0.0-py3-none-any.whl
+      version          2     e.g. demo_light-0.9.0-py3-none-any.whl
+      prerelease       1     e.g. demo_light-1.3.0b1-py3-none-any.whl
+      requires-python  1     e.g. demo_light-2.0.0-py3-none-any.whl
+      tags             1     e.g. demo_light-2.0.0-cp311-cp311-manylinux_2_17_x86_64.whl
+   candidates 5, best first: 1.2.1 wheel cp310 / 1.2.1 wheel py3 / 1.2.0 wheel /
+                              1.2.0 sdist / 1.0.0 wheel
+   -> selected  demo_light-1.2.1-cp310-cp310-manylinux_2_17_x86_64.whl
+      with no yank policy it would be demo_light-1.4.0-py3-none-any.whl
+== the same requirement in a wheelhouse (no index, no network)
+   /srv/wheels: 7 entries, 5 distribution file(s), 2 ignored
+   files_for("Demo.Light") -> 5 file(s) (PEP 503 normalization)
+   -> selected  demo_light-1.4.0-py3-none-any.whl
+   default lister: INDEX_NO_FS at 0
+```
+
+这份输出里的每一条都是可核对的：
+
+- **五条拒绝规则各出现至少一次**（`name` / `version` / `prerelease` /
+  `requires-python` / `tags`），所以报告不是只有成功路径；
+- **yank 策略真的改变了答案**：带策略选 1.2.1，不带策略会选被 yank 的 1.4.0，
+  函数在同一份输入上同时打印两种结果，读者不必相信注释；
+- **`INDEX_UNKNOWN_DIST` 与 `INDEX_NO_FS` 都是真实触发的**：`.tar.bz2` 不是 PEP 625
+  的 sdist，默认的列目录函数没被注入时会报错而不是假装目录是空的；
+- **目录与索引给出不同答案，而且原因写明了**：目录里没有 PEP 592 状态可读，
+  1.4.0 因此胜出。
+
+与场景 1 一样，输入是编译进程序的（core 没有文件系统包与 HTTP 客户端），
+四后端输出逐字节一致（md5 `e58c1ff44ab6`）。
 
 ## 7. 吞吐（`examples/bench`，本机墙钟，非跨语言基准）
 

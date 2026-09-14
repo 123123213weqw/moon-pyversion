@@ -1,0 +1,12 @@
+// moon.pkg for the candidate-resolution example.
+//
+// It needs the library and nothing else: unlike the dependency-check example it
+// does not read the differential fixtures, because its inputs are a synthetic
+// index document and a synthetic directory listing written into `main.mbt`.
+// That keeps the scenario self-contained and makes the output depend only on
+// what a reader can see in the source.
+import {
+  "123123213weqw/moon_pyversion" @pyversion,
+}
+
+pkgtype(kind: "executable")

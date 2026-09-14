@@ -14,6 +14,12 @@
   `Eq`/`Compare`/`Show` 实现；
 - `specifier.mbt`：`SpecifierOp`、`Specifier`、`SpecifierSet`、操作符匹配、
   通配符、compatible release、预发布规则；
+- `utils.mbt`：PEP 503 名称规范化、PEP 625 版本键形式、PEP 427/625 文件名解析；
+- `requirements.mbt`、`markers.mbt`：PEP 508 需求行与环境标记；
+- `toml.mbt`：TOML 1.0 读取与规范重序列化（`pyproject.toml` / `pylock.toml`）；
+- `licenses.mbt`：PEP 639 许可证表达式与许可证文件路径；
+- `metadata.mbt`：核心元数据（PEP 566/621/639/643/685/753）；
+- `index.mbt`：严格 JSON、PEP 691 索引响应、离线目录扫描与候选解析；
 - `*_test.mbt`：官方样例、错误拒绝、比较边例、specifier 操作符、
   预发布规则、生成式比较属性测试。
 
@@ -82,11 +88,12 @@
 ## 边界
 
 - 不做 pip、联网、下载、安装；
-- 不做完整依赖求解和候选生成；
-- 不解析包名、extras、环境标记、平台标签；
+- 不做完整依赖求解和冲突回溯（`resolve_candidates` 只在**一个**约束下排序候选）；
+- 不计算平台标签：标签表由调用方按 `sys_tags()` 顺序传入，库只做匹配与排序；
+- 不读运行时解释器环境：标记求值只接受调用方传入的环境表；
 - 不提供 SemVer 兼容；
 - local 段仅允许 ASCII 字母数字；
-- 错误信息只包含稳定代码和 UTF-16 偏移，不回显敏感环境数据。
+- 错误信息只包含稳定代码和偏移（JSON 层是 UTF-16 偏移），不回显敏感环境数据。
 
 ## 打包元数据辅助（`utils.mbt`）
 
@@ -125,7 +132,10 @@ CI 在四个目标执行 `fmt/check/build/test/run`。
 CPython `packaging 26.3`。设计与数据见 [experiment.md](experiment.md)、
 [experiment-results.md](experiment-results.md)。
 
-版本固定为 26.3 不是随手选的：`tools/oracle_matrix.py` 实测 24.2 有 4473 条、
-25.0 有 2735 条、26.0 有 825 条差异，26.3 为 0 条，差异全部对应上游已发布的
+版本固定为 26.3 不是随手选的：`tools/oracle_matrix.py` 实测 24.2 有 4474 条、
+25.0 有 2736 条、26.0 有 826 条差异，26.3 为 0 条，差异全部对应上游已发布的
 行为变更。
 差分实验证明的是"与 packaging 26.3 一致"，不是全规范合规证明。
+
+两个场景各有可运行示例：`examples/metadata-check`（场景 1）与
+`examples/resolve`（场景 2），四后端输出逐字节一致，CI 每次运行。

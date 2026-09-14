@@ -220,6 +220,46 @@ moon run examples/metadata-check --target js
 文件系统包，示例宁可保持四后端可移植也不为此引入依赖；文档来源与语料完全一致
 （真实 wheel 的 PEP 658 边上文件），把两个常量换成文件或网络响应即可。
 
+## 可运行示例：从索引到可安装文件
+
+`examples/resolve` 是场景 2 的端到端证据：读入一份 PEP 691 索引响应，把每个
+`files[]` 条目变成可安装文件，按目标平台标签挑出候选并排序，再把其余每个文件
+被哪条规则排除说清楚（下面是节选，`...` 处省略了重复行）：
+
+```sh
+moon run examples/resolve --target js
+```
+```text
+== an index response
+   demo_light, api-version 1.1: 14 entries, 13 installable, 1 not a distribution file
+   demo_light-0.8.0.tar.bz2: INDEX_UNKNOWN_DIST
+== requirement  demo-light>=1.0,!=1.1.0
+   12 file(s) of demo-light, 1 of another project, 11 offered to the resolver
+   yanked, dropped: demo_light-1.4.0-py3-none-any.whl
+      reason: the 1.4.0 wheels were built with the wrong ABI tag
+   rejected 6 of 11:
+      name             1     e.g. other_thing-1.0.0-py3-none-any.whl
+      version          2     e.g. demo_light-0.9.0-py3-none-any.whl
+      prerelease       1     e.g. demo_light-1.3.0b1-py3-none-any.whl
+      requires-python  1     e.g. demo_light-2.0.0-py3-none-any.whl
+      tags             1     e.g. demo_light-2.0.0-cp311-cp311-manylinux_2_17_x86_64.whl
+   candidates 5, best first:
+      1.2.1    wheel  cp310-cp310-manylinux_2_17_x86_64       demo_light-1.2.1-cp310-...
+      1.2.0    sdist  no tag (an sdist)                       demo_light-1.2.0.tar.gz
+   -> selected  demo_light-1.2.1-cp310-cp310-manylinux_2_17_x86_64.whl
+== the same requirement in a wheelhouse (no index, no network)
+   /srv/wheels: 7 entries, 5 distribution file(s), 2 ignored
+   -> selected  demo_light-1.4.0-py3-none-any.whl
+...
+```
+
+PEP 592 的 yank 策略是**示例自己实现的**：库不替调用方决定“被 yank 的版本能不能
+用”——`IndexFile` 里没有 yank 字段，读到 `SimpleIndexFile::yanked` 的调用方自己定
+策略。离线路径同理：`LocalIndex::scan` 扫一个 wheelhouse（列目录的函数由调用方
+注入，core 没有文件系统包），那里没有 PEP 592 状态可读，于是同一个约束选出
+1.4.0。这个差异是真实的，报告里写明而不是掩盖。四后端输出逐字节一致，CI 每次
+运行并逐后端比较。
+
 ## 边界
 
 预发布策略对齐 `packaging 26.3`：`contains` 只有一个候选，默认允许满足
@@ -232,10 +272,13 @@ moon run examples/metadata-check --target js
 不支持不可解析的任意 legacy 字符串候选。排序时 local 参与比较，但有序约束
 忽略候选 local；有序约束本身不接受 local 后缀。
 
-明确不做：pip、联网下载安装、完整依赖求解、冲突回溯、平台兼容性标签的匹配
-与排序、读运行时真实解释器环境（标记求值只接受调用方传入的环境表）、
-SemVer 兼容层。`SpecifierSet` 只做约束筛选，不生成候选集。整数组件当前由
-MoonBit `BigInt` 承接；非 ASCII 的本地版本段会被拒绝。
+明确不做：pip、联网下载安装、完整依赖求解、冲突回溯、**平台标签的计算**、
+读运行时真实解释器环境（标记求值只接受调用方传入的环境表）、SemVer 兼容层。
+标签的**匹配与排序**从 M7 起已经做了，但顺序由调用方给出：`resolve_candidates`
+接受一份“最具体在前”的标签表（`packaging.tags.sys_tags()` 的顺序），库不探测宿主
+的 glibc / 平台 / 解释器版本，所以同一份输入在任何机器上得到同一份排序。
+`SpecifierSet` 只做约束筛选，不生成候选集（候选来自 `IndexFile` 数组）。整数组件
+当前由 MoonBit `BigInt` 承接；非 ASCII 的本地版本段会被拒绝。
 
 已知边界（写清楚，不假装没有）：名称规范化与 wheel 名称校验按 ASCII 实现，
 而 packaging 在这两处用 Unicode 感知的正则；TOML 按 1.0 实现，参考实现

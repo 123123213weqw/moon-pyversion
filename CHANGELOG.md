@@ -90,6 +90,20 @@
   order and the reason each other file was rejected, recomputed in Python with
   `packaging`). Plus the `index_divergence` input record. Corpus grows from
   121 239 to 121 381 records, still 0 mismatches.
+- `examples/resolve` (570 lines): scenario 2 end to end. It takes one PEP 691
+  response, converts every `files[]` entry with `SimpleIndexFile::to_index_file`,
+  applies a PEP 592 yank policy **in the example** (the library has no yank
+  policy on purpose -- `IndexFile` carries no yank field, because only the caller
+  that read `SimpleIndexFile::yanked` knows whether a yanked release is
+  acceptable), resolves three requirements with `resolve_candidates`, prints the
+  first rule that dropped every other file with `explain_rejection`, and finishes
+  with the same requirement against a wheelhouse through `LocalIndex::scan` with
+  an injected `DirectoryLister`. All five rejection reasons appear at least once,
+  the yank policy visibly changes the answer (1.2.1 with it, the yanked 1.4.0
+  without it), and `INDEX_UNKNOWN_DIST` / `INDEX_NO_FS` are both really raised.
+  Inputs are compiled in, for the same reason as scenario 1: core has no
+  filesystem package and no HTTP client. Output is byte identical on the four
+  backends (md5 `e58c1ff44ab6`); CI runs it on all four and compares.
 
 ## Unreleased — M6: core metadata
 
