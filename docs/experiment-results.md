@@ -58,10 +58,10 @@ OK: 121381 records agree with packaging 26.3
 ```
 reference: wasm
 target      records      bytes  seconds  digest
-wasm         121240   10449906     4.43  69ce0c4d06443c3b
-wasm-gc      121240   10449906     3.31  69ce0c4d06443c3b identical
-js           121240   10449906     3.05  69ce0c4d06443c3b identical
-native       121240   10449906     4.05  69ce0c4d06443c3b identical
+wasm         121382   11735355     4.91  ee988e0c60474e2f
+wasm-gc      121382   11735355     3.75  ee988e0c60474e2f identical
+js           121382   11735355     3.58  ee988e0c60474e2f identical
+native       121382   11735355     4.50  ee988e0c60474e2f identical
 ```
 
 语料生成器在四个后端输出逐字节相同（sha256 前 16 位一致）。重复运行的
@@ -74,13 +74,16 @@ js 输出与捕获文件 md5 一致（`a8fdf4fe590b3e1ae11a0aabf43b4e48`），�
 
 | packaging | records | differences | fatal | causes |
 | --- | ---: | ---: | ---: | --- |
-| 24.2 | 121239 | 4473 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, license-expression x153, marker-evaluation x1998, marker-grammar x184, metadata-rules x1, oracle-crash x28 |
-| 25.0 | 121239 | 2735 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, license-expression x153, marker-evaluation x357, marker-grammar x87, metadata-rules x1, oracle-crash x28 |
-| 26.0 | 121239 | 825 | 0 | compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, license-expression x66, marker-evaluation x285, marker-grammar x87, oracle-crash x27 |
-| **26.3（目标版本）** | 121239 | **0** | **0** | — |
+| 24.2 | 121381 | 4474 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, index-scan x1, license-expression x153, marker-evaluation x1998, marker-grammar x184, metadata-rules x1, oracle-crash x28 |
+| 25.0 | 121381 | 2736 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, index-scan x1, license-expression x153, marker-evaluation x357, marker-grammar x87, metadata-rules x1, oracle-crash x28 |
+| 26.0 | 121381 | 826 | 0 | compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, index-scan x1, license-expression x66, marker-evaluation x285, marker-grammar x87, oracle-crash x27 |
+| **26.3（目标版本）** | 121381 | **0** | **0** | — |
 
-四个 oracle 都能回放全部 121 239 条记录，fatal 都是 0（旧版本按 `--tolerate-drift`
-记为容忍漂移）。`oracle-crash` 是新增的一类原因：27–28 条记录上**旧版本自己抛异常**
+四个 oracle 都能回放全部 121 381 条记录，fatal 都是 0（旧版本按 `--tolerate-drift`
+记为容忍漂移）。`index-scan` 那 1 条与 `filename-grammar` 是同一处上游变更：目录清单里有
+`-1.0-py3-none-any.whl`（项目名为空），26.3 起拒绝，旧版本接受，所以同一次扫描
+在旧 oracle 上少识别出一个文件。`oracle-crash` 是新增的
+一类原因：27–28 条记录上**旧版本自己抛异常**
 （把非法的转义序列交给 `ast.parse`，抛 `SyntaxError`，而 26.3 会抛
 `InvalidMarker`）。这类记录以前会让整轮回放中断、连报告都写不出来——现在被
 当成"参考实现在这条输入上失败"，按差异统计并给出原因，而不是让工具崩掉。
@@ -181,7 +184,7 @@ restrictions"）。
 ## 6.5 各阶段新增能力的覆盖
 
 每一阶段都不是"新写一套验证"，而是**只增加记录类型**，被测代码换、验证方法
-不换。到 M6 为止的记录构成（全部对 `packaging` 26.3，**0 不一致**，合计 121 239）：
+不换。到 M7 为止的记录构成（全部对 `packaging` 26.3，**0 不一致**，合计 121 381）：
 
 | 记录类型 | 条数 | 对照的 packaging API | 来源 |
 | --- | ---: | --- | --- |
