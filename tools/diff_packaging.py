@@ -67,6 +67,7 @@ except ImportError:  # pragma: no cover - tomli is a hard requirement of CI
         # when one of those records is actually checked, not at import time.
         toml_reader = None
 
+from packaging.metadata import Metadata as ReferenceMetadata
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.utils import (
@@ -97,6 +98,8 @@ ARITY = {
     "marker_eval": 6,
     "toml": 6,
     "license": 5,
+    "meta": 7,
+    "meta_divergence": 4,
 }
 
 EXIT_OK = 0
@@ -486,6 +489,76 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
             )
         return None
 
+    if kind == "meta_divergence":
+        name, expectation = parts[2], parts[3]
+        if expectation not in ("accept", "reject"):
+            return f"meta_divergence {name!r} has an unknown expectation {expectation!r}"
+        if name in divergence_expectations:
+            return f"meta_divergence {name!r} declared twice"
+        divergence_expectations[name] = expectation == "accept"
+        return None
+
+    if kind == "meta":
+        name, document = parts[2], parts[3]
+        status, code, rendered = parts[4], parts[5], parts[6]
+        library_ok = status == "ok"
+        try:
+            expected = ReferenceMetadata.from_email(document, validate=True)
+            expected_ok, expected_detail = True, ""
+        except Exception as error:  # noqa: BLE001 - the type is part of the answer
+            expected = None
+            expected_ok = False
+            expected_detail = f"{type(error).__name__}: {error}"
+        declared = divergence_expectations.get(name)
+        if declared is not None:
+            # The divergence is the point of the record, so both halves of it are
+            # asserted: the two implementations must disagree, and the reference
+            # must answer the way the fixture says it does. A library that quietly
+            # grew as strict, or as loose, as the reference fails here.
+            if library_ok == expected_ok:
+                return (
+                    f"metadata case {name!r}: declared a divergence, but both sides "
+                    f"{'accept' if library_ok else 'reject'} it"
+                )
+            if expected_ok != declared:
+                return (
+                    f"metadata case {name!r}: declared divergence says the reference "
+                    f"{'accepts' if declared else 'rejects'} it, but it "
+                    f"{'accepts' if expected_ok else 'rejects'} it ({expected_detail})"
+                )
+            return None
+        if library_ok != expected_ok:
+            if expected_ok:
+                return (
+                    f"metadata case {name!r}: moonbit rejects ({code}), the reference accepts"
+                )
+            return (
+                f"metadata case {name!r}: moonbit accepts, the reference rejects "
+                f"({expected_detail})"
+            )
+        if not expected_ok:
+            # Both reject. The error kinds are not compared: the specification
+            # has no schema, so the two implementations name the same rule
+            # differently on purpose.
+            return None
+        if rendered == "-":
+            return f"metadata case {name!r}: accepted but not re-rendered"
+        try:
+            round_tripped = ReferenceMetadata.from_email(rendered, validate=True)
+        except Exception as error:  # noqa: BLE001 - same as above
+            return (
+                f"metadata case {name!r}: the re-rendering does not re-parse "
+                f"({type(error).__name__}: {error})"
+            )
+        expected_form = _metadata_shape(expected)
+        actual_form = _metadata_shape(round_tripped)
+        if expected_form != actual_form:
+            return (
+                f"metadata case {name!r}: the re-rendering changed the metadata\n"
+                f"      expected {expected_form}\n      got      {actual_form}"
+            )
+        return None
+
     if kind == "license":
         raw, status, canonical = parts[2], parts[3], parts[4]
         try:
@@ -525,6 +598,58 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
         return None
 
     raise ProtocolError(f"unknown record kind {kind!r}")
+
+
+def _metadata_shape(metadata: object) -> str:
+    """A stable projection of parsed core metadata, for the round trip check.
+
+    The re-rendering this library produces is canonical, not literal: headers
+    come in specification order, an unfolded value has no line break, and the two
+    normalized fields (`Version`, `License-Expression`) are written in canonical
+    form. So the comparison cannot be a text diff. It is a projection of the
+    values, from *packaging's* parse of the original against *packaging's* parse
+    of the re-rendering, which keeps the oracle on both sides of the comparison.
+
+    Names are canonicalized (PEP 503) and the unordered multi-use fields are
+    sorted, because the specification fixes neither the spelling of a name nor
+    the order of `Requires-Dist` and `Classifier`. Everything else is compared
+    exactly, so a field the re-rendering drops or rewrites shows up here.
+    """
+
+    def text(value: object) -> str:
+        return "" if value is None else str(value)
+
+    def name(value: object) -> str:
+        return "" if value is None else canonicalize_name(str(value))
+
+    requires_dist = sorted(text(item) for item in getattr(metadata, "requires_dist", None) or [])
+    classifiers = sorted(text(item) for item in getattr(metadata, "classifiers", None) or [])
+    extras = sorted(
+        canonicalize_name(text(item)) for item in getattr(metadata, "provides_extra", None) or []
+    )
+    raw_urls = getattr(metadata, "project_urls", None) or {}
+    if isinstance(raw_urls, dict):
+        # packaging 26.3 keeps them as a label -> url mapping
+        project_urls = sorted(f"{text(k)}={text(v)}" for k, v in raw_urls.items())
+    else:
+        project_urls = sorted(text(item) for item in raw_urls)
+    return "|".join(
+        [
+            f"metadata_version={text(getattr(metadata, 'metadata_version', None))}",
+            f"name={name(getattr(metadata, 'name', None))}",
+            f"version={text(getattr(metadata, 'version', None))}",
+            f"requires_python={text(getattr(metadata, 'requires_python', None))}",
+            f"requires_dist={requires_dist}",
+            f"provides_extra={extras}",
+            f"classifiers={classifiers}",
+            f"description_content_type={text(getattr(metadata, 'description_content_type', None))}",
+            f"summary={text(getattr(metadata, 'summary', None))}",
+            f"author_email={text(getattr(metadata, 'author_email', None))}",
+            f"maintainer_email={text(getattr(metadata, 'maintainer_email', None))}",
+            f"license_expression={text(getattr(metadata, 'license_expression', None))}",
+            f"project_urls={project_urls}",
+        ]
+    )
 
 
 def _toml_shape(value: object) -> str:
@@ -636,6 +761,10 @@ def classify_difference(oracle: "Oracle", parts: list[str]) -> str:
         return "toml-grammar"
     if kind == "license":
         return "license-expression"
+    if kind == "meta":
+        return "metadata-rules"
+    if kind == "meta_divergence":
+        return "metadata-divergence"
     return {"parse": "version-grammar", "spec": "specifier-grammar"}.get(kind, "ordering")
 
 
@@ -646,11 +775,18 @@ def classify_difference(oracle: "Oracle", parts: list[str]) -> str:
 # sample and report paths as every other difference.
 ORACLE_CRASHED = "the reference implementation raised {error}"
 
+# Declared `meta` divergences: case name -> does the reference accept it. Filled
+# from the `meta_divergence` records the emitter writes before the documents they
+# qualify, so the expectation travels with the corpus instead of being kept in a
+# second table inside this harness.
+divergence_expectations: dict[str, bool] = {}
+
 ESCAPED_FIELDS = {
     "marker": (2, 4),
     "marker_eval": (3, 5),
     "toml": (3, 5),
     "license": (2, 4),
+    "meta": (3, 6),
 }
 
 
@@ -811,6 +947,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"captured {len(text.splitlines())} records to {args.capture}")
         return EXIT_OK
 
+    divergence_expectations.clear()
     oracle = Oracle()
     cases: Counter = Counter()
     mismatches: Counter = Counter()
@@ -923,6 +1060,7 @@ def main(argv: list[str] | None = None) -> int:
             "pinned_oracle": args.pinned_oracle,
             "python_version": sys.version.split()[0],
             "toml_reader": None if toml_reader is None else toml_reader.__name__,
+            "metadata_divergences": sorted(divergence_expectations),
             "target": args.target,
             "emitter_seconds": None if args.input else round(emitter_seconds, 3),
             "records": total_cases,

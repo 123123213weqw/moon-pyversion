@@ -11,6 +11,7 @@ pub(all) suberror VersionError {
   InvalidMarker(String, Int)
   InvalidToml(String, Int)
   InvalidLicense(String, Int)
+  InvalidMetadata(String, Int)
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -24,6 +25,7 @@ pub fn VersionError::diagnostic(self : VersionError) -> String {
     InvalidMarker(code, pos) => "\{code} at \{pos}"
     InvalidToml(code, pos) => "\{code} at \{pos}"
     InvalidLicense(code, pos) => "\{code} at \{pos}"
+    InvalidMetadata(code, pos) => "\{code} at \{pos}"
   }
 }
 

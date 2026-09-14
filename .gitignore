@@ -3,3 +3,4 @@ _build/
 .mooncakes/
 *.mbti
 .scratch/
+fixtures/metadata_cache/

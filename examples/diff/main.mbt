@@ -17,6 +17,8 @@
 /// - `<source>\tmarker_eval\t<env name>\t<raw>\t<ok|bad|err>\t<true|false or error kind>`
 /// - `<source>\ttoml\t<case name>\t<document>\t<ok|bad|lenient|lenient-drift>\t<re-serialization or ->`
 /// - `<source>\tlicense\t<raw>\t<ok|bad>\t<canonical expression or ->`
+/// - `<source>\tmeta\t<case name>\t<document>\t<ok|bad>\t<error code or ->\t<canonical re-rendering or ->`
+/// - `<source>\tmeta_divergence\t<case name>\t<accept|reject>` (input, not a check)
 ///
 /// `mode` is `auto` (the library default policy), `any` (prereleases forced
 /// on) or `none` (prereleases forced off); the oracle maps them onto
@@ -1151,6 +1153,69 @@ fn emit_license(source : String, sb : StringBuilder, raw : String) -> Unit {
 }
 
 ///|
+/// Emit the declared divergences for core metadata. These are inputs rather than
+/// checks: they tell the harness which documents this library deliberately
+/// answers differently from the reference implementation, and in which
+/// direction, so a difference that is not declared is a failure and a declared
+/// one is asserted in both directions.
+fn emit_metadata_divergences(sb : StringBuilder) -> Unit {
+  for entry in @fixtures.metadata_divergences {
+    let expectation = if entry.1 { "accept" } else { "reject" }
+    sb.write_string(
+      "curated\tmeta_divergence\t\{escape_record(entry.0)}\t\{expectation}\n",
+    )
+  }
+}
+
+///|
+/// Emit one core metadata record.
+///
+/// A rejected document reports the stable error code this library produced; an
+/// accepted one also reports the canonical re-rendering. The harness re-parses
+/// that text with the reference implementation and compares a projection of the
+/// values against the reference's own parse of the original, which checks the
+/// rules, the field values and the round trip in one record.
+fn emit_metadata(
+  source : String,
+  sb : StringBuilder,
+  name : String,
+  document : String,
+) -> Unit {
+  sb.write_string(
+    "\{source}\tmeta\t\{escape_record(name)}\t\{escape_record(document)}\t",
+  )
+  match metadata_opt(document) {
+    Some(metadata) =>
+      sb.write_string("ok\t-\t\{escape_record(metadata.to_string())}\n")
+    None => {
+      let code = metadata_error_code(document)
+      sb.write_string("bad\t\{escape_record(code)}\t-\n")
+    }
+  }
+}
+
+///|
+fn metadata_opt(document : String) -> @pyversion.Metadata? {
+  Some(@pyversion.Metadata::parse(document)) catch {
+    _ => None
+  }
+}
+
+///|
+/// The stable error code of a rejected document, or `<no error>` when it parses
+/// after all (which cannot happen at a call site that already decided it does
+/// not, and is reported rather than silently turned into a success).
+fn metadata_error_code(document : String) -> String {
+  try {
+    ignore(@pyversion.Metadata::parse(document))
+    "<no error>"
+  } catch {
+    @pyversion.InvalidMetadata(code, _) => code
+    _ => "OTHER_ERROR"
+  }
+}
+
+///|
 /// Emit one TOML conformance record.
 ///
 /// A rejected document reports only the rejection; an accepted one also reports
@@ -1565,6 +1630,16 @@ fn main {
   }
   for raw in mutated_licenses {
     emit_license("mutated", sb, raw)
+  }
+  // 10. Core metadata (`METADATA` / `PKG-INFO`): the curated rule cases, then the
+  //     real documents served next to PyPI wheels. The declared divergences are
+  //     written first because they qualify documents by name.
+  emit_metadata_divergences(sb)
+  for entry in @fixtures.metadata_cases {
+    emit_metadata("curated", sb, entry.0, entry.1)
+  }
+  for entry in @fixtures.metadata_pypi_cases {
+    emit_metadata("pypi", sb, entry.0, entry.1)
   }
   println(sb.to_string())
 }

@@ -1,0 +1,29 @@
+Metadata-Version: 2.4
+Name: Demo_Pkg
+Version: 1.0.0
+Summary: everything
+Description-Content-Type: text/markdown; charset=UTF-8; variant=GFM
+Keywords: a, b ,c
+Author: A Person
+Author-email: A Person <a@example.com>, b@example.com
+Maintainer: M Person
+Maintainer-email: M Person <m@example.com>
+License-Expression: MIT OR Apache-2.0
+Home-page: https://example.com
+Download-URL: https://example.com/demo.tar.gz
+Requires-Python: >=3.8
+Classifier: Programming Language :: Python :: 3
+Requires-Dist: requests>=2.0
+Requires-Dist: pytest; extra == "test"
+Requires-External: libfoo
+Project-URL: Home, https://example.com
+Project-URL: Docs, https://example.com/docs
+Provides-Extra: test
+Provides-Dist: other (1.0)
+Obsoletes-Dist: old (2.0)
+Dynamic: Summary
+Platform: any
+Supported-Platform: linux-x86_64
+License-File: LICENSE
+
+Body text.

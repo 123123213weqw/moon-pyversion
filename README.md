@@ -163,22 +163,29 @@ python -B tools/fetch_pypi_corpus.py
 
 ## 与 packaging 的一致性
 
-不是自我声明，而是实测的：`examples/diff` 生成 **120 951 条**确定性记录
+不是自我声明，而是实测的：`examples/diff` 生成 **121 239 条**确定性记录
 （手工边界、按文法生成、单字符变异、97 个 PyPI 包的真实元数据：3000 个版本、
-500 条约束、600 条需求行、471 条真实标记、900 个分发文件名），逐条回放给
-CPython `packaging 26.3`，**0 不一致**。TOML 记录另外对照参考实现 `tomli`，
-逐条比较"接受/拒绝"与"重序列化后重新解析的结果"。
+500 条约束、600 条需求行、471 条真实标记、900 个分发文件名、239 份真实
+`METADATA`），逐条回放给 CPython `packaging 26.3`，**0 不一致**。TOML 记录另外
+对照参考实现 `tomli`，核心元数据记录对照 `packaging.metadata`，两者都逐条比较
+"接受/拒绝"与"重序列化后重新解析的结果"。
 
 同一份语料在 24.2 / 25.0 / 26.0 上分别有数千条差异，全部按原因分类为上游
 行为变更（自动预发布准入、`<`/`>` 的区间实现、`~=` 上界、26.3 的文件名
 验收与标记语法收紧），`tools/oracle_matrix.py` 输出这张矩阵。
 
-另外 `tools/mutation_probe.py` 会向库里注入 16 处**故意缺陷**并断言对照能报错，
-16/16 全部检出 —— 即"0 不一致"不是因为对照失效。
+另外 `tools/mutation_probe.py` 会向库里注入 20 处**故意缺陷**并断言对照能报错，
+20/20 全部检出 —— 即"0 不一致"不是因为对照失效。
 
 CI 在 wasm / wasm-gc / js / native 四后端执行 `fmt/check/build/test/run`，
 differential 作业固定 `packaging==26.3` 与 `tomli==2.4.1`（TOML fixture 的
 裁决来自后者），并断言读取器版本，避免对照工具随环境漂移。
+
+库里还有几处与 `packaging` **故意不同的地方**，都在
+`toml_cases/leniencies.txt` 与 `metadata_cases/divergences.txt` 里逐条登记了方向，
+由 harness 断言"两边答案相反"：TOML 按 1.0 实现而参考实现带了 1.1 的放宽，
+元数据则拒绝 `Metadata-Version: 2.5`、执行 PEP 639 的 `License-Expression`
+互斥规则、并对 `Author-email` 做解析（解析失败只报告，不让文档失败）。
 
 实验设计、数据和查出的真实缺陷见 [docs/experiment.md](docs/experiment.md) 与
 [docs/experiment-results.md](docs/experiment-results.md)。

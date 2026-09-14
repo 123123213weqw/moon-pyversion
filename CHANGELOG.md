@@ -10,7 +10,7 @@
   `DocumentRef-` forms, the 200-level nesting limit, and PEP 685 normalization
   of `LicenseRef-` bodies. `canonicalize_license_file` validates a PEP 639
   license file path without normalizing it.
-- A `license` record kind with 4000 mutated expressions: 120 951 records now
+- A `license` record kind with 4000 mutated expressions: 120 951 records then
   agree with `packaging` 26.3, still 0 mismatches.
 - `MarkerEnvironment::set` / `set_names` canonicalize the `extra` value and the
   members of a set-valued key, so a caller may hand over the spelling it read
@@ -50,6 +50,51 @@
 - A newline inside an inline table reported the wrong code; it now has its own
   diagnostic, distinct from an unterminated table.
 - `Toml::to_string` emitted a leading blank line.
+
+## Unreleased — M6: core metadata
+
+### Added
+
+- `metadata.mbt`: a `METADATA` / `PKG-INFO` reader and validator for the core
+  metadata specification (PEP 566 as amended by 621, 639, 643, 685 and 753):
+  the RFC 822 header/body split with unfolding, the version gate, the multi-use
+  and single-use field rules, `Requires-Dist` through `Requirement::parse`,
+  `Requires-Python` as a `SpecifierSet`, PEP 639 license expressions and license
+  files, mailbox parsing, `Project-URL` labels and the deprecated 1.x fields.
+  Every rejection is a stable `VersionError::InvalidMetadata(code, offset)`.
+- `Metadata::requirements` / `requires_python` / `extras` / `is_compatible` /
+  `diagnostics` / `to_string`: the canonical re-rendering re-parses to the same
+  metadata, which is what the round trip check below relies on.
+- `VersionError::InvalidMetadata(String, Int)`, plus its `diagnostic` arm.
+- `tools/fetch_metadata_corpus.py` and `metadata_cases/`: 42 curated rule cases
+  and 239 real `METADATA` documents fetched from the PEP 658 `.metadata` sidecars
+  of real PyPI wheels (593 downloaded, the rest dropped for size, counted in
+  `fixtures/metadata_corpus.json`).
+- `metadata_cases/divergences.txt`: the seven documents where this library
+  deliberately answers differently from `packaging` 26.3, each with the
+  direction and the reason. The generator checks the reference's half and the
+  differential harness checks both halves on every replay.
+- A `meta` record kind (accept verdict, error code, canonical re-rendering) and a
+  `meta_divergence` input record, compared against
+  `packaging.metadata.Metadata.from_email(data, validate=True)`. Corpus grows
+  from 120 951 to 121 239 records, still 0 mismatches.
+
+### Changed
+
+- `Author-email` / `Maintainer-email` are parsed into `(name, address)` pairs but
+  no longer fail a document: a present-but-empty value counts as absent, and a
+  list that does not parse is reported by `diagnostics` as
+  `author-email-unparsable`. Measured, not assumed: five real documents that PyPI
+  serves (`kubernetes-10.0.0`, `kubernetes-10.0.1`, `kubernetes-10.1.0` with
+  `Author-email: ` and `torch-1.0.0` with `Author-email: UNKNOWN`) are rejected by
+  the stricter rule and accepted by the reference implementation. `packaging`
+  does not validate the field at all.
+- `tools/mutation_probe.py` grew from 16 to 20 injected defects: the metadata
+  version gate, `Requires-Dist` validation and both halves of the PEP 639
+  `License-Expression` exclusivity rule. Two behaviours are deliberately *not*
+  covered there (empty `Author-email`, unparsable address list) because the
+  reference implementation does not look at the field, so the corpus cannot see
+  the difference; the unit tests cover them instead.
 
 ## Unreleased — tooling
 

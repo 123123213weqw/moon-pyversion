@@ -6,18 +6,19 @@
 
 ## 1. 语料规模
 
-| 来源 | parse | spec | cmp | contains | filter | order | canon | file | req | marker | marker_eval | toml | license |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| curated | 81 | 47 | 6561 | 11421 | 141 | 1 | 57 | 45 | 62 | 104 | 520 | 83 | 86 |
-| generated | 4000 | 700 | 3000 | 12600 | 351 | 1 | — | — | — | — | — | — | — |
-| mutated | 3051 | 1244 | — | — | — | — | 6102 | 4000 | 4000 | 4000 | 8000 | — | 4000 |
-| pypi | 3000 | 500 | 3866 | 36849 | 501 | 1 | — | 900 | 600 | 471 | — | — | — |
-| **合计** | **10132** | **2491** | **13427** | **60870** | **993** | **3** | **6159** | **4945** | **4662** | **4575** | **8520** | **83** | **4086** |
+| 来源 | parse | spec | cmp | contains | filter | order | canon | file | req | marker | marker_eval | toml | license | meta |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| curated | 81 | 47 | 6561 | 11421 | 141 | 1 | 57 | 45 | 62 | 104 | 520 | 83 | 86 | 42 |
+| generated | 4000 | 700 | 3000 | 12600 | 351 | 1 | — | — | — | — | — | — | — | — |
+| mutated | 3051 | 1244 | — | — | — | — | 6102 | 4000 | 4000 | 4000 | 8000 | — | 4000 | — |
+| pypi | 3000 | 500 | 3866 | 36849 | 501 | 1 | — | 900 | 600 | 471 | — | — | — | 239 |
+| **合计** | **10132** | **2491** | **13427** | **60870** | **993** | **3** | **6159** | **4945** | **4662** | **4575** | **8520** | **83** | **4086** | **281** |
 
-另有 5 条 `marker_env`（环境定义，不是断言），合计 **120 951 条记录 /
-120 952 行语料**，其中 **61 863** 条带显式预发布模式（`auto`/`any`/`none`）。
+另有 5 条 `marker_env`（环境定义，不是断言）与 7 条 `meta_divergence`
+（声明分歧，不是断言），合计 **121 239 条记录 / 121 240 行语料**，其中
+**61 863** 条带显式预发布模式（`auto`/`any`/`none`）。
 
-- 来源分布：curated 19 214、generated 20 652、mutated 34 397、pypi 46 688。
+- 来源分布：curated 19 259、generated 20 652、mutated 34 397、pypi 46 927。
 - oracle 侧接受的**互不相同**的版本字符串 11 035 个、约束集合 1 595 个。
 - pypi 来源：97 个包的 PyPI 元数据，**3000 个版本、500 条约束、600 条真实
   `Requires-Dist` 原文、900 个真实分发文件名**，详见
@@ -25,18 +26,25 @@
 - `canon` / `file` 是 M1（`utils.mbt`）新增的两类记录：名称与版本键规范化、
   分发文件名解析。其中 `file` 的状态分布为 wheel 成功 2904 / 失败 919、
   sdist 成功 216 / 失败 172、其他 734，不是只测成功路径。
-- M2–M5 又加了三类：`req`（PEP 508 依赖行）、`marker` + `marker_eval`（标记
+- M2–M5 又加了几类：`req`（PEP 508 依赖行）、`marker` + `marker_eval`（标记
   文法与求值）、`toml`（TOML 1.0 文档）、`license`（PEP 639 表达式）。`marker_eval`
   是在 5 套完整环境上各评一次，因此条数明显多于 `marker`。
+- M6 加 `meta`：**42 条手工规则样例 + 239 份真实 `METADATA`**，后者是从 PyPI
+  上真实 wheel 的 PEP 658 `.metadata` 边上文件抓下来的（`fixtures/metadata_cache/`
+  是原始下载缓存，不入库；`fixtures/metadata_corpus.json` 记录每份文档的大小与
+  参考实现的裁决）。下载 593 份、入库 239 份，其余按"超过 12 000 字符"丢弃
+  （体积计入语料，一份 200 kB 的描述会压过整个语料），丢弃数量写在 provenance
+  里而不是静默省略。
 
 ## 2. 与目标 oracle（packaging 26.3）的一致性
 
 ```
 oracle: packaging 26.3 (python 3.10.12), library targets packaging 26.3
-records: 120951 (61863 with a prerelease mode)
+toml reference reader: tomli
+records: 121239 (61863 with a prerelease mode)
 mismatches per source, kind and mode:
   none
-OK: 120951 records agree with packaging 26.3
+OK: 121239 records agree with packaging 26.3
 ```
 
 退出码 0。**0 不一致**。
@@ -46,14 +54,14 @@ OK: 120951 records agree with packaging 26.3
 ```
 reference: wasm
 target      records      bytes  seconds  digest
-wasm         120952    8934456     4.43  f4caa9eca3d96508
-wasm-gc      120952    8934456     2.78  f4caa9eca3d96508 identical
-js           120952    8934456     2.31  f4caa9eca3d96508 identical
-native       120952    8934456     5.12  f4caa9eca3d96508 identical
+wasm         121240   10449906     4.43  69ce0c4d06443c3b
+wasm-gc      121240   10449906     3.31  69ce0c4d06443c3b identical
+js           121240   10449906     3.05  69ce0c4d06443c3b identical
+native       121240   10449906     4.05  69ce0c4d06443c3b identical
 ```
 
 语料生成器在四个后端输出逐字节相同（sha256 前 16 位一致）。重复运行的
-js 输出与捕获文件 md5 一致（`99c0790ae384a1098effcc486dddd223`），即生成
+js 输出与捕获文件 md5 一致（`a8fdf4fe590b3e1ae11a0aabf43b4e48`），即生成
 过程可重复。
 
 ## 4. 多 oracle 漂移矩阵
@@ -62,12 +70,12 @@ js 输出与捕获文件 md5 一致（`99c0790ae384a1098effcc486dddd223`），�
 
 | packaging | records | differences | fatal | causes |
 | --- | ---: | ---: | ---: | --- |
-| 24.2 | 120951 | 4472 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, license-expression x153, marker-evaluation x1998, marker-grammar x184, oracle-crash x28 |
-| 25.0 | 120951 | 2734 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, license-expression x153, marker-evaluation x357, marker-grammar x87, oracle-crash x28 |
-| 26.0 | 120951 | 825 | 0 | compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, license-expression x66, marker-evaluation x285, marker-grammar x87, oracle-crash x27 |
-| **26.3（目标版本）** | 120951 | **0** | **0** | — |
+| 24.2 | 121239 | 4473 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, license-expression x153, marker-evaluation x1998, marker-grammar x184, metadata-rules x1, oracle-crash x28 |
+| 25.0 | 121239 | 2735 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, license-expression x153, marker-evaluation x357, marker-grammar x87, metadata-rules x1, oracle-crash x28 |
+| 26.0 | 121239 | 825 | 0 | compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, license-expression x66, marker-evaluation x285, marker-grammar x87, oracle-crash x27 |
+| **26.3（目标版本）** | 121239 | **0** | **0** | — |
 
-四个 oracle 都能回放全部 120 951 条记录，fatal 都是 0（旧版本按 `--tolerate-drift`
+四个 oracle 都能回放全部 121 239 条记录，fatal 都是 0（旧版本按 `--tolerate-drift`
 记为容忍漂移）。`oracle-crash` 是新增的一类原因：27–28 条记录上**旧版本自己抛异常**
 （把非法的转义序列交给 `ast.parse`，抛 `SyntaxError`，而 26.3 会抛
 `InvalidMarker`）。这类记录以前会让整轮回放中断、连报告都写不出来——现在被
@@ -112,7 +120,7 @@ restrictions"）。
 ## 5.5 语料是否有牙：变异探针
 
 0 不一致只有在"对照能失败"的前提下才有意义。`tools/mutation_probe.py` 向库
-里注入 16 处**故意缺陷**（涵盖 M0–M5 的行为），重跑语料并断言 harness 报错：
+里注入 20 处**故意缺陷**（涵盖 M0–M6 的行为），重跑语料并断言 harness 报错：
 
 | 注入的缺陷 | 检出条数 |
 | --- | ---: |
@@ -132,9 +140,20 @@ restrictions"）。
 | 多行字符串吞掉首字符 | 3 |
 | TOML 整数退化为 32 位 | 1 |
 | 预发布策略恒为允许 | 2038 |
+| `Metadata-Version` 门槛失效（未知字段与未知版本被放行） | 1 |
+| `Requires-Dist` 的值不再解析 | 4 |
+| PEP 639 的 `License-Expression` 与 `License` 冲突被放行 | 1 |
+| PEP 639 的 `License-Expression` 与 `License ::` 分类器冲突被放行 | 1 |
 
-16/16 全部检出。两个 TOML 探针各只检出 1 条，是**故意**的：它们的现象只在
+20/20 全部检出。两个 TOML 探针各只检出 1 条，是**故意**的：它们的现象只在
 单个语料样例上出现，如果未来那条样例被改坏，检出数会掉到 0，探针就会失败。
+
+两条 `License-Expression` 冲突探针各只检出 1 条，同样是因为只有一个语料样例
+能触发它；如果那条样例被改坏，检出数会掉到 0，探针就会失败。
+
+`Author-email` 的两处行为（空值等价于缺席、解析失败只报告不致命）**没有**放进
+这份探针：参考实现根本不解析这个字段，语料看不出差别，它们由单元测试覆盖。
+这是刻意的取舍，写在这里以免被误读成"已经全覆盖"。
 
 其中"内联表允许换行"这条探针还兼任**分歧方向**的守卫：`94_err_inline_newline`
 是登记在 `toml_cases/leniencies.txt` 里的放宽项，库必须拒绝它。注入缺陷后
@@ -148,12 +167,12 @@ restrictions"）。
 | `moon fmt --check` | 通过 |
 | `moon check/build/test --deny-warn`（wasm / wasm-gc / js / native） | 全部通过，每个后端 **120 个测试块全部通过**（合计 480） |
 | `moon run examples/basic`（四后端） | 通过 |
-| `moon run examples/diff`（四后端） | 120 952 行语料，四端字节一致 |
+| `moon run examples/diff`（四后端） | 121 240 行语料，四端字节一致 |
 
 ## 6.5 各阶段新增能力的覆盖
 
 每一阶段都不是"新写一套验证"，而是**只增加记录类型**，被测代码换、验证方法
-不换。到 M5 为止的记录构成（全部对 `packaging` 26.3，**0 不一致**，合计 120 951）：
+不换。到 M6 为止的记录构成（全部对 `packaging` 26.3，**0 不一致**，合计 121 239）：
 
 | 记录类型 | 条数 | 对照的 packaging API | 来源 |
 | --- | ---: | --- | --- |
@@ -169,8 +188,10 @@ restrictions"）。
 | `spec` | 2491 | `SpecifierSet` | curated + generated + mutated + pypi |
 | `filter` | 993 | `SpecifierSet.filter` | curated + generated + pypi |
 | `toml` | 83 | 参考实现 `tomli`（接受/拒绝 + 重序列化） | 83 个 TOML 文档 |
-| `marker_env` | 5 | —（环境定义，非断言） | 5 套完整环境 |
+| `meta` | 281 | `Metadata.from_email(data, validate=True)` | 42 条手工规则样例 + 239 份真实 PyPI `METADATA` |
 | `order` | 3 | `Version` 全序 | curated + generated + pypi |
+| `marker_env` | 5 | —（环境定义，非断言） | 5 套完整环境 |
+| `meta_divergence` | 7 | —（声明分歧，非断言） | curated |
 
 TOML 的对照方式与其他记录不同，值得单独说明：参考实现给出"接受/拒绝"的裁决，
 库另外给出自己的规范重序列化文本，harness 把这段文本用参考实现**重新解析**
@@ -191,6 +212,44 @@ TOML 的对照方式与其他记录不同，值得单独说明：参考实现给
 "一方接受一方拒绝"都算不一致，因此这条对照不会因为读取器不同而失效——
 严格读取器的回退路径在 CI 的 Python 3.13 上实测过。
 
+### 6.6 核心元数据（`meta`）的对照方式
+
+`METADATA` / `PKG-INFO` 没有机器可读的 schema，参考实现是
+`packaging.metadata.Metadata.from_email(data, validate=True)`。一条 `meta` 记录
+的比对规则是：
+
+- 双方裁决不同 → 不一致。两边都拒绝时**不比较错误种类**：规范没有 schema，
+  两份实现对同一条规则给出的名字本来就不同（`'name' is a required field`
+  对 `NAME_REQUIRED`）。
+- 双方都接受 → 再把库自己的规范重排文本交给参考实现重新解析，比较一份**取值
+  投影**（`Metadata-Version`、规范化后的 `Name`、`Version`、`Requires-Python`、
+  排序后的 `Requires-Dist` / `Classifier` / `Provides-Extra`、
+  `Description-Content-Type`、`Summary`、`License-Expression`、`Project-URL`、
+  `Author-email` / `Maintainer-email`）。投影两侧都来自参考实现的解析，因此一条
+  记录同时验证规则、取值与往返一致性。
+
+**声明分歧**（`meta_divergence` 记录，7 条）是库故意与参考实现不同的地方，逐条
+写清方向，并且在两个方向上都被断言：库必须给出与参考实现**相反**的答案，且参考
+实现必须真的按声明那样回答（生成 fixture 时校验一次，harness 每轮回放时再校验
+一次）。库哪天变得和参考实现一样松或一样严，记录就会变成普通不一致：
+
+| 样例 | 参考实现 | 本库 | 原因 |
+| --- | --- | --- | --- |
+| `04_folded_summary` | 拒绝 | 接受 | 参考实现用 `compat32` 策略保留 RFC 5322 折行，库先展开折行（2.2.3）再看单行规则 |
+| `06_metadata_25` | 接受 | 拒绝 | 参考实现支持 2.5；库实现到 2.4，声明未知版本的文档直接拒绝 |
+| `09_license_expression_conflict` | 接受 | 拒绝 | PEP 639 禁止 `License-Expression` 与 `License`/`License ::` 并存，库执行该规则；参考实现 26.3 未实现 |
+| `41_license_and_expression` | 接受 | 拒绝 | 同上，只涉及自由文本 `License` 字段 |
+| `42_license_classifier_conflict` | 接受 | 拒绝 | 同上，只涉及 `License ::` 分类器 |
+| `10_description_content_type_variant` | 拒绝 | 接受 | 参考实现把该字段限定为三个取值 + UTF-8；库接受任何形式良好的 `type/subtype` 加参数 |
+| `31_folded_requires_dist` | 拒绝 | 接受 | 折行是参考实现拿去校验的值的一部分，库先展开表头再解析约束 |
+
+另外两条已知差异不计入上面这张表，因为它们不影响裁决：`Author-email` /
+`Maintainer-email` 在库里会被解析成 `(name, address)` 列表（参考实现原样存放），
+解析失败只进 `diagnostics` 而不让文档失败。这条放宽是**实测驱动**的：239 份真实
+文档里有 5 份（`kubernetes-10.0.0/10.0.1/10.1.0` 的 `Author-email: ` 与
+`torch-1.0.0` 的 `Author-email: UNKNOWN`）会被更严的版本拒掉，而它们正是场景 1
+要读的那种文档。
+
 ## 7. 吞吐（`examples/bench`，本机墙钟，非跨语言基准）
 
 | 操作 | js | native |
@@ -206,11 +265,14 @@ TOML 的对照方式与其他记录不同，值得单独说明：参考实现给
 ## 8. 这次实验**没有**证明什么
 
 - 不证明与 PEP 440 规范本身完全一致：oracle 是另一份实现，不是规范。
-- 不证明覆盖全部现实输入：120 951 条是一次抽样，PyPI 的真实版本远多于 3000 个。
+- 不证明覆盖全部现实输入：121 239 条是一次抽样，PyPI 的真实版本远多于 3000 个；
+  真实 `METADATA` 只覆盖 239 份（有 PEP 658 边上文件的那些），且丢弃了 12 000
+  字符以上的文档。
 - 不覆盖平台兼容性标签的匹配与排序、不覆盖依赖求解与冲突回溯。
-- TOML 与许可证表达式的对照各用了一个参考实现（`tomli` 2.4.1、
-  `packaging.licenses`），两者都不是规范文本本身；TOML 的差异已在
-  `toml_cases/leniencies.txt` 中逐条登记。
+- TOML、许可证表达式与核心元数据的对照各用了一个参考实现（`tomli` 2.4.1、
+  `packaging.licenses`、`packaging.metadata`），三者都不是规范文本本身；TOML 与
+  元数据的差异分别在 `toml_cases/leniencies.txt` 与
+  `metadata_cases/divergences.txt` 中逐条登记。
 - 标记求值只对照了 5 套环境；`packaging` 在缺键时会回落到**宿主进程**的真实
   环境值，本库拒绝这个回落（不读运行时环境），因此"缺键"这一类行为是
   设计上的差异而非等价性结论。

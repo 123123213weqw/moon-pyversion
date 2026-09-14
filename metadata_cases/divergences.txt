@@ -1,0 +1,38 @@
+# Documents where this library deliberately answers differently from the
+# reference implementation (`packaging` 26.3 `Metadata.from_email(validate=True)`).
+#
+# One entry per line: `<case name> accept|reject`, where the second word is what
+# the *reference* implementation does with the document. The generator asserts
+# that the reference really answers that way, and the differential harness
+# asserts that this library really answers the other way, so a divergence that
+# stops being one fails the run instead of being tolerated.
+#
+# 41_license_and_expression   the same rule for the free text `License` field,
+#                            which PEP 639 forbids next to `License-Expression`.
+# 42_license_classifier_conflict
+#                            and the same rule for a `License ::` classifier.
+# 04_folded_summary          the reference keeps the RFC 5322 fold and rejects a
+#                            folded `Summary`; this library unfolds it (2.2.3)
+#                            and accepts the one-line summary.
+# 06_metadata_25             the reference accepts metadata 2.5; this library
+#                            implements 2.4 and rejects a document that declares
+#                            a version it does not know.
+# 09_license_expression_conflict
+#                            PEP 639 forbids `License-Expression` next to a
+#                            `License ::` classifier and this library enforces
+#                            it; `packaging` 26.3 does not implement that rule.
+# 10_description_content_type_variant
+#                            the reference restricts the field to three values
+#                            with a UTF-8 charset; this library accepts any well
+#                            formed `type/subtype` with parameters.
+# 31_folded_requires_dist    the reference rejects a folded `Requires-Dist`
+#                            (the fold is part of the value it validates); this
+#                            library unfolds the header first, so the constraint
+#                            is valid.
+41_license_and_expression accept
+42_license_classifier_conflict accept
+04_folded_summary reject
+06_metadata_25 accept
+09_license_expression_conflict accept
+10_description_content_type_variant reject
+31_folded_requires_dist reject

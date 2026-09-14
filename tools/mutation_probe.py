@@ -184,6 +184,51 @@ MUTATIONS = [
         "covers": "TOML integers are 64-bit, not 32-bit",
     },
     {
+        "name": "metadata-license-field-conflict-allowed",
+        "file": "metadata.mbt",
+        "old": """      match license {
+        Some(_) => fail("LICENSE_EXPRESSION_CONFLICT", headers, "license")
+        None => ()
+      }""",
+        "new": """      ignore(license)""",
+        "covers": "PEP 639 forbids `License-Expression` next to the free text `License`",
+    },
+    {
+        "name": "metadata-license-classifier-conflict-allowed",
+        "file": "metadata.mbt",
+        "old": """      for classifier in classifiers {
+        if classifier.has_prefix("License ::") {
+          fail("LICENSE_EXPRESSION_CONFLICT", headers, "classifier")
+        }
+      }""",
+        "new": """      ignore(classifiers)""",
+        "covers": "PEP 639 forbids `License-Expression` next to a `License ::` classifier",
+    },
+    {
+        "name": "metadata-unknown-field-accepted",
+        "file": "metadata.mbt",
+        "old": """      None => raise InvalidMetadata("UNKNOWN_FIELD", header.offset)""",
+        "new": """      None => 0""",
+        "covers": "an unrecognized field is rejected",
+    },
+    {
+        "name": "metadata-requires-dist-not-validated",
+        "file": "metadata.mbt",
+        "old": """    let requirement = Requirement::parse(value) catch {
+      _ => fail("REQUIRES_DIST_INVALID", headers, "requires-dist")
+    }
+    match requirement.marker_text {
+      Some(marker_text) =>
+        if rank < EXTRA_SUPPORT_VERSION_RANK &&
+          marker_mentions_extra(marker_text) {
+          fail("EXTRA_MARKER_NOT_IN_METADATA_VERSION", headers, "requires-dist")
+        }
+      None => ()
+    }""",
+        "new": """    ignore(value)""",
+        "covers": "every `Requires-Dist` value is parsed",
+    },
+    {
         "name": "prerelease-policy-always-allows",
         "file": "specifier.mbt",
         "old": """  let allow_pre = prereleases.unwrap_or(true)

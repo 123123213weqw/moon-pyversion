@@ -91,13 +91,15 @@ MoonBit 想消费 Python 生态（离线镜像、锁文件、包元数据）时�
 | M3 | `markers.mbt` | PEP 508 环境标记解析与求值 | 场景 1 | 1032 | M1 | `[已完成]` |
 | M4 | `toml.mbt` | TOML 1.0 读取与规范重序列化（`pyproject.toml` / `pylock.toml`） | 场景 1、2 | 1580 | M1 | `[已完成]`（计划外新增） |
 | M5 | `licenses.mbt` | PEP 639 许可证表达式与许可证文件路径 | 场景 1 | 460 | — | `[已完成]`（计划外新增） |
-| M6 | `metadata.mbt` | METADATA / PKG-INFO 头部 | 场景 1 端到端 | ~500 | M2 M3 | `[计划]` |
+| M6 | `metadata.mbt` | METADATA / PKG-INFO 头部 | 场景 1 端到端 | 1336 | M2 M3 M5 | `[已完成]` |
 | M7 | `index.mbt` | 离线索引目录扫描 + PEP 691 JSON | 场景 2 端到端 | ~450 | M1 M2 | `[计划]` |
 | M8 | `pylock.mbt` | `pylock.toml` 解析（PEP 751） | 场景 1、2 | ~500 | M2 M4 | `[计划]` |
 | M9 | CLI 示例 | 依赖检查报告（可运行产物） | — | ~250 | M6–M8 | `[计划]` |
 
-实际落地（截至 M5）：库源码 **4790 行**、测试 **1851 行**（120 个测试块）、
-差分语料 **120 951 条**。原计划按 `metadata.mbt` 一个文件推进，施工中发现
+实际落地（截至 M6）：库源码 **6128 行**、测试 **1851 行**（120 个测试块）、
+差分语料 **121 239 条**。M6 的验收证据是 **239 份真实 PyPI `METADATA`**（取自
+真实 wheel 的 PEP 658 边上文件）加上 42 条手工规则样例，全部对
+`packaging.metadata` 回放，另有 7 条声明分歧（方向逐条登记）。原计划按 `metadata.mbt` 一个文件推进，施工中发现
 `METADATA` 与锁文件都要先有 TOML 读取能力，且 PEP 639 在 26.3 里已单独成
 模块，因此把 TOML 与许可证提前成独立里程碑（M4/M5），`metadata.mbt` 顺延为
 M6。里程碑编号变化不影响验收门禁，也不影响已交付能力的证据。
@@ -114,7 +116,8 @@ M6。里程碑编号变化不影响验收门禁，也不影响已交付能力的
 | `marker` | 标记原文 + 环境表 → 布尔 | `Marker.evaluate(env)` | M3 |
 | `license` | 许可证表达式原文 → 规范化结果 | `canonicalize_license_expression` | M5 |
 | `toml` | TOML 文档 → 接受/拒绝 + 重序列化后重新解析 | 参考实现 `tomli` | M4 |
-| `meta` | METADATA 原文 → 关键字段 | `email` 解析路径 | M6 |
+| `meta_divergence` | 声明分歧的样例名与参考实现的方向（输入，非断言） | — | M6 |
+| `meta` | METADATA 原文 → 裁决 + 错误码 + 规范重排 | `Metadata.from_email(validate=True)`（+ 声明分歧） | M6 |
 | `index` | simple index JSON → (name, version) 列表 | `parse_sdist/wheel_filename` | M7 |
 
 真实语料**几乎免费**：`tools/fetch_pypi_corpus.py` 已经在抓 `Requires-Dist` 原文，

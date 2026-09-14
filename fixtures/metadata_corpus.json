@@ -1,0 +1,1989 @@
+{
+  "curated_count": 42,
+  "divergences": [
+    "41_license_and_expression",
+    "42_license_classifier_conflict",
+    "04_folded_summary",
+    "06_metadata_25",
+    "09_license_expression_conflict",
+    "10_description_content_type_variant",
+    "31_folded_requires_dist"
+  ],
+  "document_count": 281,
+  "documents": [
+    {
+      "bytes": 46,
+      "name": "01_minimal",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 99,
+      "name": "02_description_body",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 828,
+      "name": "03_all_fields",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 73,
+      "name": "04_folded_summary",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'summary' must be a single line\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 78,
+      "name": "05_description_header",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 64,
+      "name": "06_metadata_25",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 64,
+      "name": "07_import_name_at_24",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('import-name introduced in metadata version 2.5, not 2.4')])",
+      "source": "curated"
+    },
+    {
+      "bytes": 63,
+      "name": "08_dynamic_at_21",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('dynamic introduced in metadata version 2.2, not 2.1')])",
+      "source": "curated"
+    },
+    {
+      "bytes": 142,
+      "name": "09_license_expression_conflict",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 108,
+      "name": "10_description_content_type_variant",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'description-content-type' must be one of ['text/markdown', 'text/plain', 'text/x-rst'], not 'text/x-markdown; variant=GFM'\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 73,
+      "name": "11_author_email_invalid",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 24,
+      "name": "12_no_metadata_version",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('None is not a valid metadata version')])",
+      "source": "curated"
+    },
+    {
+      "bytes": 46,
+      "name": "13_metadata_version_invalid",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'9.9' is not a valid metadata version\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 35,
+      "name": "14_no_name",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'name' is a required field\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 33,
+      "name": "15_no_version",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'version' is a required field\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 47,
+      "name": "16_name_invalid",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'-demo' is invalid for 'name'\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 56,
+      "name": "17_version_invalid",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'not a version' is invalid for 'version'\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 58,
+      "name": "18_unknown_field",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"unrecognized field: 'whatever'\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 58,
+      "name": "19_duplicate_name",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'name' has invalid data\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 79,
+      "name": "20_requires_python_invalid",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'>=3.8, nonsense' is invalid for 'requires-python'\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 67,
+      "name": "21_requires_dist_invalid",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'1bad!' is invalid for 'requires-dist'\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 75,
+      "name": "22_provides_extra_invalid",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'not an extra' is invalid for 'provides-extra'\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 104,
+      "name": "23_project_url_duplicate_label",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 75,
+      "name": "24_project_url_invalid",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 78,
+      "name": "25_license_expression_invalid",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'NotALicense' is invalid for 'license-expression'\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 78,
+      "name": "26_license_file_invalid",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'/absolute/LICENSE' is invalid for 'license-file', paths must be relative\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 76,
+      "name": "27_summary_multiline",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 78,
+      "name": "28_description_content_type_invalid",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'bogus' is not a valid content type for 'description-content-type': Invalid content type\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 62,
+      "name": "29_metadata_10",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('requires introduced in metadata version 1.1, not 1.0')])",
+      "source": "curated"
+    },
+    {
+      "bytes": 70,
+      "name": "30_crlf",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 82,
+      "name": "31_folded_requires_dist",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'requests>=2.0,\\\\n <3.0' is invalid for 'requires-dist'\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 77,
+      "name": "32_metadata_12_deprecated",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 66,
+      "name": "33_empty_values",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 112,
+      "name": "34_email_list_complex",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 61,
+      "name": "35_keywords_single",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 80,
+      "name": "36_epoch_and_local_version",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 85,
+      "name": "37_extra_marker_at_21",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 99,
+      "name": "38_license_file_ok",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 60,
+      "name": "39_body_only",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 48,
+      "name": "40_leading_blank_lines",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('None is not a valid metadata version'), InvalidMetadata(\"'name' is a required field\"), InvalidMetadata(\"'version' is a required field",
+      "source": "curated"
+    },
+    {
+      "bytes": 91,
+      "name": "41_license_and_expression",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 121,
+      "name": "42_license_classifier_conflict",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 6368,
+      "name": "aiohttp-0.21.4",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6446,
+      "name": "aiohttp-0.21.5",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6539,
+      "name": "aiohttp-0.21.6",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7011,
+      "name": "alembic-1.5.8",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8236,
+      "name": "ansible-10.0.0a2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8236,
+      "name": "ansible-10.0.0a3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8234,
+      "name": "ansible-10.0.0rc1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4302,
+      "name": "attrs-15.0.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4254,
+      "name": "attrs-15.1.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4211,
+      "name": "attrs-15.2.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3542,
+      "name": "beautifulsoup4-4.10.0",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3525,
+      "name": "beautifulsoup4-4.11.0",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3525,
+      "name": "beautifulsoup4-4.11.1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9876,
+      "name": "black-18.3a0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'UNKNOWN' is not a valid content type for 'description-content-type': Inval",
+      "source": "pypi"
+    },
+    {
+      "bytes": 11129,
+      "name": "black-18.3a1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 11587,
+      "name": "black-18.3a2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6020,
+      "name": "boto3-0.0.10",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6020,
+      "name": "boto3-0.0.11",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6165,
+      "name": "boto3-0.0.12",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1952,
+      "name": "build-0.0.3.1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3393,
+      "name": "build-0.3.1.post1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3609,
+      "name": "build-0.6.0.post1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1532,
+      "name": "certifi-2015.04.28",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2524,
+      "name": "certifi-2015.11.20.1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2522,
+      "name": "certifi-2015.11.20",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9192,
+      "name": "charset-normalizer-1.3.7",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9192,
+      "name": "charset-normalizer-1.3.8",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9192,
+      "name": "charset-normalizer-1.3.9",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 424,
+      "name": "click-2.4",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 424,
+      "name": "click-4.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 424,
+      "name": "click-4.1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4328,
+      "name": "coverage-4.2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4915,
+      "name": "coverage-4.3.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4838,
+      "name": "coverage-4.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3151,
+      "name": "cryptography-0.5.2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3151,
+      "name": "cryptography-0.5.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3151,
+      "name": "cryptography-0.5.4",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 951,
+      "name": "datasets-0.0.9",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9547,
+      "name": "datasets-1.13.3",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1331,
+      "name": "django-1.10.5",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1331,
+      "name": "django-1.10.6",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1331,
+      "name": "django-1.10.7",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3045,
+      "name": "docker-2.2.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3045,
+      "name": "docker-2.2.1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3054,
+      "name": "docker-2.4.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2332,
+      "name": "docutils-0.13.1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2593,
+      "name": "docutils-0.15.1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2593,
+      "name": "docutils-0.15.2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6472,
+      "name": "filelock-3.0.10",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4343,
+      "name": "filelock-3.0.12",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6696,
+      "name": "filelock-3.0.6",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1954,
+      "name": "flask-0.12.5",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2468,
+      "name": "flit-0.11.2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2550,
+      "name": "flit-0.11.4",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3822,
+      "name": "flit-2.0rc2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3172,
+      "name": "google-cloud-storage-0.20.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3427,
+      "name": "google-cloud-storage-0.21.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3436,
+      "name": "google-cloud-storage-0.22.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 510,
+      "name": "gradio-0.1.9",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 517,
+      "name": "gradio-0.9.9.2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 517,
+      "name": "gradio-0.9.9.3",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 308,
+      "name": "grpcio-0.13.1rc1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 308,
+      "name": "grpcio-0.14.0rc1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 308,
+      "name": "grpcio-1.0.0rc1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2197,
+      "name": "httplib2-0.17.2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2197,
+      "name": "httplib2-0.17.3",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2536,
+      "name": "httplib2-0.20.4",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4283,
+      "name": "hypothesis-3.11.6",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4283,
+      "name": "hypothesis-3.18.2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4283,
+      "name": "hypothesis-3.18.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8713,
+      "name": "idna-2.7",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9765,
+      "name": "idna-3.6",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9765,
+      "name": "idna-3.7",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3499,
+      "name": "importlib-metadata-3.8.2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3960,
+      "name": "importlib-metadata-4.11.4",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4010,
+      "name": "importlib-metadata-4.6.4",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3942,
+      "name": "ipython-4.1.0rc1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'setuptools (>=18.5decorator)' is invalid for 'requires-dist'\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3833,
+      "name": "ipython-4.1.0rc2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4268,
+      "name": "ipython-5.10.0",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2550,
+      "name": "itsdangerous-2.0.0rc1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2900,
+      "name": "itsdangerous-2.0.0rc2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2227,
+      "name": "jinja2-2.10.1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3380,
+      "name": "jinja2-2.10.2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2258,
+      "name": "jinja2-2.10",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'UNKNOWN' is not a valid content type for 'description-content-type': Inval",
+      "source": "pypi"
+    },
+    {
+      "bytes": 759,
+      "name": "jupyterlab-0.0.13",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1393,
+      "name": "jupyterlab-0.18.0.dev1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1436,
+      "name": "jupyterlab-0.20.0rc1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6417,
+      "name": "kafka-python-1.2.4",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6417,
+      "name": "kafka-python-1.2.5",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9952,
+      "name": "kafka-python-2.2.11",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1508,
+      "name": "kubernetes-10.0.0",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1510,
+      "name": "kubernetes-10.0.1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1510,
+      "name": "kubernetes-10.1.0",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6453,
+      "name": "lightgbm-2.0.10",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'UNKNOWN' is not a valid content type for 'description-content-type': Inval",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6451,
+      "name": "lightgbm-2.0.11",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'UNKNOWN' is not a valid content type for 'description-content-type': Inval",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6368,
+      "name": "lightgbm-2.0.12",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'UNKNOWN' is not a valid content type for 'description-content-type': Inval",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3229,
+      "name": "lxml-3.3.6",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2951,
+      "name": "lxml-3.4.4",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2867,
+      "name": "lxml-3.6.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 5364,
+      "name": "marshmallow-0.3.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8031,
+      "name": "marshmallow-0.5.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 5040,
+      "name": "marshmallow-1.2.6",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1396,
+      "name": "matplotlib-2.1.0rc1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1466,
+      "name": "matplotlib-2.2.0rc1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'UNKNOWN' is not a valid content type for 'description-content-type': Inval",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1385,
+      "name": "matplotlib-3.1.0rc2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1254,
+      "name": "mypy-0.470",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1263,
+      "name": "mypy-0.471",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1263,
+      "name": "mypy-0.501",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1625,
+      "name": "notebook-4.0.6",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1576,
+      "name": "notebook-4.2.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1576,
+      "name": "notebook-4.2.1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1961,
+      "name": "numpy-1.11.2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1961,
+      "name": "numpy-1.11.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2235,
+      "name": "numpy-1.14.2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'UNKNOWN' is not a valid content type for 'description-content-type': Inval",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1784,
+      "name": "numpy-financial-0.0.1.dev3",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9297,
+      "name": "opencv-python-3.4.0.12",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'UNKNOWN' is not a valid content type for 'description-content-type': Inval",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8994,
+      "name": "opencv-python-3.4.0.14",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8994,
+      "name": "opencv-python-3.4.1.15",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1081,
+      "name": "packaging-14.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1429,
+      "name": "packaging-14.1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1847,
+      "name": "packaging-14.2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4482,
+      "name": "pandas-0.14.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'pytz (>=2011k)' is invalid for 'requires-dist'\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4473,
+      "name": "pandas-0.23.2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'pytz (>=2011k)' is invalid for 'requires-dist'\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4473,
+      "name": "pandas-0.23.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'pytz (>=2011k)' is invalid for 'requires-dist'\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1506,
+      "name": "paramiko-1.13.4",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1490,
+      "name": "paramiko-1.17.6",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9708,
+      "name": "pillow-10.2.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9199,
+      "name": "pillow-10.3.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9167,
+      "name": "pillow-10.4.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2588,
+      "name": "pip-18.1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3189,
+      "name": "pip-19.0.1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2892,
+      "name": "pip-19.0.2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9137,
+      "name": "platformdirs-2.5.1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9392,
+      "name": "platformdirs-2.5.2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 10645,
+      "name": "platformdirs-2.5.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 10264,
+      "name": "poetry-1.1.0a1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 10950,
+      "name": "poetry-1.1.0a2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 11082,
+      "name": "poetry-1.1.0a3",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 761,
+      "name": "protobuf-3.0.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 761,
+      "name": "protobuf-3.1.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 767,
+      "name": "protobuf-3.1.0.post1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3742,
+      "name": "psycopg2-binary-2.7.3.2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'UNKNOWN' is not a valid content type for 'description-content-type': Inval",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4233,
+      "name": "psycopg2-binary-2.7.4",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'UNKNOWN' is not a valid content type for 'description-content-type': Inval",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4193,
+      "name": "psycopg2-binary-2.7.5",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1638,
+      "name": "pydantic-0.0.2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1607,
+      "name": "pydantic-0.0.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1448,
+      "name": "pydantic-0.0.4",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1469,
+      "name": "pygments-2.12.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1605,
+      "name": "pygments-2.13.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1606,
+      "name": "pygments-2.14.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 911,
+      "name": "pyparsing-2.1.10",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 910,
+      "name": "pyparsing-2.1.6",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 910,
+      "name": "pyparsing-2.1.7",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4413,
+      "name": "pytest-2.8.7",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4652,
+      "name": "pytest-3.0.5",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4714,
+      "name": "pytest-3.0.7",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1000,
+      "name": "python-dateutil-2.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6760,
+      "name": "python-dateutil-2.7.1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6802,
+      "name": "python-dateutil-2.7.2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1288,
+      "name": "python-dotenv-0.1.2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1288,
+      "name": "python-dotenv-0.1.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8359,
+      "name": "python-dotenv-0.1.5",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1424,
+      "name": "pyyaml-3.12",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1424,
+      "name": "pyyaml-3.13",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1430,
+      "name": "pyyaml-3.13rc1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8189,
+      "name": "redis-4.4.0rc1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8102,
+      "name": "redis-4.4.0rc2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8231,
+      "name": "redis-4.4.0rc3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 5512,
+      "name": "requests-2.22.0",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6773,
+      "name": "requests-2.23.0",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6855,
+      "name": "requests-2.24.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7171,
+      "name": "rich-0.2.3",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7603,
+      "name": "rich-0.3.2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7860,
+      "name": "rich-0.3.3",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4812,
+      "name": "scikit-learn-0.15.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7036,
+      "name": "scikit-learn-0.19.1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'UNKNOWN' is not a valid content type for 'description-content-type': Inval",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7034,
+      "name": "scikit-learn-0.19.2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1649,
+      "name": "scipy-0.10.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1649,
+      "name": "scipy-0.10.1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1649,
+      "name": "scipy-0.13.2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2459,
+      "name": "scrapy-0.24.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2459,
+      "name": "scrapy-0.24.4",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2459,
+      "name": "scrapy-0.24.5",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2268,
+      "name": "seaborn-0.10.0rc0",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2230,
+      "name": "seaborn-0.11.0rc0",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2284,
+      "name": "seaborn-0.11.2rc0",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 11018,
+      "name": "setuptools-10.1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 11020,
+      "name": "setuptools-10.2.1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 11018,
+      "name": "setuptools-10.2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1795,
+      "name": "six-1.16.0",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1658,
+      "name": "six-1.17.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2967,
+      "name": "sphinx-1.4.9",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7010,
+      "name": "sphinx-1.7.9",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7258,
+      "name": "sphinx-1.8.6",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1')])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 5834,
+      "name": "starlette-0.26.0.post1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-expression introduced in metadata version 2.4, not 2.1'), InvalidMetadata('license-file introduced in metadata version 2.4, n",
+      "source": "pypi"
+    },
+    {
+      "bytes": 5786,
+      "name": "starlette-0.32.0.post1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-expression introduced in metadata version 2.4, not 2.1'), InvalidMetadata('license-file introduced in metadata version 2.4, n",
+      "source": "pypi"
+    },
+    {
+      "bytes": 5844,
+      "name": "starlette-0.36.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-expression introduced in metadata version 2.4, not 2.1'), InvalidMetadata('license-file introduced in metadata version 2.4, n",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7206,
+      "name": "statsmodels-0.10.0rc2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7395,
+      "name": "statsmodels-0.11.0rc1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7395,
+      "name": "statsmodels-0.11.0rc2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1235,
+      "name": "streamlit-0.11.0",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1068,
+      "name": "streamlit-0.12.2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1191,
+      "name": "streamlit-0.12.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'future (>+0.16.0)' is invalid for 'requires-dist'\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 909,
+      "name": "tensorflow-0.12.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 909,
+      "name": "tensorflow-0.12.1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2332,
+      "name": "tensorflow-1.12.2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7277,
+      "name": "tomli-0.2.10",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6613,
+      "name": "tomli-0.2.4",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6613,
+      "name": "tomli-0.2.5",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 236,
+      "name": "torch-1.0.0",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 1346,
+      "name": "torch-1.4.0",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 8346,
+      "name": "tox-2.8.0rc1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 10920,
+      "name": "tox-2.8.0rc2",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 7272,
+      "name": "tox-3.14.1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 10070,
+      "name": "tqdm-2.2.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 10070,
+      "name": "tqdm-2.2.4",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 10192,
+      "name": "tqdm-3.1.3",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4619,
+      "name": "twine-1.1.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'argparse; python_version == 2.6' is invalid for 'requires-dist'\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4568,
+      "name": "twine-1.1.1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 11803,
+      "name": "twine-1.10.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'UNKNOWN' is not a valid content type for 'description-content-type': Inval",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2098,
+      "name": "typing-extensions-3.10.0.0",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2098,
+      "name": "typing-extensions-3.10.0.1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2098,
+      "name": "typing-extensions-3.10.0.2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 11919,
+      "name": "urllib3-1.15",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3351,
+      "name": "uvicorn-0.10.9",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 4686,
+      "name": "uvicorn-0.17.0.post1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6241,
+      "name": "uvicorn-0.17.6",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2600,
+      "name": "werkzeug-0.11.10",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2600,
+      "name": "werkzeug-0.11.11",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 2601,
+      "name": "werkzeug-0.11.12",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6732,
+      "name": "wheel-0.17.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9117,
+      "name": "wheel-0.24.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 9402,
+      "name": "wheel-0.25.0",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\")])",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6697,
+      "name": "wrapt-1.13.0rc1",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6647,
+      "name": "wrapt-1.13.0rc2",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 6647,
+      "name": "wrapt-1.13.0rc3",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3443,
+      "name": "xgboost-0.72.1",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'UNKNOWN' is not a valid content type for 'description-content-type': Inval",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3441,
+      "name": "xgboost-0.80",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'UNKNOWN' is not a valid content type for 'description-content-type': Inval",
+      "source": "pypi"
+    },
+    {
+      "bytes": 3441,
+      "name": "xgboost-0.81",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'2.0' is not a valid metadata version\"), InvalidMetadata(\"'UNKNOWN' is not a valid content type for 'description-content-type': Inval",
+      "source": "pypi"
+    }
+  ],
+  "pypi_count": 239,
+  "reference": "packaging 26.3 Metadata.from_email(data, validate=True)",
+  "skipped": {
+    "larger_than_limit": 0,
+    "missing": 0,
+    "offline": true
+  }
+}

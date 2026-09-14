@@ -102,10 +102,10 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 | `markers.mbt` `[已有]` | `Marker::parse/to_string/evaluate/clauses/variables`、`MarkerEnvironment`、`validate_marker_text` | 场景 1、2 | 1032 |
 | `toml.mbt` `[已有]` | `Toml::parse/get/…/to_string`（TOML 1.0） | 场景 1、2 | 1580 |
 | `licenses.mbt` `[已有]` | `canonicalize_license_expression`、`is_valid_license_expression`、`canonicalize_license_file` | 场景 1 | 460 |
-| `metadata.mbt` `[计划]` | `Metadata::parse`、`Metadata::requires_dist`、`Metadata::requires_python` | 场景 1（端到端） | ~200 |
+| `metadata.mbt` `[已有]` | `Metadata::parse/requirements/requires_python/extras/is_compatible/diagnostics/to_string` | 场景 1（端到端） | 1336 |
 
-库源码合计 **4790 行**（不含测试与示例），测试 **1851 行**（`*_test.mbt`，
-120 个测试块 × 四后端），差分语料发射器 1570 行，工具链 2255 行 Python。
+库源码合计 **6128 行**（不含测试与示例），测试 **1851 行**（`*_test.mbt`，
+120 个测试块 × 四后端），差分语料发射器 1645 行，工具链 2829 行 Python。
 
 **`utils.mbt` 设计要点** `[已完成，见下]`（已用 packaging 26.3 核实）：
 
@@ -172,7 +172,7 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
   两类记录，共 **11 104 条**，其中真实文件名的 `pypi/file` 记录 900 条；
 - 对照 `packaging 26.3` **0 不一致**；
 - `tools/mutation_probe.py` 对故意注入的缺陷全部检出（M1 阶段为 7 处，
-  现为 16 处），证明语料对这部分行为有覆盖。
+  现为 20 处），证明语料对这部分行为有覆盖。
 
 `utils_test.mbt` 在开发中抓到一处真实缺陷：标签排序用了 MoonBit 默认的
 `String` 比较（先比长度），与 `packaging` 的 `sorted()`（按码点）不一致 ——
@@ -228,19 +228,47 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 - 差分语料新增 `license`（4086 条，含 4000 条变异表达式），对照
   `packaging.licenses` **0 不一致**。
 
+### `[已完成]` M6 落地情况
+
+`metadata.mbt`（1300 行）是 `METADATA` / `PKG-INFO` 的读取与校验实现
+（PEP 566，含 621 / 639 / 643 / 685 / 753 的修订）：
+
+- RFC 822 风格表头 + 空行 + 正文；折行按 2.2.3 展开；表头名大小写不敏感、
+  输出规范化；多值与单值字段分别处理；
+- 版本门槛（`Metadata-Version` 必需，字段按引入版本放行）、未知字段拒绝、
+  重复单值字段拒绝；每个拒绝都是稳定的 `InvalidMetadata(code, offset)`；
+- `Requires-Dist` 逐条交给 `Requirement::parse`（单条失败即文档失败，但要指明
+  是哪条规则的哪个字段）；`Requires-Python` 交给 `SpecifierSet::parse`；
+  `Provides-Extra` 用 `canonicalize_name` 规范化；PEP 639 的许可证表达式与
+  许可证文件路径复用 `licenses.mbt`；
+- `Metadata::to_string` 是规范重排，`to_string(parse(x))` 是不动点，因此可以用
+  "重新解析后取值一致"来做对照；
+- **验收证据是真实数据**：239 份真实 `METADATA`（真实 wheel 的 PEP 658
+  `.metadata` 边上文件，`fixtures/metadata_cache/` 是原始缓存）+ 42 条手工规则
+  样例，逐条对 `packaging.metadata.Metadata.from_email(validate=True)` 回放，
+  **0 不一致**；另有 7 条声明分歧登记在 `metadata_cases/divergences.txt`，
+  由 harness 双向断言。
+
+设计上的一处**实测驱动的放宽**值得单独记：最初 `Author-email` /
+`Maintainer-email` 解析失败会让整份文档失败，239 份真实文档里有 5 份因此被拒
+（`kubernetes-10.0.0/10.0.1/10.1.0` 的 `Author-email: `、`torch-1.0.0` 的
+`Author-email: UNKNOWN`），而参考实现根本不看这个字段。这不符合场景 1
+（"读一份真实 METADATA"）的目标，因此改成：空值等价于缺席，解析失败只写进
+`diagnostics`，文档照常可用。
+
 ### `[已完成]` 语料扩展与"有牙"验收
 
-- 语料从 87 916 条扩到 **120 951 条 / 120 952 行**：来源分布 curated 19 214、
-  generated 20 652、mutated 34 397、pypi 46 688；四后端逐字节一致。
-- `tools/mutation_probe.py` 从 7 处扩到 **16 处**故意缺陷（覆盖 M0–M5），
-  16/16 全部被语料检出；探针失败即实验失败。
+- 语料从 87 916 条扩到 **121 239 条 / 121 240 行**：来源分布 curated 19 259、
+  generated 20 652、mutated 34 397、pypi 46 927；四后端逐字节一致。
+- `tools/mutation_probe.py` 从 7 处扩到 **20 处**故意缺陷（覆盖 M0–M6），
+  20/20 全部被语料检出；探针失败即实验失败。
 - 多 oracle 矩阵（24.2 / 25.0 / 26.0 / 26.3）按原因分类上游行为变更，
   固定版本 26.3 仍为 **0 差异**。
 
 ## 技术路线
 
 `[已有]` 版本解析用按 UTF-16 偏移移动的 ASCII 游标，不引入正则；整数组件经
-`BigInt`；比较按键序。四后端 CI。120 951 条语料差分对照 `packaging 26.3`，另有 16 处故意缺陷的变异探针证明对照有效。
+`BigInt`；比较按键序。四后端 CI。121 239 条语料差分对照 `packaging 26.3`，另有 20 处故意缺陷的变异探针证明对照有效。
 
 `[计划]` 新增模块沿用同一套技术路线与**同一套验收方法**，不新造轮子：
 
@@ -268,15 +296,16 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 ## 交付成果
 
-`[已有]` 源码 **4790 行**（不含测试）、测试 **1851 行**（120 个测试块 × 四后端
+`[已有]` 源码 **6128 行**（不含测试）、测试 **1851 行**（120 个测试块 × 四后端
 全通过）、`examples/basic` `examples/diff`（1570 行确定性发射器）
-`examples/bench`、`tools/` 六个脚本（2255 行 Python）、`fixtures/` 真实语料
-（97 个 PyPI 包 + 83 个 TOML 文档）、四后端 CI + 独立 differential 作业。
+`examples/bench`、`tools/` 七个脚本（2829 行 Python）、`fixtures/` 真实语料
+（97 个 PyPI 包 + 83 个 TOML 文档 + 281 份核心元数据）、四后端 CI + 独立 differential 作业。
 
 `[计划]` 还差：
 
 - `examples/metadata-check`：读一份真实 `METADATA`，输出越界项与不适用项清单
-  ——即场景 1 的可运行证据（`docs/plan.md` 的 M6）；
+  ——即场景 1 的**可运行**证据（库与语料已完成，差一个示例程序；`docs/plan.md`
+  把这一项归到 M9）；
 - `metadata.mbt` 与 `index.mbt` / `pylock.mbt`（`docs/plan.md` 的 M6/M7）。
 
 ## 明确不做的范围
