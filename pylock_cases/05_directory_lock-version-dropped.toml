@@ -1,0 +1,7 @@
+created-by = "moon-pyversion corpus"
+
+[[packages]]
+name = "spam"
+[packages.directory]
+path = "../spam"
+editable = false

@@ -1,0 +1,15 @@
+lock-version = "1.0"
+created-by = "moon-pyversion corpus"
+
+[[packages]]
+name = "spam"
+version = "1.0"
+[[packages.wheels]]
+kind = "mutable"
+name = "spam-1.0-py3-none-any.whl"
+upload-time = 2024-03-01T09:15:00Z
+size = 0
+hashes = { sha256 = "0e00" }
+[[packages.wheels]]
+path = "wheelhouse/spam-1.0-2-py3-none-any.whl"
+hashes = { sha256 = "1e00", blake2b_256 = "2e00" }

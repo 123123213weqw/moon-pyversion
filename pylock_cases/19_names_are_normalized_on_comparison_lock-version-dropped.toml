@@ -1,0 +1,10 @@
+created-by = "moon-pyversion corpus"
+
+[[packages]]
+name = "Zope.Interface"
+version = "6.0"
+dependencies = [{ name = "setuptools" }]
+[[packages.wheels]]
+name = "zope_interface-6.0-cp311-cp311-linux_x86_64.whl"
+url = "https://files.invalid/zope_interface-6.0-cp311-cp311-linux_x86_64.whl"
+hashes = { sha256 = "3e00" }

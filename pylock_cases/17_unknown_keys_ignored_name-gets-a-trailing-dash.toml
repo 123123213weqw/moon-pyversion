@@ -1,0 +1,16 @@
+lock-version = "1.0"
+created-by = "moon-pyversion corpus"
+
+[tool.moon-pyversion]
+note = "this table is a reader's to ignore"
+
+[[packages]]
+name = "attrs-"
+version = "25.1.0"
+[tool.other]
+anything = [1, 2, 3]
+[[packages.wheels]]
+name = "attrs-25.1.0-py3-none-any.whl"
+url = "https://files.invalid/attrs-25.1.0-py3-none-any.whl"
+hashes = { sha256 = "abcd" }
+unknown-member = "ignored"

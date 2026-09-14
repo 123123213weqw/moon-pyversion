@@ -1,0 +1,6 @@
+created-by = "moon-pyversion corpus"
+
+[[packages]]
+name = "spam"
+version = "1.0"
+path = "vendor/spam"

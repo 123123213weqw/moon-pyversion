@@ -1,0 +1,9 @@
+created-by = "moon-pyversion corpus"
+
+[[packages]]
+name = "spam"
+[packages.vcs]
+type = "git"
+url = "https://example.invalid/spam.git"
+path = "../spam"
+commit-id = "abc"

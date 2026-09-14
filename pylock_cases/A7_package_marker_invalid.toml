@@ -1,0 +1,8 @@
+lock-version = "1.0"
+created-by = "moon-pyversion corpus"
+
+[[packages]]
+name = "attrs"
+version = "1.0"
+path = "x"
+marker = "python_version >="

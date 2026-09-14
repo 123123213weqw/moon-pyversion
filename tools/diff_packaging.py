@@ -78,6 +78,12 @@ from fetch_index_corpus import (  # noqa: E402
     unescape_field,
 )
 
+# The PEP 751 projection is written down once as well, in the corpus generator,
+# and imported here for the same reason: the two sides of a `pylock` record would
+# otherwise be free to drift apart. That module imports the standard library and a
+# TOML reader only.
+from fetch_pylock_corpus import reference_pylock  # noqa: E402
+
 from packaging.metadata import Metadata as ReferenceMetadata
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
@@ -110,11 +116,14 @@ ARITY = {
     "toml": 6,
     "license": 5,
     "meta": 7,
+    "meta_values": 6,
     "meta_divergence": 4,
     "index": 6,
     "index_dir": 6,
     "index_divergence": 4,
     "resolve": 9,
+    "pylock": 6,
+    "pylock_divergence": 4,
 }
 
 EXIT_OK = 0
@@ -516,6 +525,7 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
     if kind == "meta":
         name, document = parts[2], parts[3]
         status, code, rendered = parts[4], parts[5], parts[6]
+        metadata_documents[name] = document
         library_ok = status == "ok"
         try:
             expected = ReferenceMetadata.from_email(document, validate=True)
@@ -574,6 +584,61 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
             )
         return None
 
+    if kind == "meta_values":
+        case, field, index, value = parts[2], parts[3], parts[4], parts[5]
+        document = metadata_documents.get(case)
+        if document is None:
+            return (
+                f"meta_values case {case!r} arrived before its document; the "
+                "`meta` record for it must come first"
+            )
+        try:
+            parsed = ReferenceMetadata.from_email(document, validate=True)
+        except Exception:  # noqa: BLE001 - the verdict is the `meta` record's job
+            # The library accepted the document and the reference did not. That
+            # difference is already reported once, by the `meta` record beside
+            # this one; repeating it per value would bury the real mismatches.
+            return None
+        if field == "requires-dist":
+            # The library keeps the raw `Requires-Dist` lines and the reference
+            # re-renders them as `Requirement` objects, so their texts are not
+            # comparable on purpose; the *count* is, and it is what this field
+            # carries. The lines themselves are covered by the `req` records.
+            expected = str(len(parsed.requires_dist or []))
+        elif field == "requires-python":
+            expected = str(parsed.requires_python) if parsed.requires_python else "-"
+        elif field == "summary":
+            expected = "1" if parsed.summary is not None else "0"
+        elif field == "name":
+            expected = canonicalize_name(parsed.name)
+        elif field == "version":
+            expected = str(parsed.version)
+        elif field in ("keywords", "provides-extra"):
+            items = list(
+                (parsed.keywords if field == "keywords" else parsed.provides_extra)
+                or []
+            )
+            if index == "-":
+                expected = str(len(items))
+            else:
+                position = int(index)
+                if position >= len(items):
+                    return (
+                        f"meta_values case {case!r}: the library has a "
+                        f"{field}[{position}] but the reference has only "
+                        f"{len(items)}"
+                    )
+                expected = items[position]
+        else:
+            return f"meta_values case {case!r} has an unknown field {field!r}"
+        if value != expected:
+            where = field if index == "-" else f"{field}[{index}]"
+            return (
+                f"metadata case {case!r}: {where} differs -- the library has "
+                f"{value!r}, the reference has {expected!r}"
+            )
+        return None
+
     if kind == "index_divergence":
         name, expectation = parts[2], parts[3]
         if expectation not in ("accept", "reject"):
@@ -581,6 +646,65 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
         if name in index_divergence_expectations:
             return f"index_divergence {name!r} declared twice"
         index_divergence_expectations[name] = expectation == "accept"
+        return None
+
+    if kind == "pylock":
+        name, document, status, detail = parts[2], parts[3], parts[4], parts[5]
+        try:
+            accepted, reason, expected = reference_pylock(document)
+        except Exception as error:  # noqa: BLE001 - the reference must answer, not raise
+            return (
+                f"pylock case {name!r}: the reference implementation could not read "
+                f"the document ({type(error).__name__}: {error})"
+            )
+        library_ok = status == "ok"
+        declared = pylock_divergence_expectations.get(name)
+        if declared is not None:
+            # The divergence is the point of the record: the two answers must
+            # differ, and the reference must answer the way the fixture says. A
+            # library that quietly grew as strict as the specification fails here.
+            if library_ok == accepted:
+                return (
+                    f"pylock case {name!r}: declared a divergence, but both sides "
+                    f"{'accept' if library_ok else 'reject'} it"
+                )
+            if accepted != declared:
+                return (
+                    f"pylock case {name!r}: the declared divergence says the "
+                    f"reference {'accepts' if declared else 'rejects'} it, but it "
+                    f"{'accepts' if accepted else 'rejects'} it ({reason})"
+                )
+            return None
+        if library_ok != accepted:
+            if accepted:
+                return (
+                    f"pylock case {name!r}: moonbit rejects ({detail}), the "
+                    "specification accepts the document"
+                )
+            return (
+                f"pylock case {name!r}: moonbit accepts, the specification rejects "
+                f"the document ({reason})"
+            )
+        if not accepted:
+            # Both reject. The codes are not compared: PEP 751 has no schema, so
+            # the library names rules in its own vocabulary.
+            return None
+        if expected is None:
+            return f"pylock case {name!r}: the reference accepted but projected nothing"
+        if detail != expected:
+            return (
+                f"pylock case {name!r}: the projection differs\n"
+                f"      expected {expected}\n      got      {detail}"
+            )
+        return None
+
+    if kind == "pylock_divergence":
+        name, expectation = parts[2], parts[3]
+        if expectation not in ("accept", "reject"):
+            return f"pylock_divergence {name!r} has an unknown expectation {expectation!r}"
+        if name in pylock_divergence_expectations:
+            return f"pylock_divergence {name!r} declared twice"
+        pylock_divergence_expectations[name] = expectation == "accept"
         return None
 
     if kind == "resolve":
@@ -1102,6 +1226,8 @@ def classify_difference(oracle: "Oracle", parts: list[str]) -> str:
         return "license-expression"
     if kind == "meta":
         return "metadata-rules"
+    if kind == "meta_values":
+        return "metadata-values"
     if kind == "meta_divergence":
         return "metadata-divergence"
     if kind == "index":
@@ -1112,6 +1238,10 @@ def classify_difference(oracle: "Oracle", parts: list[str]) -> str:
         return "index-divergence"
     if kind == "resolve":
         return "candidate-resolution"
+    if kind == "pylock":
+        return "pylock-rules"
+    if kind == "pylock_divergence":
+        return "pylock-divergence"
     return {"parse": "version-grammar", "spec": "specifier-grammar"}.get(kind, "ordering")
 
 
@@ -1121,6 +1251,11 @@ def classify_difference(oracle: "Oracle", parts: list[str]) -> str:
 # instead of answering. It is kept as a string so it travels through the same
 # sample and report paths as every other difference.
 ORACLE_CRASHED = "the reference implementation raised {error}"
+
+# The `meta` documents themselves, keyed by case name, so the `meta_values`
+# records that follow can compare the *values* the library extracted rather than
+# only the verdict and the re-rendering. The `meta` record has to arrive first.
+metadata_documents: dict[str, str] = {}
 
 # Declared `meta` divergences: case name -> does the reference accept it. Filled
 # from the `meta_divergence` records the emitter writes before the documents they
@@ -1132,15 +1267,21 @@ divergence_expectations: dict[str, bool] = {}
 # `json` module plus the specification's rules) accept it.
 index_divergence_expectations: dict[str, bool] = {}
 
+# And for PEP 751 lock files: case name -> does the reference (a second reading of
+# the specification, in `tools/fetch_pylock_corpus.py`) accept it.
+pylock_divergence_expectations: dict[str, bool] = {}
+
 ESCAPED_FIELDS = {
     "marker": (2, 4),
     "marker_eval": (3, 5),
     "toml": (3, 5),
     "license": (2, 4),
     "meta": (3, 6),
+    "meta_values": (5,),
     "index": (3, 5),
     "index_dir": (3, 5),
     "resolve": (3, 4, 5, 6, 7, 8),
+    "pylock": (3, 5),
 }
 
 
@@ -1176,6 +1317,17 @@ def unescape_record(text: str) -> str:
             out.append("\n")
         elif following == "r":
             out.append("\r")
+        elif following == "u" and text[index + 2 : index + 3] == "{":
+            # A control character with no short spelling. The emitter escapes
+            # every one of them because a raw vertical tab or form feed is a
+            # record separator to the *transport* -- and a line break to the
+            # MoonBit lexer as well -- so it cannot be carried as itself.
+            close = text.find("}", index + 3)
+            if close == -1:
+                return f"unterminated \\u{{ escape at {index}: {text[:80]!r}"
+            out.append(chr(int(text[index + 3 : close], 16)))
+            index = close + 1
+            continue
         else:
             out.append(char)
             index += 1

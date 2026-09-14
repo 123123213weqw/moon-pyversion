@@ -253,6 +253,88 @@ MUTATIONS = [
         "covers": "a directory scan orders names by code point, not by length",
     },
     {
+        # The `Name` rule ends on a letter or a digit. The version of the code
+        # before this rule was fixed also accepted a trailing `_` (which is a legal
+        # character *inside* a name), so `Name: demo_` was accepted where
+        # `packaging` rejects it. Putting the `|| c == '_'` back is exactly that
+        # defect, and `metadata_cases/43_name_trailing_underscore.metadata` is the
+        # document that has to notice.
+        "name": "metadata-name-may-end-with-underscore",
+        "file": "metadata.mbt",
+        "old": """  if !is_ascii_alphanumeric(chars[n - 1]) {
+    return false
+  }""",
+        "new": """  if !(is_ascii_alphanumeric(chars[n - 1]) || chars[n - 1] == '_') {
+    return false
+  }""",
+        "covers": "a project name may not end in an underscore",
+    },
+    {
+        # `Keywords` parts are stripped with Python's whitespace set, which is
+        # wider than RFC 5322's WSP. Trimming with WSP alone leaves the vertical tab
+        # and the form feed inside a part, and the `meta_values` records for
+        # `metadata_cases/46_keywords_vertical_tab.metadata` are what notice: the
+        # `meta` record beside them does *not*, because the reference implementation
+        # normalises the same characters away when it re-reads the re-rendering.
+        "name": "metadata-keywords-trimmed-with-wsp-only",
+        "file": "metadata.mbt",
+        "old": """  for part in text.split(",") {
+    out.push(strip_python_space(part.to_owned()))
+  }""",
+        "new": """  for part in text.split(",") {
+    out.push(trim_wsp(part.to_owned()))
+  }""",
+        "covers": "a Keywords part is stripped with Python's whitespace, not with WSP",
+    },
+    {
+        # PEP 751 records the major/minor version the file was written for, and
+        # this reader rejects anything but 1.0 instead of warning. Accepting every
+        # value would make the declared divergence disappear, which the harness
+        # reports as a mismatch.
+        "name": "pylock-accepts-any-lock-version",
+        "file": "pylock.mbt",
+        "old": """  if lock_version != PYLOCK_LOCK_VERSION {
+    raise pylock_error("LOCK_VERSION_INVALID", 0)
+  }""",
+        "new": """  if false {
+    raise pylock_error("LOCK_VERSION_INVALID", 0)
+  }""",
+        "covers": "a lock-version the reader does not implement is rejected, not warned about",
+    },
+    {
+        "name": "pylock-ignores-source-exclusivity",
+        "file": "pylock.mbt",
+        "old": """  if direct > 1 || (direct > 0 && lists > 0) {
+    raise pylock_error("PACKAGE_SOURCE_CONFLICT", ordinal)
+  }""",
+        "new": """  if false {
+    raise pylock_error("PACKAGE_SOURCE_CONFLICT", ordinal)
+  }""",
+        "covers": "a package entry with two sources is rejected",
+    },
+    {
+        "name": "pylock-file-order-puts-wheels-first",
+        "file": "pylock.mbt",
+        "old": """pub fn PylockPackage::all_files(self : PylockPackage) -> Array[PylockFile] {
+  let out : Array[PylockFile] = []
+  for file in self.files {
+    out.push(file)
+  }""",
+        "new": """pub fn PylockPackage::all_files(self : PylockPackage) -> Array[PylockFile] {
+  let out : Array[PylockFile] = []
+  for file in self.wheels {
+    out.push(file)
+  }""",
+        "covers": "the file records of a locked package come out in a fixed order",
+    },
+    {
+        "name": "pylock-filename-ignores-the-url",
+        "file": "pylock.mbt",
+        "old": """        Some(url) => last_path_component(url)""",
+        "new": """        Some(url) => None""",
+        "covers": "a file record without `name` resolves its name from the URL",
+    },
+    {
         "name": "resolver-ignores-tags",
         "file": "index.mbt",
         "old": """  } else if file.kind is WheelFile && tag_priority(file, tags) == tags.length() {

@@ -1,0 +1,553 @@
+{
+  "curated_accepted": [
+    "01_pep751_example",
+    "00_package_without_a_source",
+    "02_minimal",
+    "03_vcs_url",
+    "04_vcs_path",
+    "05_directory",
+    "06_archive",
+    "07_sdist_and_wheels",
+    "08_files_draft",
+    "09_package_path_draft",
+    "10_environments",
+    "11_requires_python",
+    "12_extras_and_groups",
+    "13_marker_on_package",
+    "14_marker_needs_an_unanswerable_key",
+    "15_package_requires_python",
+    "16_dependencies",
+    "17_unknown_keys_ignored",
+    "18_file_members",
+    "19_names_are_normalized_on_comparison",
+    "23_vcs_with_both_url_and_path",
+    "22_unnormalized_spellings_are_accepted",
+    "21_file_record_with_a_name_but_no_location",
+    "20_attestation_identities_are_ignored"
+  ],
+  "curated_rejected": [
+    "90_lock_version_missing",
+    "91_lock_version_type",
+    "92_lock_version_not_major_minor",
+    "93_environments_not_array",
+    "94_environments_entry_type",
+    "95_environment_marker_invalid",
+    "96_requires_python_invalid",
+    "97_requires_python_type",
+    "98_extras_not_array",
+    "9A_extra_invalid",
+    "9B_dependency_groups_not_array",
+    "9C_dependency_groups_entry_type",
+    "9D_default_groups_invalid",
+    "9E_created_by_type",
+    "9F_packages_missing",
+    "A0_packages_not_array",
+    "A1_package_not_table",
+    "A2_package_name_missing",
+    "A3_package_name_type",
+    "A4_package_name_invalid",
+    "A6_package_version_invalid",
+    "A7_package_marker_invalid",
+    "A8_package_requires_python_invalid",
+    "A9_source_conflict_vcs_and_directory",
+    "B1_vcs_type_missing",
+    "B2_vcs_type_invalid",
+    "B4_vcs_commit_missing",
+    "B5_directory_path_missing",
+    "B6_archive_hashes_empty",
+    "B7_sdist_hashes_empty",
+    "B8_wheel_not_table",
+    "B9_wheel_has_no_name_url_or_path",
+    "C0_dependencies_not_array",
+    "C1_dependency_not_table",
+    "C2_dependency_name_missing",
+    "C3_dependency_version_invalid",
+    "C4_dependency_marker_invalid",
+    "C5_dependency_extra_invalid_name",
+    "C6_dependency_self_reference",
+    "C8_upload_time_type",
+    "C9_size_negative",
+    "CA_not_toml"
+  ],
+  "derived": [
+    {
+      "bytes": 1232,
+      "name": "accelerate"
+    },
+    {
+      "bytes": 1207,
+      "name": "aiohttp"
+    },
+    {
+      "bytes": 1196,
+      "name": "alembic"
+    },
+    {
+      "bytes": 1196,
+      "name": "ansible"
+    },
+    {
+      "bytes": 1184,
+      "name": "attrs"
+    },
+    {
+      "bytes": 1268,
+      "name": "beautifulsoup4"
+    },
+    {
+      "bytes": 1186,
+      "name": "black"
+    },
+    {
+      "bytes": 1184,
+      "name": "boto3"
+    },
+    {
+      "bytes": 1226,
+      "name": "botocore"
+    },
+    {
+      "bytes": 1178,
+      "name": "build"
+    },
+    {
+      "bytes": 1187,
+      "name": "celery"
+    },
+    {
+      "bytes": 1246,
+      "name": "certifi"
+    },
+    {
+      "bytes": 1304,
+      "name": "charset-normalizer"
+    },
+    {
+      "bytes": 1158,
+      "name": "click"
+    },
+    {
+      "bytes": 1190,
+      "name": "coverage"
+    },
+    {
+      "bytes": 1241,
+      "name": "cryptography"
+    },
+    {
+      "bytes": 1175,
+      "name": "dash"
+    },
+    {
+      "bytes": 1215,
+      "name": "datasets"
+    },
+    {
+      "bytes": 1199,
+      "name": "Django"
+    },
+    {
+      "bytes": 1187,
+      "name": "docker"
+    },
+    {
+      "bytes": 1229,
+      "name": "docutils"
+    },
+    {
+      "bytes": 1208,
+      "name": "fastapi"
+    },
+    {
+      "bytes": 1205,
+      "name": "filelock"
+    },
+    {
+      "bytes": 1187,
+      "name": "Flask"
+    },
+    {
+      "bytes": 1175,
+      "name": "flit"
+    },
+    {
+      "bytes": 1325,
+      "name": "google-cloud-storage"
+    },
+    {
+      "bytes": 1187,
+      "name": "gradio"
+    },
+    {
+      "bytes": 1208,
+      "name": "grpcio"
+    },
+    {
+      "bytes": 1214,
+      "name": "httplib2"
+    },
+    {
+      "bytes": 1199,
+      "name": "httpx"
+    },
+    {
+      "bytes": 1220,
+      "name": "hypothesis"
+    },
+    {
+      "bytes": 1154,
+      "name": "idna"
+    },
+    {
+      "bytes": 1283,
+      "name": "importlib-metadata"
+    },
+    {
+      "bytes": 1196,
+      "name": "ipython"
+    },
+    {
+      "bytes": 1232,
+      "name": "itsdangerous"
+    },
+    {
+      "bytes": 1154,
+      "name": "Jinja2"
+    },
+    {
+      "bytes": 1232,
+      "name": "jupyterlab"
+    },
+    {
+      "bytes": 1241,
+      "name": "kafka-python"
+    },
+    {
+      "bytes": 1235,
+      "name": "kubernetes"
+    },
+    {
+      "bytes": 1214,
+      "name": "lightgbm"
+    },
+    {
+      "bytes": 1151,
+      "name": "lxml"
+    },
+    {
+      "bytes": 1208,
+      "name": "MarkupSafe"
+    },
+    {
+      "bytes": 1229,
+      "name": "marshmallow"
+    },
+    {
+      "bytes": 1229,
+      "name": "matplotlib"
+    },
+    {
+      "bytes": 1169,
+      "name": "mypy"
+    },
+    {
+      "bytes": 1208,
+      "name": "notebook"
+    },
+    {
+      "bytes": 1265,
+      "name": "numpy-financial"
+    },
+    {
+      "bytes": 476,
+      "name": "numpy"
+    },
+    {
+      "bytes": 1292,
+      "name": "opencv-python"
+    },
+    {
+      "bytes": 1202,
+      "name": "packaging"
+    },
+    {
+      "bytes": 1189,
+      "name": "pandas"
+    },
+    {
+      "bytes": 1215,
+      "name": "paramiko"
+    },
+    {
+      "bytes": 1169,
+      "name": "pillow"
+    },
+    {
+      "bytes": 1160,
+      "name": "pip"
+    },
+    {
+      "bytes": 1238,
+      "name": "platformdirs"
+    },
+    {
+      "bytes": 1187,
+      "name": "plotly"
+    },
+    {
+      "bytes": 1196,
+      "name": "poetry"
+    },
+    {
+      "bytes": 1204,
+      "name": "protobuf"
+    },
+    {
+      "bytes": 1274,
+      "name": "psycopg2-binary"
+    },
+    {
+      "bytes": 1193,
+      "name": "pydantic"
+    },
+    {
+      "bytes": 1181,
+      "name": "Pygments"
+    },
+    {
+      "bytes": 1202,
+      "name": "pymongo"
+    },
+    {
+      "bytes": 1216,
+      "name": "pyparsing"
+    },
+    {
+      "bytes": 1181,
+      "name": "pytest"
+    },
+    {
+      "bytes": 1268,
+      "name": "python-dateutil"
+    },
+    {
+      "bytes": 1256,
+      "name": "python-dotenv"
+    },
+    {
+      "bytes": 1173,
+      "name": "pytz"
+    },
+    {
+      "bytes": 816,
+      "name": "PyYAML"
+    },
+    {
+      "bytes": 1184,
+      "name": "redis"
+    },
+    {
+      "bytes": 1214,
+      "name": "requests"
+    },
+    {
+      "bytes": 1166,
+      "name": "rich"
+    },
+    {
+      "bytes": 457,
+      "name": "ruff"
+    },
+    {
+      "bytes": 1247,
+      "name": "scikit-learn"
+    },
+    {
+      "bytes": 1190,
+      "name": "scipy"
+    },
+    {
+      "bytes": 1196,
+      "name": "Scrapy"
+    },
+    {
+      "bytes": 1215,
+      "name": "seaborn"
+    },
+    {
+      "bytes": 1185,
+      "name": "setuptools"
+    },
+    {
+      "bytes": 1166,
+      "name": "six"
+    },
+    {
+      "bytes": 1184,
+      "name": "Sphinx"
+    },
+    {
+      "bytes": 1202,
+      "name": "SQLAlchemy"
+    },
+    {
+      "bytes": 1220,
+      "name": "starlette"
+    },
+    {
+      "bytes": 477,
+      "name": "statsmodels"
+    },
+    {
+      "bytes": 459,
+      "name": "streamlit"
+    },
+    {
+      "bytes": 1178,
+      "name": "tomli"
+    },
+    {
+      "bytes": 1158,
+      "name": "tox"
+    },
+    {
+      "bytes": 1166,
+      "name": "tqdm"
+    },
+    {
+      "bytes": 1247,
+      "name": "transformers"
+    },
+    {
+      "bytes": 1184,
+      "name": "twine"
+    },
+    {
+      "bytes": 1310,
+      "name": "typing-extensions"
+    },
+    {
+      "bytes": 1193,
+      "name": "urllib3"
+    },
+    {
+      "bytes": 1202,
+      "name": "uvicorn"
+    },
+    {
+      "bytes": 1214,
+      "name": "Werkzeug"
+    },
+    {
+      "bytes": 1184,
+      "name": "wheel"
+    },
+    {
+      "bytes": 1184,
+      "name": "wrapt"
+    },
+    {
+      "bytes": 1210,
+      "name": "xgboost"
+    }
+  ],
+  "derived_skipped": [
+    "tensorflow",
+    "torch"
+  ],
+  "divergences": [
+    {
+      "name": "D1_created_by_missing",
+      "reason": "PEP 751 requires `created-by`; this reader treats it as optional, because a lock file without it is still a usable lock file and the field is provenance.",
+      "reference_accepts": false
+    },
+    {
+      "name": "D2_created_by_empty",
+      "reason": "An empty string counts as an absent value here, the rule `metadata.mbt` applies to an empty header value; PEP 751 would reject it.",
+      "reference_accepts": false
+    },
+    {
+      "name": "D3_redundant_version_next_to_a_source_tree",
+      "reason": "The specification says a source tree MUST NOT record `version`; this reader keeps it, because a version key is what a resolved set is checked against and the MUST NOT is a locker-side rule.",
+      "reference_accepts": false
+    },
+    {
+      "name": "D4_file_record_without_hashes",
+      "reason": "`hashes` is required on `wheels`, `sdist` and `archive`; this reader accepts a record without it -- the digest is then simply unknown -- but still rejects an empty `hashes` table, which the specification forbids outright.",
+      "reference_accepts": false
+    },
+    {
+      "name": "D5_upload_time_not_utc",
+      "reason": "`upload-time` must be recorded in UTC; this reader only checks that it is a TOML datetime and records the spelling verbatim, because no date arithmetic happens anywhere in the library.",
+      "reference_accepts": false
+    },
+    {
+      "name": "D7_version_omitted_on_a_file_list_entry",
+      "reason": "`packages.version` is only a SHOULD for an entry that names files; this reader requires it unless the entry is a direct reference, because the version key is what a resolved set is checked against.",
+      "reference_accepts": true
+    },
+    {
+      "name": "D6_lock_version_minor_not_implemented",
+      "reason": "The specification tells a reader that supports the major version but not the minor one to warn; there is no warning channel here, so `1.1` is rejected instead of being silently accepted.",
+      "reference_accepts": true
+    }
+  ],
+  "environment": {
+    "sets": {
+      "dependency_groups": [],
+      "extras": []
+    },
+    "single": {
+      "extra": "",
+      "implementation_name": "cpython",
+      "implementation_version": "3.11.9",
+      "os_name": "posix",
+      "platform_machine": "x86_64",
+      "platform_python_implementation": "CPython",
+      "platform_release": "6.1.0",
+      "platform_system": "Linux",
+      "platform_version": "#1 SMP",
+      "python_full_version": "3.11.9",
+      "python_version": "3.11",
+      "sys_platform": "linux"
+    }
+  },
+  "generated_by": "tools/fetch_pylock_corpus.py",
+  "max_derived_files": 6,
+  "max_derived_versions": 3,
+  "mutated_rejected": [
+    "00_package_without_a_source_lock-version-dropped",
+    "02_minimal_lock-version-dropped",
+    "03_vcs_url_lock-version-dropped",
+    "03_vcs_url_name-gets-a-trailing-dash",
+    "03_vcs_url_name-is-not-a-string",
+    "04_vcs_path_lock-version-dropped",
+    "05_directory_lock-version-dropped",
+    "06_archive_lock-version-dropped",
+    "07_sdist_and_wheels_lock-version-dropped",
+    "08_files_draft_lock-version-dropped",
+    "09_package_path_draft_lock-version-dropped",
+    "10_environments_lock-version-dropped",
+    "11_requires_python_lock-version-dropped",
+    "12_extras_and_groups_lock-version-dropped",
+    "13_marker_on_package_lock-version-dropped",
+    "13_marker_on_package_marker-loses-its-operand",
+    "14_marker_needs_an_unanswerable_key_lock-version-dropped",
+    "15_package_requires_python_lock-version-dropped",
+    "16_dependencies_lock-version-dropped",
+    "17_unknown_keys_ignored_lock-version-dropped",
+    "17_unknown_keys_ignored_name-gets-a-trailing-dash",
+    "17_unknown_keys_ignored_name-is-not-a-string",
+    "18_file_members_lock-version-dropped",
+    "19_names_are_normalized_on_comparison_lock-version-dropped",
+    "23_vcs_with_both_url_and_path_lock-version-dropped",
+    "22_unnormalized_spellings_are_accepted_lock-version-dropped",
+    "22_unnormalized_spellings_are_accepted_name-gets-a-trailing-dash",
+    "22_unnormalized_spellings_are_accepted_name-is-not-a-string",
+    "21_file_record_with_a_name_but_no_location_lock-version-dropped",
+    "20_attestation_identities_are_ignored_lock-version-dropped",
+    "20_attestation_identities_are_ignored_name-gets-a-trailing-dash",
+    "20_attestation_identities_are_ignored_name-is-not-a-string"
+  ],
+  "reference": "PEP 751 read a second time in reference_pylock, plus packaging.markers for marker syntax/evaluation and packaging.version/specifiers for versions; there is no external pylock.toml implementation to compare against."
+}

@@ -1,0 +1,5 @@
+extras = ["docs", "test"]
+dependency-groups = ["lint", "typecheck"]
+default-groups = ["lint"]
+created-by = "mousebender"
+packages = []

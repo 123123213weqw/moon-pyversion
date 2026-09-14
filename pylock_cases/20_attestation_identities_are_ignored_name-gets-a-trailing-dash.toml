@@ -1,0 +1,15 @@
+lock-version = "1.0"
+created-by = "moon-pyversion corpus"
+
+[[packages]]
+name = "attrs-"
+version = "25.1.0"
+[[packages.wheels]]
+name = "attrs-25.1.0-py3-none-any.whl"
+url = "https://files.invalid/attrs-25.1.0-py3-none-any.whl"
+hashes = { sha256 = "4e00" }
+[[packages.attestation-identities]]
+environment = "release-pypi"
+kind = "GitHub"
+repository = "python-attrs/attrs"
+workflow = "pypi-package.yml"

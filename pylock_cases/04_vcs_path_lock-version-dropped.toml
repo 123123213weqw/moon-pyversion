@@ -1,0 +1,8 @@
+created-by = "moon-pyversion corpus"
+
+[[packages]]
+name = "spam"
+[packages.vcs]
+type = "hg"
+path = "../spam"
+commit-id = "deadbeef"

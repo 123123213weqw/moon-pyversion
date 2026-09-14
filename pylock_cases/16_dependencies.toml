@@ -1,0 +1,15 @@
+lock-version = "1.0"
+created-by = "moon-pyversion corpus"
+
+[[packages]]
+name = "flask"
+version = "3.1.0"
+dependencies = [
+  { name = "click", version = "8.1.7" },
+  { name = "jinja2", marker = "python_version >= '3.9'", extras = ["i18n"] },
+  { name = "werkzeug" },
+]
+[[packages.wheels]]
+name = "flask-3.1.0-py3-none-any.whl"
+url = "https://files.invalid/flask-3.1.0-py3-none-any.whl"
+hashes = { sha256 = "1234" }

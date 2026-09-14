@@ -18,11 +18,14 @@
 /// - `<source>\ttoml\t<case name>\t<document>\t<ok|bad|lenient|lenient-drift>\t<re-serialization or ->`
 /// - `<source>\tlicense\t<raw>\t<ok|bad>\t<canonical expression or ->`
 /// - `<source>\tmeta\t<case name>\t<document>\t<ok|bad>\t<error code or ->\t<canonical re-rendering or ->`
+/// - `<source>\tmeta_values\t<case name>\t<field>\t<index>\t<value>`
 /// - `<source>\tmeta_divergence\t<case name>\t<accept|reject>` (input, not a check)
 /// - `<source>\tindex\t<case name>\t<document>\t<ok|bad>\t<projection or error code>`
 /// - `<source>\tindex_divergence\t<case name>\t<accept|reject>` (input, not a check)
 /// - `<source>\tresolve\t<requirement>\t<files as f@rp;...>\t<tags as a|b>\t<python or ->\t<mode>\t<kept as a|b>\t<rejected as f=reason|...>`
 /// - `<source>\tindex_dir\t<directory>\t<entries as a|b>\t<ok|bad>\t<projection or error code>`
+/// - `<source>\tpylock\t<case name>\t<document>\t<ok|bad>\t<projection or error code>`
+/// - `<source>\tpylock_divergence\t<case name>\t<accept|reject>` (input, not a check)
 /// - `<source>\tresolve\t<requirement>\t<tags as a|b>\t<python or ->\t<mode>\t<kept as a|b>\t<rejected as f=reason|...>`
 ///
 /// `mode` is `auto` (the library default policy), `any` (prereleases forced
@@ -966,11 +969,46 @@ fn escape_record(text : String) -> String {
       out.write_string("\\n")
     } else if c == '\r' {
       out.write_string("\\r")
+    } else if c.to_int() < 32 || c.to_int() == 127 {
+      // Every other control character, as `\u{..}`.
+      //
+      // The three above have short spellings, but a raw vertical tab or form feed
+      // is just as fatal to the transport: it is a record separator to anything
+      // that reads the corpus by lines, and a *line break* to this lexer, so a
+      // document carrying one could not even be written as a literal. The
+      // `Keywords` whitespace rules need both characters, which is how the hole
+      // was found; escaping the whole class is the fix rather than the two
+      // characters that happened to expose it.
+      out.write_string("\\u{")
+      out.write_string(hex_lower(c.to_int()))
+      out.write_string("}")
     } else {
       out.write_char(c)
     }
   }
   out.to_string()
+}
+
+///|
+/// A non-negative integer in lowercase hexadecimal, without padding.
+fn hex_lower(value : Int) -> String {
+  if value == 0 {
+    return "0"
+  }
+  let digits = "0123456789abcdef"
+  let out = StringBuilder()
+  let mut n = value
+  while n > 0 {
+    out.write_char(digits.to_array()[n % 16])
+    n = n / 16
+  }
+  // The digits come out least significant first.
+  let text = out.to_string()
+  let reversed : Array[Char] = []
+  for i = text.length() - 1; i >= 0; i = i - 1 {
+    reversed.push(text.to_array()[i])
+  }
+  String::from_array(reversed)
 }
 
 ///|
@@ -1197,6 +1235,77 @@ fn emit_metadata(
       sb.write_string("bad\t\{escape_record(code)}\t-\n")
     }
   }
+}
+
+///|
+/// Emit the values `Metadata::parse` extracted from `document`, one record per
+/// value, as
+/// `<source>\tmeta_values\t<case name>\t<field>\t<index>\t<value>`.
+///
+/// This asks a different question from the `meta` record beside it. That one asks
+/// whether the two implementations agree on *acceptance*, and whether the
+/// canonical re-rendering the library produces means the same thing to the
+/// reference implementation. This one asks whether the values themselves are the
+/// same values -- which the round trip cannot answer, because `packaging` strips
+/// whitespace and canonicalizes names on the way in, so a spelling this library
+/// got wrong is normalised away by the very step meant to check it. The
+/// `Keywords` whitespace rule is exactly that shape of mistake, and is why these
+/// records exist.
+///
+/// A list-valued field also carries a record with the index `-` whose value is the
+/// number of entries, so a list that comes out too short is a difference rather
+/// than a record that simply is not there. A scalar that may be absent is always
+/// emitted, with `-` for absent, for the same reason.
+fn emit_metadata_values(
+  source : String,
+  sb : StringBuilder,
+  name : String,
+  document : String,
+) -> Unit {
+  let metadata = match metadata_opt(document) {
+    Some(metadata) => metadata
+    None => return
+  }
+  let write = fn(field : String, index : String, value : String) -> Unit {
+    sb.write_string(
+      "\{source}\tmeta_values\t\{escape_record(name)}\t\{field}\t\{index}\t\{escape_record(value)}\n",
+    )
+  }
+  // The name as the library would compare it, and the version as it would print
+  // it: the two values a resolver matches on.
+  write("name", "-", @pyversion.canonicalize_name(metadata.name))
+  write("version", "-", metadata.version.to_string())
+  // `Keywords`, entry by entry: the field whose parts are stripped.
+  write("keywords", "-", metadata.keywords.length().to_string())
+  for i, keyword in metadata.keywords {
+    write("keywords", i.to_string(), keyword)
+  }
+  // `Provides-Extra` in the PEP 685 compare form, which is what the reference
+  // reports as well.
+  let extras = metadata.extras()
+  write("provides-extra", "-", extras.length().to_string())
+  for i, extra in extras {
+    write("provides-extra", i.to_string(), extra)
+  }
+  // `Requires-Python` as *parsed and re-rendered*, not as written, and how many
+  // `Requires-Dist` lines there are. The raw spelling is the document's -- real
+  // metadata on PyPI writes `>=2.6, !=3.0.*` with a space -- while the reference
+  // re-renders the set it parsed (`!=3.0.*,>=2.6`). Those are two different
+  // things, and comparing them would report whitespace and ordering that no rule
+  // governs; the set the library matches with is what has to agree.
+  let requires_python = match metadata.requires_python() {
+    Some(specifier) => specifier.to_string()
+    None => "-"
+  }
+  write("requires-python", "-", requires_python)
+  write("requires-dist", "-", metadata.requires_dist.length().to_string())
+  // Whether a summary is present at all: the text itself is long and is already
+  // covered by the round trip, but presence is a rule of its own.
+  let summary = match metadata.summary {
+    Some(_) => "1"
+    None => "0"
+  }
+  write("summary", "-", summary)
 }
 
 ///|
@@ -1884,6 +1993,252 @@ fn emit_req(source : String, sb : StringBuilder, raw : String) -> Unit {
 }
 
 ///|
+/// The environment the PEP 751 records decide package applicability in: the two
+/// tables `fixtures/pylock_corpus.mbt` declares, so the projection and the
+/// harness evaluate every marker against the same one.
+fn pylock_marker_environment() -> @pyversion.MarkerEnvironment {
+  let environment = @pyversion.MarkerEnvironment::new()
+  for pair in @fixtures.pylock_environment {
+    environment.set(pair.0, pair.1)
+  }
+  for entry in @fixtures.pylock_environment_sets {
+    environment.set_names(entry.0, entry.1)
+  }
+  environment
+}
+
+///|
+/// A list in the projection: its length, then the items in document order joined
+/// by `^`. The length is written so an empty list and a list holding one empty
+/// string cannot look alike.
+fn pylock_list(items : Array[String]) -> String {
+  let out = StringBuilder()
+  out.write_string(items.length().to_string())
+  for item in items {
+    out.write_string("^")
+    out.write_string(item)
+  }
+  out.to_string()
+}
+
+///|
+/// A member that may be absent, as its text or `-`.
+fn pylock_optional(value : String?) -> String {
+  match value {
+    Some(text) => text
+    None => "-"
+  }
+}
+
+///|
+/// A parsed version as its PEP 440 rendering, or `-` when the member is absent.
+fn pylock_version(value : @pyversion.Version?) -> String {
+  match value {
+    Some(version) => version.to_string()
+    None => "-"
+  }
+}
+
+///|
+/// Whether a locked entry applies to the environment: `1`, `0`, or `!` when the
+/// marker mentions a key the environment cannot answer. The `!` is a fact worth
+/// recording -- an applicability question that cannot be answered is not the same
+/// answer as `false`.
+fn pylock_applies(
+  locked : @pyversion.PylockPackage,
+  environment : @pyversion.MarkerEnvironment,
+) -> String {
+  match (Some(locked.is_applicable(environment)) catch { _ => None }) {
+    Some(true) => "1"
+    Some(false) => "0"
+    None => "!"
+  }
+}
+
+///|
+/// `0` or `1` for a member that is present or absent.
+fn pylock_present(value : Bool) -> String {
+  if value {
+    "1"
+  } else {
+    "0"
+  }
+}
+
+///|
+/// The projection of one locked document: the document-level members, then one
+/// group per locked entry, with its dependencies and file records.
+///
+/// The format is written down here and in `tools/fetch_pylock_corpus.py`, which
+/// re-derives it from the specification with `tomli`, so a `pylock` record
+/// compares the values a reader extracted, not merely its verdict. Groups are
+/// separated by `|` and fields by `;`, and no value in the corpus contains
+/// either (the harness checks that rather than assuming it).
+fn pylock_projection(
+  lock : @pyversion.Pylock,
+  environment : @pyversion.MarkerEnvironment,
+) -> String {
+  let out = StringBuilder()
+  out.write_string("lock-version=")
+  out.write_string(lock.lock_version())
+  out.write_string(";environments=")
+  out.write_string(pylock_list(lock.environments()))
+  out.write_string(";requires-python=")
+  out.write_string(pylock_optional(lock.requires_python()))
+  out.write_string(";extras=")
+  out.write_string(pylock_list(lock.extras()))
+  out.write_string(";dependency-groups=")
+  out.write_string(pylock_list(lock.dependency_groups()))
+  out.write_string(";default-groups=")
+  out.write_string(pylock_list(lock.default_groups()))
+  out.write_string(";created-by=")
+  out.write_string(pylock_optional(lock.created_by()))
+  let packages = lock.packages()
+  out.write_string(";packages=")
+  out.write_string(packages.length().to_string())
+  for i = 0; i < packages.length(); i = i + 1 {
+    let locked = packages[i]
+    out.write_string("|pkg")
+    out.write_string(i.to_string())
+    out.write_string(":name=")
+    out.write_string(locked.name)
+    out.write_string(";version=")
+    out.write_string(pylock_version(locked.version))
+    out.write_string(";marker=")
+    out.write_string(pylock_optional(locked.marker))
+    out.write_string(";applies=")
+    out.write_string(pylock_applies(locked, environment))
+    out.write_string(";requires-python=")
+    out.write_string(pylock_optional(locked.requires_python))
+    out.write_string(";deps=")
+    out.write_string(locked.dependencies.length().to_string())
+    out.write_string(";files=")
+    out.write_string(locked.files.length().to_string())
+    out.write_string(";wheels=")
+    out.write_string(locked.wheels.length().to_string())
+    out.write_string(";sdist=")
+    out.write_string(pylock_present(locked.sdist is Some(_)))
+    out.write_string(";archive=")
+    out.write_string(pylock_present(locked.archive is Some(_)))
+    out.write_string(";vcs=")
+    out.write_string(pylock_present(locked.vcs is Some(_)))
+    out.write_string(";directory=")
+    out.write_string(pylock_present(locked.directory is Some(_)))
+    out.write_string(";index=")
+    out.write_string(pylock_optional(locked.index))
+    out.write_string(";path=")
+    out.write_string(pylock_present(locked.path is Some(_)))
+    out.write_string(";all-files=")
+    out.write_string(locked.all_files().length().to_string())
+    for j = 0; j < locked.dependencies.length(); j = j + 1 {
+      let dependency = locked.dependencies[j]
+      out.write_string("|dep")
+      out.write_string(i.to_string())
+      out.write_string(".")
+      out.write_string(j.to_string())
+      out.write_string(":name=")
+      out.write_string(dependency.name)
+      out.write_string(";version=")
+      out.write_string(pylock_version(dependency.version))
+      out.write_string(";marker=")
+      out.write_string(pylock_optional(dependency.marker))
+      out.write_string(";extras=")
+      out.write_string(pylock_list(dependency.extras))
+    }
+    // `all_files` fixes the order as files, sdist, wheels, archive, so the
+    // ordinal is stable no matter which members the document used.
+    for k = 0; k < locked.all_files().length(); k = k + 1 {
+      let file = locked.all_files()[k]
+      out.write_string("|file")
+      out.write_string(i.to_string())
+      out.write_string(".")
+      out.write_string(k.to_string())
+      out.write_string(":kind=")
+      out.write_string(file.kind.key())
+      out.write_string(";filename=")
+      out.write_string(pylock_optional(file.filename()))
+      out.write_string(";sha256=")
+      out.write_string(pylock_optional(file.hash_for("sha256")))
+      out.write_string(";size=")
+      out.write_string(
+        match file.size {
+          Some(value) => value.to_string()
+          None => "-"
+        },
+      )
+      out.write_string(";upload-time=")
+      out.write_string(pylock_optional(file.upload_time))
+      out.write_string(";subdirectory=")
+      out.write_string(pylock_optional(file.subdirectory))
+    }
+  }
+  out.to_string()
+}
+
+///|
+/// Emit one PEP 751 record.
+///
+/// A document the specification accepts also reports the projection above; a
+/// rejected one reports the stable error code. The harness reads the same
+/// document with `tomli`, applies the specification's rules independently and
+/// recomputes the projection, so the verdict, the mapping and every extracted
+/// value are compared.
+fn emit_pylock(
+  source : String,
+  sb : StringBuilder,
+  name : String,
+  document : String,
+) -> Unit {
+  sb.write_string(
+    "\{source}\tpylock\t\{escape_record(name)}\t\{escape_record(document)}\t",
+  )
+  match pylock_opt(document) {
+    Some(lock) =>
+      sb.write_string(
+        "ok\t\{escape_record(pylock_projection(lock, pylock_marker_environment()))}\n",
+      )
+    None =>
+      sb.write_string("bad\t\{escape_record(pylock_error_code(document))}\n")
+  }
+}
+
+///|
+fn pylock_opt(document : String) -> @pyversion.Pylock? {
+  Some(@pyversion.Pylock::parse(document)) catch {
+    _ => None
+  }
+}
+
+///|
+/// The stable code of a rejection, or the TOML layer's code when the document is
+/// not TOML at all -- `pylock.mbt` leaves that diagnosis to `toml.mbt` on
+/// purpose, because that reader owns the offset.
+fn pylock_error_code(document : String) -> String {
+  try {
+    ignore(@pyversion.Pylock::parse(document))
+    "<no error>"
+  } catch {
+    @pyversion.InvalidPylock(code, _) => code
+    @pyversion.InvalidToml(code, _) => "toml:\{code}"
+    _ => "OTHER_ERROR"
+  }
+}
+
+///|
+/// Emit the declared PEP 751 divergences: documents this library deliberately
+/// answers differently from a strict reading of the specification, and in which
+/// direction. They are inputs rather than checks, so the harness can assert that
+/// the two answers really do differ.
+fn emit_pylock_divergences(sb : StringBuilder) -> Unit {
+  for entry in @fixtures.pylock_divergences {
+    let expectation = if entry.1 { "accept" } else { "reject" }
+    sb.write_string(
+      "curated\tpylock_divergence\t\{escape_record(entry.0)}\t\{expectation}\n",
+    )
+  }
+}
+
+///|
 fn main {
   let sb = StringBuilder()
   let rng = Rng::new(0x5EED202644000001UL)
@@ -2144,9 +2499,11 @@ fn main {
   emit_metadata_divergences(sb)
   for entry in @fixtures.metadata_cases {
     emit_metadata("curated", sb, entry.0, entry.1)
+    emit_metadata_values("curated", sb, entry.0, entry.1)
   }
   for entry in @fixtures.metadata_pypi_cases {
     emit_metadata("pypi", sb, entry.0, entry.1)
+    emit_metadata_values("pypi", sb, entry.0, entry.1)
   }
   // 11. PEP 691 simple-index documents: the curated cases the specification
   //     accepts, the ones it requires a client to reject, and real responses from
@@ -2173,6 +2530,21 @@ fn main {
   //     and why the rest were rejected.
   for entry in resolver_cases() {
     emit_resolve("curated", sb, entry.0, entry.1, entry.2, entry.3, entry.4)
+  }
+  // 14. PEP 751 lock files: the curated documents, the documents derived from
+  //     real index responses, and the declared divergences.
+  emit_pylock_divergences(sb)
+  for entry in @fixtures.pylock_cases {
+    emit_pylock("curated", sb, entry.0, entry.1)
+  }
+  for entry in @fixtures.pylock_divergence_cases {
+    emit_pylock("curated", sb, entry.0, entry.1)
+  }
+  for entry in @fixtures.pylock_bad_cases {
+    emit_pylock("curated_bad", sb, entry.0, entry.1)
+  }
+  for entry in @fixtures.pylock_pypi_cases {
+    emit_pylock("pypi_lock", sb, entry.0, entry.1)
   }
   println(sb.to_string())
 }

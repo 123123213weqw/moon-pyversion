@@ -1,0 +1,15 @@
+lock-version = "1.0"
+created-by = "moon-pyversion corpus"
+
+extras = ["Docs_Build"]
+dependency-groups = ["Static_Typing"]
+default-groups = ["Static_Typing"]
+
+[[packages]]
+name = "spam"
+version = "1.0"
+dependencies = [{ name = "attrs-", extras = ["Dev_Extras"] }]
+[[packages.wheels]]
+name = "spam-1.0-py3-none-any.whl"
+url = "https://example.invalid/spam-1.0-py3-none-any.whl"
+hashes = { sha256 = "6e00" }

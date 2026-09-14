@@ -1,0 +1,11 @@
+created-by = "moon-pyversion corpus"
+
+[[packages]]
+name = "colorama"
+version = "0.4.6"
+marker = "sys_platform == 'win32'"
+
+[[packages]]
+name = "colorama"
+version = "0.4.6"
+marker = "sys_platform != 'win32'"

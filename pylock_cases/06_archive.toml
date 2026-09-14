@@ -1,0 +1,11 @@
+lock-version = "1.0"
+created-by = "moon-pyversion corpus"
+
+[[packages]]
+name = "spam"
+version = "1.0"
+[packages.archive]
+url = "https://example.invalid/spam-1.0.tar.gz"
+size = 12345
+hashes = { sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" }
+subdirectory = "spam-1.0"

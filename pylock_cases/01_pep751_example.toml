@@ -1,0 +1,28 @@
+lock-version = '1.0'
+environments = ["sys_platform == 'win32'", "sys_platform == 'linux'"]
+requires-python = '==3.12'
+created-by = 'mousebender'
+
+[[packages]]
+name = 'attrs'
+version = '25.1.0'
+requires-python = '>=3.8'
+wheels = [
+{name = 'attrs-25.1.0-py3-none-any.whl', upload-time = 2025-01-25T11:30:10.164985+00:00, url = 'https://files.pythonhosted.org/packages/fc/30/d4986a882011f9df997a55e6becd864812ccfcd821d64aac8570ee39f719/attrs-25.1.0-py3-none-any.whl', size = 63152, hashes = {sha256 = 'c75a69e28a550a7e93789579c22aa26b0f5b83b75dc4e08fe092980051e1090a'}},
+]
+[[packages.attestation-identities]]
+environment = 'release-pypi'
+kind = 'GitHub'
+repository = 'python-attrs/attrs'
+workflow = 'pypi-package.yml'
+
+[[packages]]
+name = 'numpy'
+version = '2.2.3'
+requires-python = '>=3.10'
+wheels = [
+{name = 'numpy-2.2.3-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl', url = 'https://files.pythonhosted.org/packages/0c/7e/1e5d1e5e3b9a1b3a/example.whl', size = 20000000, hashes = {sha256 = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'}},
+]
+
+[tool.moon-pyversion]
+nothing = true

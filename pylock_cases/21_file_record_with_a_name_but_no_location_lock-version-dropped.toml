@@ -1,0 +1,8 @@
+created-by = "moon-pyversion corpus"
+
+[[packages]]
+name = "spam"
+version = "1.0"
+[[packages.wheels]]
+name = "spam-1.0-py3-none-any.whl"
+hashes = { sha256 = "5e00" }

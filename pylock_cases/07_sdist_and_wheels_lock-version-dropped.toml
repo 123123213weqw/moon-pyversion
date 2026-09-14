@@ -1,0 +1,20 @@
+created-by = "moon-pyversion corpus"
+
+[[packages]]
+name = "cattrs"
+version = "24.1.2"
+requires-python = ">=3.8"
+index = "https://pypi.org/simple/"
+[packages.sdist]
+name = "cattrs-24.1.2.tar.gz"
+url = "https://files.invalid/cattrs-24.1.2.tar.gz"
+size = 55000
+hashes = { sha256 = "aaaa", md5 = "bbbb" }
+[[packages.wheels]]
+name = "cattrs-24.1.2-py3-none-any.whl"
+url = "https://files.invalid/cattrs-24.1.2-py3-none-any.whl"
+upload-time = 2025-01-25T11:30:10.164985+00:00
+hashes = { sha256 = "cccc" }
+[[packages.wheels]]
+url = "https://files.invalid/cattrs-24.1.2-cp311-cp311-manylinux_2_17_x86_64.whl"
+hashes = { sha256 = "dddd" }

@@ -1,0 +1,6 @@
+lock-version = "1.0"
+extras = ["docs", "test"]
+dependency-groups = ["lint", "typecheck"]
+default-groups = ["lint"]
+created-by = "mousebender"
+packages = []

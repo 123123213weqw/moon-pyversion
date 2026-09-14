@@ -1,0 +1,11 @@
+lock-version = "1.0"
+created-by = "moon-pyversion corpus"
+
+[[packages]]
+name = "numpy"
+version = "2.2.3"
+requires-python = ">=3.10"
+[[packages.wheels]]
+name = "numpy-2.2.3-cp311-cp311-manylinux_2_17_x86_64.whl"
+url = "https://files.invalid/numpy-2.2.3-cp311-cp311-manylinux_2_17_x86_64.whl"
+hashes = { sha256 = "ffff" }

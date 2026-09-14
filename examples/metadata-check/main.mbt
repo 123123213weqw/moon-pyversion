@@ -218,58 +218,56 @@ fn report(
 /// platform -- and the file records the target it was locked for through
 /// `environments` and a per-package `marker`.
 fn lock_document() -> String {
-  let lines : Array[String] = [
-    "lock-version = \"1.0\"",
-    "environments = [\"sys_platform == 'linux'\"]",
-    "extras = [\"test\"]",
-    "dependency-groups = [\"docs\", \"lint\"]",
-    "default-groups = [\"docs\"]",
-    "created-by = \"moon-pyversion metadata-check\"",
-    "",
-    "[[packages]]",
-    "name = \"requests\"",
-    "version = \"2.31.0\"",
-    "",
-    "[[packages]]",
-    "name = \"werkzeug\"",
-    "version = \"2.0.0\"",
-    "",
-    "[[packages]]",
-    "name = \"jinja2\"",
-    "version = \"3.1.4\"",
-    "",
-    "[[packages]]",
-    "name = \"click\"",
-    "version = \"8.1.7\"",
-    "",
-    "[[packages]]",
-    "name = \"pytest\"",
-    "version = \"8.3.5\"",
-    "",
-    "[[packages]]",
-    "name = \"markupsafe\"",
-    "version = \"2.1.5\"",
-    "",
-    "[[packages]]",
-    "name = \"itsdangerous\"",
-    "version = \"2.2.0\"",
-    "",
-    "[[packages]]",
-    "name = \"blinker\"",
-    "version = \"1.8.2\"",
-    "",
-    "[[packages]]",
-    "name = \"colorama\"",
-    "version = \"0.4.6\"",
-    "marker = \"sys_platform == 'win32'\"",
-    "",
-    "[[packages]]",
-    "name = \"demo-linux-only\"",
-    "version = \"1.0.0\"",
-    "marker = \"sys_platform == 'linux' and python_version >= '3.8'\"",
-    "",
-  ]
-  lines.join("\n")
+  let text =
+    #|lock-version = "1.0"
+    #|environments = ["sys_platform == 'linux'"]
+    #|extras = ["test"]
+    #|dependency-groups = ["docs", "lint"]
+    #|default-groups = ["docs"]
+    #|created-by = "moon-pyversion metadata-check"
+    #|
+    #|[[packages]]
+    #|name = "requests"
+    #|version = "2.31.0"
+    #|
+    #|[[packages]]
+    #|name = "werkzeug"
+    #|version = "2.0.0"
+    #|
+    #|[[packages]]
+    #|name = "jinja2"
+    #|version = "3.1.4"
+    #|
+    #|[[packages]]
+    #|name = "click"
+    #|version = "8.1.7"
+    #|
+    #|[[packages]]
+    #|name = "pytest"
+    #|version = "8.3.5"
+    #|
+    #|[[packages]]
+    #|name = "markupsafe"
+    #|version = "2.1.5"
+    #|
+    #|[[packages]]
+    #|name = "itsdangerous"
+    #|version = "2.2.0"
+    #|
+    #|[[packages]]
+    #|name = "blinker"
+    #|version = "1.8.2"
+    #|
+    #|[[packages]]
+    #|name = "colorama"
+    #|version = "0.4.6"
+    #|marker = "sys_platform == 'win32'"
+    #|
+    #|[[packages]]
+    #|name = "demo-linux-only"
+    #|version = "1.0.0"
+    #|marker = "sys_platform == 'linux' and python_version >= '3.8'"
+  text
 }
 
 ///|
@@ -295,10 +293,9 @@ fn applicable_lock(
     match entry.version {
       Some(version) =>
         if applies {
-          table.push((
-            @pyversion.canonicalize_name(entry.name),
-            version.to_string(),
-          ))
+          table.push(
+            (@pyversion.canonicalize_name(entry.name), version.to_string()),
+          )
         } else {
           skipped = skipped + 1
         }
