@@ -1,5 +1,5 @@
 {
-  "curated_count": 42,
+  "curated_count": 46,
   "divergences": [
     "41_license_and_expression",
     "42_license_classifier_conflict",
@@ -9,7 +9,7 @@
     "10_description_content_type_variant",
     "31_folded_requires_dist"
   ],
-  "document_count": 281,
+  "document_count": 285,
   "documents": [
     {
       "bytes": 46,
@@ -78,7 +78,7 @@
       "bytes": 108,
       "name": "10_description_content_type_variant",
       "reference_accepts": false,
-      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'description-content-type' must be one of ['text/markdown', 'text/plain', 'text/x-rst'], not 'text/x-markdown; variant=GFM'\")])",
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'description-content-type' must be one of ['text/plain', 'text/x-rst', 'text/markdown'], not 'text/x-markdown; variant=GFM'\")])",
       "source": "curated"
     },
     {
@@ -301,6 +301,34 @@
     {
       "bytes": 121,
       "name": "42_license_classifier_conflict",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 47,
+      "name": "43_name_trailing_underscore",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'demo_' is invalid for 'name'\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 68,
+      "name": "44_extra_trailing_underscore",
+      "reference_accepts": false,
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata(\"'demo_' is invalid for 'provides-extra'\")])",
+      "source": "curated"
+    },
+    {
+      "bytes": 65,
+      "name": "45_keywords_whitespace",
+      "reference_accepts": true,
+      "reference_detail": "",
+      "source": "curated"
+    },
+    {
+      "bytes": 75,
+      "name": "46_keywords_vertical_tab",
       "reference_accepts": true,
       "reference_detail": "",
       "source": "curated"
@@ -1667,21 +1695,21 @@
       "bytes": 5834,
       "name": "starlette-0.26.0.post1",
       "reference_accepts": false,
-      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-expression introduced in metadata version 2.4, not 2.1'), InvalidMetadata('license-file introduced in metadata version 2.4, n",
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1'), InvalidMetadata('license-expression introduced in metadata version 2.4, n",
       "source": "pypi"
     },
     {
       "bytes": 5786,
       "name": "starlette-0.32.0.post1",
       "reference_accepts": false,
-      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-expression introduced in metadata version 2.4, not 2.1'), InvalidMetadata('license-file introduced in metadata version 2.4, n",
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1'), InvalidMetadata('license-expression introduced in metadata version 2.4, n",
       "source": "pypi"
     },
     {
       "bytes": 5844,
       "name": "starlette-0.36.3",
       "reference_accepts": false,
-      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-expression introduced in metadata version 2.4, not 2.1'), InvalidMetadata('license-file introduced in metadata version 2.4, n",
+      "reference_detail": "ExceptionGroup: ('invalid or unparsed metadata', [InvalidMetadata('license-file introduced in metadata version 2.4, not 2.1'), InvalidMetadata('license-expression introduced in metadata version 2.4, n",
       "source": "pypi"
     },
     {

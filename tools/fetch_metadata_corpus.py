@@ -222,7 +222,15 @@ def real_documents(offline: bool) -> tuple[list[tuple[str, str]], dict]:
 
 
 def mbt_string(text: str) -> str:
-    """A MoonBit string literal for one document or case name."""
+    """A MoonBit string literal for one document or case name.
+
+    Every control character is escaped, not just the three with a short spelling:
+    MoonBit's lexer treats the vertical tab and the form feed as line breaks, so a
+    raw one inside a literal ends that literal and turns the rest of the document
+    into source. The `Keywords` whitespace case carries exactly those two, which is
+    how this rule was found -- the emitter reported a four-field `meta` record for
+    a document whose literal had been cut in half.
+    """
     out = ['"']
     for char in text:
         if char == "\\":
@@ -235,6 +243,8 @@ def mbt_string(text: str) -> str:
             out.append("\\r")
         elif char == "\t":
             out.append("\\t")
+        elif ord(char) < 0x20 or ord(char) == 0x7F:
+            out.append("\\u{%x}" % ord(char))
         else:
             out.append(char)
     out.append('"')

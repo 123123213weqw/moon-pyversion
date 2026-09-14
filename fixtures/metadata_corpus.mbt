@@ -122,6 +122,18 @@ pub let metadata_cases : Array[(String, String)] = [
   (
     "42_license_classifier_conflict", "Metadata-Version: 2.4\nName: demo\nVersion: 1.0\nLicense-Expression: MIT\nClassifier: License :: OSI Approved :: MIT License\n",
   ),
+  (
+    "43_name_trailing_underscore", "Metadata-Version: 2.1\nName: demo_\nVersion: 1.0\n",
+  ),
+  (
+    "44_extra_trailing_underscore", "Metadata-Version: 2.1\nName: demo\nVersion: 1.0\nProvides-Extra: demo_\n",
+  ),
+  (
+    "45_keywords_whitespace", "Metadata-Version: 2.1\nName: demo\nVersion: 1.0\nKeywords: a, b , c\n",
+  ),
+  (
+    "46_keywords_vertical_tab", "Metadata-Version: 2.1\nName: demo\nVersion: 1.0\nKeywords: alpha,\u{b}beta,\u{c}gamma\n",
+  ),
 ]
 
 ///|

@@ -151,10 +151,10 @@ test "metadata: Name follows the core metadata rule" {
   // A trailing `_` separates this rule from the PEP 508 requirement name rule:
   // `Requires-Dist: demo_>=1.0` is accepted (see the block on requirements),
   // `Name: demo_` is not, because the field has to end with a letter or a digit.
-  // That one case is not enforced by the current implementation, so it is
-  // asserted in "metadata: reported bugs" at the end of this file instead.
   for
-    name in ["-demo-", "demo-", "demo.", "_demo", "de mo", "d\u00e9mo", "demo!"] {
+    name in [
+      "-demo-", "demo-", "demo.", "demo_", "_demo", "de mo", "d\u00e9mo", "demo!",
+    ] {
     assert_metadata_error(
       base_document().replace_all(old="Name: demo", new="Name: \{name}"),
       "NAME_INVALID",
@@ -1206,10 +1206,10 @@ let corpus : Array[(String, String, String)] = [
     "name-invalid-dot-end", "Metadata-Version: 2.1\nName: demo.\nVersion: 1.0\n",
     "NAME_INVALID",
   ),
-  // packaging: REJECT InvalidMetadata:name / this reader: <accepted> (name-underscore-end)
+  // packaging: reject (name) (name-underscore-end) -- fixed; both readers reject
   (
     "name-underscore-end", "Metadata-Version: 2.1\nName: demo_\nVersion: 1.0\n",
-    "<accepted>",
+    "NAME_INVALID",
   ),
   // packaging: reject (project-url) (project-url-duplicate-label)
   (
@@ -1231,10 +1231,10 @@ let corpus : Array[(String, String, String)] = [
     "provides-extra-space", "Metadata-Version: 2.1\nName: demo\nVersion: 1.0\nProvides-Extra: two words\n",
     "PROVIDES_EXTRA_INVALID",
   ),
-  // packaging: REJECT InvalidMetadata:provides-extra / this reader: <accepted> (provides-extra-underscore-end)
+  // packaging: reject (provides-extra); fixed -- both readers reject
   (
     "provides-extra-underscore-end", "Metadata-Version: 2.1\nName: demo\nVersion: 1.0\nProvides-Extra: demo_\n",
-    "<accepted>",
+    "PROVIDES_EXTRA_INVALID",
   ),
   // packaging: reject (requires-dist) (requires-dist-empty)
   (
@@ -1281,30 +1281,74 @@ test "metadata: the case corpus against packaging 26.3" {
 }
 
 ///|
-/// Three rules the specification and `packaging` 26.3 enforce but the current
-/// `metadata.mbt` does not. Each block asserts the *current* behaviour, so the
-/// suite stays green, and is annotated with what it should be; when the
-/// implementation is fixed these three blocks must be inverted, not deleted.
-test "metadata: reported bugs" {
-  // BUG 1 (reported): the core metadata `Name` rule is
-  // `[a-z0-9]|[a-z0-9][a-z0-9._-]*[a-z0-9]`, so the last character must be a
-  // letter or a digit. `is_valid_name` in metadata.mbt accepts a trailing `_`
-  // (its end test is `is_ascii_alphanumeric(c) || c == '_'`), while
-  // `packaging.metadata` rejects `Name: demo_` with InvalidMetadata(field
-  // "name"). The same predicate validates `Provides-Extra`, so
-  // `Provides-Extra: demo_` is accepted too; packaging rejects it.
-  ignore(
-    metadata_of(
-      base_document().replace_all(old="Name: demo", new="Name: demo_"),
-    ),
+/// Three rules that the specification and `packaging` 26.3 enforce and that this
+/// library did *not*, found by replaying the corpus and confirmed against
+/// `packaging` before anything was changed; the implementation is fixed now and
+/// this block asserts the fixed behaviour, case by case. The version before the
+/// fix accepted `Name: demo_`, accepted `Provides-Extra: demo_`, and left the
+/// vertical tab inside a `Keywords` part.
+test "metadata: the three rules that a corpus replay found" {
+  // The `Name` rule is `[a-z0-9]|[a-z0-9][a-z0-9._-]*[a-z0-9]`: the last
+  // character must be a letter or a digit, so a trailing `_` is invalid even
+  // though `_` is allowed inside. `is_valid_name` accepted it; the end test no
+  // longer does. `d` and `demo_1` show the rule is about the *last* character,
+  // and `demo-.x` that a dot may end a segment in the middle.
+  assert_metadata_error(
+    base_document().replace_all(old="Name: demo", new="Name: demo_"),
+    "NAME_INVALID",
   )
-  ignore(metadata_of(base_document() + "Provides-Extra: demo_\n"))
-  // BUG 2 (reported): `Keywords` parts are stripped with `str.strip()`, whose
-  // whitespace set includes the vertical tab and the form feed. `split_keywords`
-  // in metadata.mbt trims with space and tab only, so `Keywords: a,\u{0b}b`
-  // yields ["a", "\u{0b}b"] instead of packaging's ["a", "b"].
+  assert_metadata_error(
+    base_document().replace_all(old="Name: demo", new="Name: d_"),
+    "NAME_INVALID",
+  )
+  assert_eq(
+    metadata_of(base_document().replace_all(old="Name: demo", new="Name: d")).name,
+    "d",
+  )
+  assert_eq(
+    metadata_of(
+      base_document().replace_all(old="Name: demo", new="Name: demo_1"),
+    ).name,
+    "demo_1",
+  )
+  assert_eq(
+    metadata_of(
+      base_document().replace_all(old="Name: demo", new="Name: demo-.x"),
+    ).name,
+    "demo-.x",
+  )
+  // `Provides-Extra` is validated by the same predicate, so it rejects a
+  // trailing `_` too.
+  assert_metadata_error(
+    base_document() + "Provides-Extra: demo_\n",
+    "PROVIDES_EXTRA_INVALID",
+  )
+  // `Metadata::extras` reports the PEP 685 *compare* form (`demo-x`), which is
+  // this library's documented choice, not the spelling the field holds.
+  assert_eq(
+    metadata_of(base_document() + "Provides-Extra: demo_x\n").extras(),
+    ["demo-x"],
+  )
+  // `Keywords` parts are stripped with `str.strip()`, whose whitespace set is
+  // wider than RFC 5322's WSP: the vertical tab and the form feed are removed
+  // (they are *inside* the part, so trimming with space and tab left them), and
+  // so are the Unicode spaces and the C0 information separators.
   assert_eq(metadata_of(base_document() + "Keywords: a,\u{0b}b\n").keywords, [
-    "a", "\u{0b}b",
+    "a", "b",
+  ])
+  assert_eq(metadata_of(base_document() + "Keywords: a,\u{0c}b\n").keywords, [
+    "a", "b",
+  ])
+  assert_eq(metadata_of(base_document() + "Keywords: a,\u{1c}b\n").keywords, [
+    "a", "b",
+  ])
+  assert_eq(metadata_of(base_document() + "Keywords: a,\u{a0}b\n").keywords, [
+    "a", "b",
+  ])
+  // The stripping is the same set `packaging` uses, so a character outside it is
+  // kept: the zero-width space is not whitespace to `str.strip()`.
+  assert_eq(metadata_of(base_document() + "Keywords: a,\u{200b}b\n").keywords, [
+    "a", "\u{200b}b",
   ])
   // The five real PyPI documents that motivated the rule 11 change: their
   // `Author-email` is empty or the placeholder `UNKNOWN`, and all three shapes

@@ -460,7 +460,7 @@ fn is_valid_name(text : String) -> Bool {
   if n == 0 || !is_ascii_alphanumeric(chars[0]) {
     return false
   }
-  if !(is_ascii_alphanumeric(chars[n - 1]) || chars[n - 1] == '_') {
+  if !is_ascii_alphanumeric(chars[n - 1]) {
     return false
   }
   for i = 1; i < n - 1; i = i + 1 {
@@ -772,12 +772,54 @@ fn parse_project_urls(
 }
 
 ///|
+/// True when `c` is whitespace to Python's `str.strip()`, which is a wider set
+/// than RFC 5322's WSP: besides space, tab, CR, LF, VT and FF it also removes the
+/// four C0 information separators and the Unicode spaces. `packaging` strips
+/// `Keywords` parts with `str.strip()`, so matching it means matching this set and
+/// not `is_wsp`.
+fn is_python_space(c : Char) -> Bool {
+  let code = c.to_int()
+  if code == 32 || (code >= 9 && code <= 13) || (code >= 28 && code <= 31) {
+    return true
+  }
+  // NEL, NO-BREAK SPACE, OGHAM SPACE MARK, the EN/EM QUAD..HAIR SPACE run,
+  // LINE/PARAGRAPH SEPARATOR, NARROW NO-BREAK SPACE, MEDIUM MATHEMATICAL SPACE
+  // and IDEOGRAPHIC SPACE.
+  code == 133 ||
+  code == 160 ||
+  code == 5760 ||
+  (code >= 8192 && code <= 8202) ||
+  code == 8232 ||
+  code == 8233 ||
+  code == 8239 ||
+  code == 8287 ||
+  code == 12288
+}
+
+///|
+/// `text` with Python's whitespace removed from both ends.
+fn strip_python_space(text : String) -> String {
+  let chars = text.to_array()
+  let mut start = 0
+  let mut end = chars.length()
+  while start < end && is_python_space(chars[start]) {
+    start = start + 1
+  }
+  while end > start && is_python_space(chars[end - 1]) {
+    end = end - 1
+  }
+  String::from_array(chars[start:end].to_owned())
+}
+
+///|
 /// PEP 566: `Keywords` is a comma separated string, exposed here as the list of
-/// stripped parts, which is the shape `packaging` uses too.
+/// stripped parts, which is the shape `packaging` uses too -- including *which*
+/// whitespace it strips: `str.strip()` removes the Unicode spaces as well, so
+/// `a,\u{0b}b` is `["a", "b"]` and not `["a", "\u{0b}b"]`.
 fn split_keywords(text : String) -> Array[String] {
   let out : Array[String] = []
   for part in text.split(",") {
-    out.push(trim_wsp(part.to_owned()))
+    out.push(strip_python_space(part.to_owned()))
   }
   out
 }
