@@ -190,6 +190,28 @@ test "marker: extra values are normalized, PEP 685" {
 }
 
 ///|
+test "marker: the environment normalizes extra and set member names" {
+  // A caller may hand over the spelling it read from `pyproject.toml`; PEP 685
+  // compares the normalized name, and `packaging` rewrites the environment
+  // value before it evaluates. The environment value here is deliberately not
+  // canonical, so an implementation that only normalizes the marker literal
+  // gets these wrong.
+  let environment = posix38()
+  environment.set("extra", "Docs.Build")
+  assert_true(evaluate_with("extra == 'docs-build'", environment))
+  assert_true(evaluate_with("extra == 'Docs_Build'", environment))
+  assert_true(evaluate_with("'Docs-Build' == extra", environment))
+  assert_true(evaluate_with("extra != 'other'", environment))
+  assert_false(evaluate_with("extra == 'docs'", environment))
+  // the same holds for the members of a set-valued key
+  environment.set_names("extras", ["Docs_Build", "CLI"])
+  assert_true(evaluate_with("'docs-build' in extras", environment))
+  assert_true(evaluate_with("'cli' in extras", environment))
+  assert_true(evaluate_with("'nope' not in extras", environment))
+  assert_false(evaluate_with("'docs' in extras", environment))
+}
+
+///|
 test "marker: version-like keys compare numerically" {
   let environment = posix38()
   // a plain string comparison would call "3.10" smaller than "3.9"

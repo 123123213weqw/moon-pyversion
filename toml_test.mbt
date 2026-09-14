@@ -109,6 +109,14 @@ test "toml: integers in every base, and the rules that bound them" {
     toml_error_code("a = 9223372036854775808\n"),
     "INTEGER_OUT_OF_RANGE",
   )
+  // Both ends of the range, which `toml_cases/47_int64_range.toml` also pins
+  // against the reference reader: an accumulator narrower than 64 bits parses
+  // the 32-bit cases above and then rejects these.
+  assert_eq(
+    toml_of("min = -9223372036854775808\n").get_int("min"),
+    Some(-9223372036854775807 - 1),
+  )
+  assert_eq(toml_rejected("a = 9223372036854775808\n"), true)
 }
 
 ///|
@@ -266,13 +274,13 @@ test "toml: the reference corpus agrees with the parser" {
       rejected = rejected + 1
     }
   }
-  // 81 cases: the reference reader accepts 48, of which 3 are its own
+  // 83 cases: the reference reader accepts 50, of which 4 are its own
   // leniencies, and rejects 33. Adding a case file means updating these numbers
   // deliberately.
-  assert_eq(accepted, 45)
+  assert_eq(accepted, 46)
   assert_eq(rejected, 33)
-  assert_eq(@fixtures.toml_leniencies.length(), 3)
-  assert_eq(@fixtures.toml_cases.length(), 81)
+  assert_eq(@fixtures.toml_leniencies.length(), 4)
+  assert_eq(@fixtures.toml_cases.length(), 83)
   assert_eq(
     accepted + rejected + @fixtures.toml_leniencies.length(),
     @fixtures.toml_cases.length(),

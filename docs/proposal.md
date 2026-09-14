@@ -20,30 +20,41 @@ https://github.com/123123213weqw/moon-pyversion
 
 ## 预期使用场景
 
-> **核对提示**：三个场景的完成度不同，逐项说明如下。
-> 场景 2 的**解析环节已完成**（`utils.mbt`，M1）；场景 1 的解析环节仍缺
-> 需求行与环境标记；场景 3 当前可用。补齐计划见 [扩展工作项](roadmap.md)，
-> **未完成的部分不应作为可交付能力对外陈述**。
+> **进度说明**：场景 1 与场景 2 的库内环节已经完成并有实测证据，场景 3 一直可用。每个场景后面都注明了当前边界，**没做的部分不当作已交付能力陈述**。
 
-1. **依赖清单检查** `[部分完成]`：工具先从上层的项目元数据中提取版本约束字符串，再对锁定版本逐个调用 `SpecifierSet::contains`，输出越界项清单。约束非法时返回稳定的 `VersionError` 与 UTF-16 偏移，便于定位。**当前仍不解析整条依赖表达式**（`name[extras]>=1.0 ; marker`），该能力在 M2/M3。
-2. **离线包索引筛选** `[解析已完成，索引扫描待做]`：库已能用 `parse_wheel_filename` / `parse_sdist_filename` 从分发文件名解析出名称与版本（含真实 PyPI 文件名，900 条对照通过），并可用 `canonicalize_name` / `canonicalize_version` 得到归组与查找用的键形式；随后把候选版本数组交给 `SpecifierSet::filter`，按 `>=1.0, !=1.4.*, <2.0` 之类的约束筛出可用集合，默认优先正式版、在没有任何匹配正式版时才回退到预发布，也可用 `prereleases=Some(false)` 显式排除预发布，从而减少无谓的下载与构建尝试。
+1. **依赖清单检查** `[库内环节已完成]`：工具先从上层的项目元数据中提取版本约束字符串，再对锁定版本逐个调用 `SpecifierSet::contains`，输出越界项清单。约束非法时返回稳定的 `VersionError` 与 UTF-16 偏移，便于定位。现在整条依赖表达式（`name[extras]>=1.0 ; marker`）由 `Requirement::parse` 解析，环境标记由 `Marker::evaluate` 在**调用方传入的**环境表上求值（库不读运行时环境，因此同一份清单在任何机器上得到同样的结论），`pyproject.toml` / `pylock.toml` 里的约束可用内置的 TOML 1.0 读取器取出，PEP 639 的许可证表达式与许可证文件路径也一并能校验。尚未完成的是 `METADATA` 的读写与这份清单的可运行示例（`docs/plan.md` 的 M6）。
+2. **离线包索引筛选** `[解析与筛选已完成，索引扫描待做]`：库已能用 `parse_wheel_filename` / `parse_sdist_filename` 从分发文件名解析出名称与版本（含真实 PyPI 文件名，900 条对照通过），并可用 `canonicalize_name` / `canonicalize_version` 得到归组与查找用的键形式；随后把候选版本数组交给 `SpecifierSet::filter`，按 `>=1.0, !=1.4.*, <2.0` 之类的约束筛出可用集合，默认优先正式版、在没有任何匹配正式版时才回退到预发布，也可用 `prereleases=Some(false)` 显式排除预发布，从而减少无谓的下载与构建尝试。索引响应（PEP 691 的 JSON 形式）与本地目录扫描尚未实现，见 `docs/plan.md` 的 M7。
 3. **升级候选评估**：解析当前版本与候选版本，用 `compare` 排序并筛出落在目标区间内的候选，生成待测试短名单。本库明确不保证 API 兼容性、安全性与依赖可解性——它给的是“满足版本约束”这一层结论，是否真的可以升级仍由人工与集成测试决定。
 
 ## 核心功能
 
-`Version::parse` / `normalize` / `to_string` / `compare`；支持 epoch、任意段数的 release、pre/post/dev 版本、local version、`v` 前缀、后缀标签两侧的 `[-_.]?` 分隔符、隐式补零与隐式 post（如 `1.0-1`）；`Version` 实现 `Eq`、`Compare`、`Show` 并保留调用方原始字符串。`canonicalize_name`（PEP 503）、`canonicalize_version`（PEP 625，索引键与显示两种形式）、`parse_wheel_filename`（PEP 427，含 build 段与压缩标签集展开）、`parse_sdist_filename`（PEP 625）。`SpecifierSet::parse` / `contains` / `filter`；支持 `==`、`!=`、`<`、`<=`、`>`、`>=`、`~=`、`===` 以及 `==`/`!=` 的 `.*` 通配后缀；提供 `prereleases` 显式开关。错误为稳定的 `VersionError`，只含错误码与偏移，不回显环境数据。
+**版本与约束**：`Version::parse` / `normalize` / `to_string` / `compare`；支持 epoch、任意段数的 release、pre/post/dev 版本、local version、`v` 前缀、后缀标签两侧的 `[-_.]?` 分隔符、隐式补零与隐式 post（如 `1.0-1`）；`Version` 实现 `Eq`、`Compare`、`Show` 并保留调用方原始字符串。`SpecifierSet::parse` / `contains` / `filter`；支持 `==`、`!=`、`<`、`<=`、`>`、`>=`、`~=`、`===` 以及 `==`/`!=` 的 `.*` 通配后缀；提供 `prereleases` 显式开关。错误为稳定的 `VersionError`，只含错误码与偏移，不回显环境数据。
+
+**规范化与文件名**：`canonicalize_name`（PEP 503）、`canonicalize_version`（PEP 625，索引键与显示两种形式）、`parse_wheel_filename`（PEP 427，含 build 段与压缩标签集展开）、`parse_sdist_filename`（PEP 625）。
+
+**需求行与环境标记**：`Requirement::parse` / `to_string`（PEP 508）覆盖两种操作数形式（`name [extras] 约束` 与 `name @ URL`）、可选标记；名称与 extras 按规范保留原样、约束按规范排序输出。`Marker::parse` / `to_string` / `evaluate` / `clauses` / `variables` 覆盖 14 个环境键的封闭词汇表（含集合型键 `extras` / `dependency_groups` 与点号别名）、`in` / `not in` 与六个比较运算符、`and` / `or` / 括号、Python 字面量式的引号与转义；版本型键按 PEP 440 比较，其余按字符串语义；`extra` 与集合成员按 PEP 685 / PEP 735 规范化。
+
+**配置文件读取**：内置 TOML 1.0 解析器与规范重序列化器（`Toml::parse` / `get_*` / `to_string`），覆盖四种字符串、四种整数进制、浮点与特殊值、五种日期时间形状、数组、内联表、表与表数组、点号键，并保留文档顺序。
+
+**许可证**：`canonicalize_license_expression` / `is_valid_license_expression` / `canonicalize_license_file`（PEP 639），含 699 个许可证标识符与 79 个例外的查表、ASCII 大小写折叠、`LicenseRef-` / `DocumentRef-` 形式与嵌套上限。
+
+库源码合计 4790 行（不含测试），测试 1851 行（120 个测试块）。
 
 ## 技术路线
 
-解析器是按 UTF-16 偏移移动的 ASCII 游标，不引入正则依赖；所有整数组件经 `BigInt` 解析，避免组件溢出。比较按键序进行：epoch → 补齐后的 release → pre 相位与序号 → post → dev → local 分段。规范化为公开形式（去前导零、统一 `a`/`b`/`rc`/`.post`/`.dev`、`-`/`_` 归一、local 小写），release 段数保留，因此 `1.0` 与 `1.0.0` 输出不同但比较相等。所有约束以 AND 组合；`~=` 取含下界、上界由倒数第二个 release 段加一构成。CI 在 wasm / wasm-gc / js / native 四后端执行格式化检查、构建、测试与示例；另一个作业生成 87 916 条确定性语料（手工边界、按文法生成、单字符变异、真实 PyPI 元数据）并逐条回放给 CPython `packaging==26.3` 做独立黑盒对照，同时在多个 packaging 版本上输出差异分类矩阵（仅作行为参照，不引入其运行时代码）。
+版本与约束解析器是按 UTF-16 偏移移动的 ASCII 游标，不引入正则依赖；所有整数组件经 `BigInt` 解析，避免组件溢出。TOML 整数是 `Int64`（TOML 语义就是 64 位有符号），因此 `0xDEADBEEF` 在 wasm32 后端也能通过。比较按键序进行：epoch → 补齐后的 release → pre 相位与序号 → post → dev → local 分段。规范化为公开形式（去前导零、统一 `a`/`b`/`rc`/`.post`/`.dev`、`-`/`_` 归一、local 小写），release 段数保留，因此 `1.0` 与 `1.0.0` 输出不同但比较相等。所有约束以 AND 组合；`~=` 取含下界、上界由倒数第二个 release 段加一构成。库不使用任何第三方依赖，只依赖 `moonbitlang/core`，也不读时钟、环境变量或网络，因此同一输入在四个后端得到逐字节相同的输出。
+
+CI 在 wasm / wasm-gc / js / native 四后端执行格式化检查、构建、测试与示例；另一个作业生成 **120 951 条**确定性语料（手工边界、按文法生成、单字符变异、97 个真实 PyPI 包的元数据）并逐条回放给 CPython `packaging==26.3` 做独立黑盒对照，同时用参考实现 `tomli` 对照 TOML 的接受/拒绝与往返一致性，并在多个 packaging 版本上输出差异分类矩阵（仅作行为参照，不引入其运行时代码）。固定 26.3 是实测选定的：24.2 / 25.0 / 26.0 上分别有数千条差异，全部对应上游已发布的行为变更。
 
 ## 预计交付成果
 
-公开可复现的 MoonBit 源码与 Apache-2.0 许可证；中文 README 与英文 API 契约；`examples/basic`、`examples/diff`（确定性语料发射器）、`examples/bench`（吞吐）三个可运行示例；覆盖核心路径的测试（现有 34 个测试块，含 PEP 440 官方规范化样例、非法输入拒绝、比较边例、各操作符、预发布规则与固定版本集上的反自反/反对称/传递性属性测试）；`tools/` 下的差分实验工具链（`diff_packaging.py`、`target_parity.py`、`oracle_matrix.py`、`fetch_pypi_corpus.py`）与 `fixtures/` 真实语料；四后端 CI；MoonCakes 发布。
+公开可复现的 MoonBit 源码与 Apache-2.0 许可证；中文 README 与英文 API 契约；`examples/basic`、`examples/diff`（确定性语料发射器，1570 行）、`examples/bench`（吞吐）三个可运行示例；覆盖核心路径的 **120 个测试块**（含 PEP 440 官方规范化样例、非法输入拒绝、比较边例、各操作符、预发布规则、标记求值、需求行文法、TOML 一致性、许可证表达式，以及固定版本集上的反自反/反对称/传递性属性测试），四个后端全部通过；`tools/` 下的差分实验工具链（`diff_packaging.py`、`target_parity.py`、`oracle_matrix.py`、`fetch_pypi_corpus.py`、`fetch_toml_corpus.py`、`mutation_probe.py`）与 `fixtures/` 真实语料（97 个 PyPI 包、83 个 TOML 文档）；四后端 CI；MoonCakes 发布。
+
+实验不只报告“0 不一致”，还报告**对照本身能不能失败**：`tools/mutation_probe.py` 向库里注入 16 处故意缺陷（名称规范化、标签排序、版本键形式、wheel/sdist 名称切分、local 段比较、标记规范化与词汇表、依赖行标记校验、SPDX 大小写、TOML 内联表与多行字符串与整数宽度、预发布策略），16/16 全部被语料检出。语料中的 4 个 TOML 样例是参考实现的放宽（TOML 1.1 的内联表换行与尾随逗号、`\xHH` 转义、任意精度整数），库按 TOML 1.0 拒绝，这处分歧在两个方向上都被断言。
 
 ## 明确不做的范围
 
-不做 pip；不联网、不下载、不安装；不做完整依赖求解、候选生成或冲突回溯；不解析包名、extras、环境标记与平台标签；不提供 SemVer 兼容层；不为任意 legacy 版本字符串提供候选接口；不评估升级的安全性或 API 兼容性。`SpecifierSet` 只做约束筛选，不排序也不生成候选集。
+不做 pip；不联网、不下载、不安装；不做完整依赖求解、候选生成或冲突回溯；不做平台兼容性标签的匹配与排序（wheel tag 只解析、不判断是否兼容当前平台）；不提供 SemVer 兼容层；不为任意 legacy 版本字符串提供候选接口；不评估升级的安全性或 API 兼容性；不读运行时真实解释器环境（标记求值只接受调用方传入的环境表）。`SpecifierSet` 只做约束筛选，不生成候选集。
 
 ## 原创 / 参考来源与许可证
 

@@ -15,7 +15,7 @@
 /// - `<source>\tmarker\t<raw>\t<ok|bad>\t<canonical rendering or ->`
 /// - `<source>\tmarker_env\t<name>\t<key=value;...>` (input, not a check)
 /// - `<source>\tmarker_eval\t<env name>\t<raw>\t<ok|bad|err>\t<true|false or error kind>`
-/// - `<source>\ttoml\t<case name>\t<document>\t<ok|bad>\t<re-serialization or ->`
+/// - `<source>\ttoml\t<case name>\t<document>\t<ok|bad|lenient|lenient-drift>\t<re-serialization or ->`
 /// - `<source>\tlicense\t<raw>\t<ok|bad>\t<canonical expression or ->`
 ///
 /// `mode` is `auto` (the library default policy), `any` (prereleases forced
@@ -757,6 +757,12 @@ fn curated_markers() -> Array[String] {
      "os_name=='posix'and extra=='x'", "  os_name  ==  'posix'  ", "python_version == '3.8'\tand\tos_name == 'posix'",
     // set valued keys
      "extra == 'x' or extras == 'y'", "'x' in extras", "extras == 'a'", "dependency_groups == 'test'",
+    // PEP 685 / PEP 735: the names either side of a comparison are normalized,
+    // so the odd spellings in the `oddnames` environment must still match
+     "extra == 'docs-build'", "extra == 'Docs_Build'", "'Docs-Build' == extra", "extra in 'docs build'",
+    "extra not in 'docs build'", "extra == 'docs'", "'cli' in extras", "'docs_build' in extras",
+    "'docs-build' in extras", "'docsbuild' in dependency_groups", "'test-ci' in dependency_groups",
+    "'test_ci' not in dependency_groups", "'test' in dependency_groups",
     // string escapes and quotes
      "extra == 'a\\tb'", "extra == 'a\\nb'", "extra == 'a\\\\b'", "extra == \"it's\"",
     "extra == 'say \"hi\"'", "extra == '\\\\x41'",
@@ -848,13 +854,39 @@ fn marker_environments() -> Array[
         ("extra", "Docs"),
       ],
     ),
+    (
+      // The same keys, but spelled the way a `pyproject.toml` may spell them:
+      // PEP 685 / PEP 735 compare names, so an extra called `Docs_Build` and a
+      // group member called `CLI` still have to match the normalized markers.
+      "oddnames",
+      [
+        ("python_version", "3.13"),
+        ("python_full_version", "3.13.2"),
+        ("os_name", "posix"),
+        ("sys_platform", "linux"),
+        ("platform_release", "6.8.0-45-generic"),
+        ("platform_system", "Linux"),
+        ("platform_version", "#45-Ubuntu SMP PREEMPT_DYNAMIC"),
+        ("platform_machine", "x86_64"),
+        ("platform_python_implementation", "CPython"),
+        ("implementation_name", "cpython"),
+        ("implementation_version", "3.13.2"),
+        ("extra", "Docs_Build"),
+      ],
+    ),
   ]
-  let names : Array[String] = ["posix38", "win311", "pypy310", "macos312"]
+  let names : Array[String] = [
+    "posix38", "win311", "pypy310", "macos312", "oddnames",
+  ]
   let sets : Array[Array[(String, Array[String])]] = [
     [],
     [],
     [],
     [("extras", ["cli", "docs"])],
+    [
+      ("extras", ["CLI", "docs_build"]),
+      ("dependency_groups", ["DocsBuild", "test_ci"]),
+    ],
   ]
   let out : Array[(String, String, @pyversion.MarkerEnvironment)] = []
   for i = 0; i < values.length(); i = i + 1 {
@@ -1127,8 +1159,11 @@ fn emit_license(source : String, sb : StringBuilder, raw : String) -> Unit {
 /// checks the grammar, the values and the round trip in one record.
 ///
 /// `lenient` marks the small set of documents TOML 1.0 requires us to reject
-/// while the reference reader accepts them. Reporting the divergence explicitly
-/// keeps it asserted in both directions instead of tolerated.
+/// while the reference reader accepts them, and `lenient-drift` marks a
+/// declared leniency that the library now accepts after all. Recording both
+/// directions keeps the divergence asserted instead of tolerated: a test that
+/// only ever sees "the reference is looser here" would stay green if the
+/// library quietly grew as loose as the reference.
 fn emit_toml(
   source : String,
   sb : StringBuilder,
@@ -1141,7 +1176,10 @@ fn emit_toml(
   )
   match toml_parse_opt(document) {
     Some(table) =>
-      if expected_accept {
+      if @fixtures.toml_leniencies.contains(name) {
+        // this document is supposed to be rejected; accepting it is the drift
+        sb.write_string("lenient-drift\t-\n")
+      } else if expected_accept {
         sb.write_string("ok\t\{escape_record(table.to_string())}\n")
       } else {
         // the oracle rejects this document, so reporting a rendering would make

@@ -8,7 +8,11 @@
 #
 # tomli 2.4.1 skips newlines and comments inside an inline table, allows a
 # trailing comma there, and decodes the `\xHH` escape. All three are TOML 1.1
-# additions rather than TOML 1.0 rules. This library implements TOML 1.0.
+# additions rather than TOML 1.0 rules. It also parses integers wider than the
+# signed 64-bit range TOML 1.0 defines, because its integers are Python ints
+# rather than 64-bit words. This library implements TOML 1.0, so it rejects all
+# four, and the differential harness asserts that it still does.
 93_err_inline_trailing_comma
 94_err_inline_newline
 9Y_err_hex_escape
+9Z_err_int64_overflow

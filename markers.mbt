@@ -786,21 +786,41 @@ pub fn MarkerEnvironment::new() -> MarkerEnvironment {
 }
 
 ///|
+/// Set a single-valued key.
+///
+/// `extra` is a project extra, so PEP 685 name normalization applies to the
+/// environment half of a comparison as much as to the literal inside the
+/// marker: a distribution that declares its optional dependency group as
+/// `Docs.Build` has to satisfy `extra == "docs-build"`. `packaging` rewrites
+/// the value it is handed before evaluating, so this library stores the
+/// canonical spelling instead and no comparison path can see the raw one.
 pub fn MarkerEnvironment::set(
   self : MarkerEnvironment,
   key : String,
   value : String,
 ) -> Unit {
-  self.values[key] = value
+  match MarkerVar::parse(key) {
+    Some(Extra) => self.values[key] = canonicalize_name(value)
+    _ => self.values[key] = value
+  }
 }
 
 ///|
+/// Set a set-valued key (`extras`, `dependency_groups`).
+///
+/// The members are canonicalized for the same reason as in `set`: PEP 685 and
+/// PEP 735 compare names, so `"docs-build" in extras` has to match a provided
+/// `Docs_Build`.
 pub fn MarkerEnvironment::set_names(
   self : MarkerEnvironment,
   key : String,
   value : Array[String],
 ) -> Unit {
-  self.names[key] = value
+  let names : Array[String] = []
+  for name in value {
+    names.push(canonicalize_name(name))
+  }
+  self.names[key] = names
 }
 
 ///|

@@ -1,6 +1,6 @@
 {
-  "accepted_count": 48,
-  "case_count": 81,
+  "accepted_count": 50,
+  "case_count": 83,
   "cases": [
     {
       "accepted": true,
@@ -233,6 +233,11 @@
       "name": "46_arrays_mixed"
     },
     {
+      "accepted": true,
+      "canonical": "table:{max=int:9223372036854775807,min=int:-9223372036854775808,above32=int:2147483648,below32=int:-2147483649,hex_max=int:9223372036854775807,oct_max=int:9223372036854775807,bin_max=int:9223372036854775807}",
+      "name": "47_int64_range"
+    },
+    {
       "accepted": false,
       "canonical": "",
       "name": "90_err_dup_key"
@@ -406,12 +411,18 @@
       "accepted": true,
       "canonical": "table:{a=str:A}",
       "name": "9Y_err_hex_escape"
+    },
+    {
+      "accepted": true,
+      "canonical": "table:{dec_wide=int:9223372036854775808,dec_wide_negative=int:-9223372036854775809,hex_wide=int:9223372036854775808}",
+      "name": "9Z_err_int64_overflow"
     }
   ],
   "leniencies": [
     "93_err_inline_trailing_comma",
     "94_err_inline_newline",
-    "9Y_err_hex_escape"
+    "9Y_err_hex_escape",
+    "9Z_err_int64_overflow"
   ],
   "reference": "tomli 2.4.1",
   "rejected_count": 33

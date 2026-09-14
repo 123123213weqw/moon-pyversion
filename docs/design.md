@@ -117,14 +117,15 @@ Unicode 感知的正则。PEP 427 要求 wheel 文件名是转义后的 ASCII，
 
 `moon test` 覆盖官方规范化样例、非法输入、比较边例、各操作符、
 预发布规则、通配符、`~=` 以及固定合法版本集上的反自反/反对称/传递性，
-共 34 个测试块，在 wasm、wasm-gc、js、native 四目标全部通过。
+共 120 个测试块，在 wasm、wasm-gc、js、native 四目标全部通过。
 CI 在四个目标执行 `fmt/check/build/test/run`。
 
-另有独立差分实验：`examples/diff` 生成 87 916 条确定性记录（手工语料、
+另有独立差分实验：`examples/diff` 生成 120 951 条确定性记录（手工语料、
 按 PEP 440 文法生成、单字符变异、真实 PyPI 元数据四种来源），逐条回放给
 CPython `packaging 26.3`。设计与数据见 [experiment.md](experiment.md)、
 [experiment-results.md](experiment-results.md)。
 
-版本固定为 26.3 不是随手选的：`tools/oracle_matrix.py` 实测 24.2/25.0 有
-1961 条、26.0 有 212 条差异，26.3 为 0 条，差异全部对应上游三次行为变更。
+版本固定为 26.3 不是随手选的：`tools/oracle_matrix.py` 实测 24.2 有 3765 条、
+25.0 有 2323 条、26.0 有 505 条差异，26.3 为 0 条，差异全部对应上游已发布的
+行为变更。
 差分实验证明的是"与 packaging 26.3 一致"，不是全规范合规证明。

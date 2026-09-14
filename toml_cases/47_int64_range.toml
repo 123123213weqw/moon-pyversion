@@ -1,0 +1,9 @@
+# TOML integers are signed 64-bit: the 32-bit boundary is not the limit, and an
+# accumulator narrower than 64 bits silently rejects the ends of this range.
+max = 9223372036854775807
+min = -9223372036854775808
+above32 = 2147483648
+below32 = -2147483649
+hex_max = 0x7FFFFFFFFFFFFFFF
+oct_max = 0o777777777777777777777
+bin_max = 0b111111111111111111111111111111111111111111111111111111111111111

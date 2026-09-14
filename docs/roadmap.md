@@ -91,14 +91,21 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
   `===` 与 `.*` 通配，可控预发布策略；
 - `VersionError` 稳定错误码 + UTF-16 偏移。
 
-### `[计划]` 新增四个模块
+### 六个模块（M1–M5 已落地，M6 计划中）
 
-| 模块 | 公开 API | 关掉哪个场景 | 估行数 |
+| 模块 | 公开 API | 关掉哪个场景 | 实际行数 |
 | --- | --- | --- | ---: |
-| `utils.mbt` `[已有]` | `canonicalize_name`、`canonicalize_version`、`parse_wheel_filename`、`parse_sdist_filename` | 场景 2 | 331 |
-| `requirements.mbt` | `Requirement::parse`、`Requirement::to_string` | 场景 1 | ~260 |
-| `markers.mbt` | `Marker::parse`、`Marker::evaluate`、`MarkerEnvironment` | 场景 1 | ~380 |
-| `metadata.mbt` | `Metadata::parse`、`Metadata::requires_dist`、`Metadata::requires_python` | 场景 1（端到端） | ~200 |
+| `version.mbt` `[已有]` | `Version::parse/normalize/to_string/compare`、`VersionError` | 场景 1、3 | 545 |
+| `specifier.mbt` `[已有]` | `SpecifierSet::parse/contains/filter`、`Specifier` | 场景 1、3 | 394 |
+| `utils.mbt` `[已有]` | `canonicalize_name`、`canonicalize_version`、`parse_wheel_filename`、`parse_sdist_filename` | 场景 2 | 368 |
+| `requirements.mbt` `[已有]` | `Requirement::parse`、`Requirement::to_string` | 场景 1 | 411 |
+| `markers.mbt` `[已有]` | `Marker::parse/to_string/evaluate/clauses/variables`、`MarkerEnvironment`、`validate_marker_text` | 场景 1、2 | 1032 |
+| `toml.mbt` `[已有]` | `Toml::parse/get/…/to_string`（TOML 1.0） | 场景 1、2 | 1580 |
+| `licenses.mbt` `[已有]` | `canonicalize_license_expression`、`is_valid_license_expression`、`canonicalize_license_file` | 场景 1 | 460 |
+| `metadata.mbt` `[计划]` | `Metadata::parse`、`Metadata::requires_dist`、`Metadata::requires_python` | 场景 1（端到端） | ~200 |
+
+库源码合计 **4790 行**（不含测试与示例），测试 **1851 行**（`*_test.mbt`，
+120 个测试块 × 四后端），差分语料发射器 1570 行，工具链 2255 行 Python。
 
 **`utils.mbt` 设计要点** `[已完成，见下]`（已用 packaging 26.3 核实）：
 
@@ -164,17 +171,76 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 - 差分语料新增 `canon`（名称 / 版本键两种形式）与 `file`（wheel / sdist / 其他）
   两类记录，共 **11 104 条**，其中真实文件名的 `pypi/file` 记录 900 条；
 - 对照 `packaging 26.3` **0 不一致**；
-- `tools/mutation_probe.py` 对 7 处故意注入的缺陷全部检出，证明语料对这部分
-  行为有覆盖。
+- `tools/mutation_probe.py` 对故意注入的缺陷全部检出（M1 阶段为 7 处，
+  现为 16 处），证明语料对这部分行为有覆盖。
 
 `utils_test.mbt` 在开发中抓到一处真实缺陷：标签排序用了 MoonBit 默认的
 `String` 比较（先比长度），与 `packaging` 的 `sorted()`（按码点）不一致 ——
 与之前 local 段比较是同一类问题。
 
+### `[已完成]` M2 + M3 落地情况
+
+`requirements.mbt`（411 行 / 12 个测试块）、`markers.mbt`（1032 行 / 20 个测试块）
+已实现并通过验收：
+
+- PEP 508 需求行：`name [extras] (约束 | URL) [; marker]` 两种操作数形式，
+  名称与 extras **保留原样**、约束**规范化排序**、URL 可含 `;`、空约束（`name; marker`）
+  可用；拒绝路径由 `mutated/req` 4000 条单字符变异覆盖。
+- PEP 508 环境标记：14 个键的封闭词汇表（含 `extras` / `dependency_groups`
+  两个集合型键与点号别名）、`in` / `not in` / 比较运算符、`and` / `or` / 括号、
+  Python 字面量式的引号与转义解码；版本型键走 PEP 440 比较，其余走字符串语义。
+- **求值必须由调用方传入环境**：`MarkerEnvironment::new()` 是空的，缺键报
+  `UndefinedEnvironmentName`。`packaging` 会回落到宿主进程的真实环境，这一
+  差异是设计上的，已在文档中写明。
+- 差分语料新增 `req`（4662 条）、`marker`（4575 条）、`marker_eval`（8520 条，
+  5 套固定环境 × 标记）三类记录，对照 `packaging 26.3` **0 不一致**。
+- 开发中抓到的真实缺陷：`platform.machine` 漏在词汇表里；`lhs in rhs` 的
+  包含方向写反；引号字符串的结束判定；标记环境里的 `extra` / 集合成员
+  未按 PEP 685 / PEP 735 规范化（后者由 16 个变异探针中的两个守着）。
+
+### `[已完成]` M4 落地情况
+
+`toml.mbt`（1580 行 / 15 个测试块）是 TOML 1.0 的解析器与**规范重序列化器**：
+
+- 有序表、四种字符串、四种整数进制、浮点与特殊值、五种日期时间形状、数组、
+  内联表、`[table]`、`[[array of tables]]`、点号键，全部保留文档顺序；
+- 整数是 `Int64`（TOML 语义），因此 `0xDEADBEEF` 在 wasm32 上也能通过；
+- 83 个一致性样例，裁决来自参考实现 `tomli` 2.4.1（`tools/fetch_toml_corpus.py`
+  从 `toml_cases/*.toml` 生成 `fixtures/toml_corpus.mbt`）；
+- 记录格式比其他类型多一层：库给出自己的重序列化文本，harness 用参考实现
+  **重新解析**并与原文解析结果逐值比较，一条记录同时验证文法、取值与往返一致性；
+- 4 个样例是参考实现的放宽（TOML 1.1 的内联表换行与尾随逗号、`\xHH` 转义，
+  以及任意精度整数），库按 TOML 1.0 拒绝，登记在 `toml_cases/leniencies.txt`，
+  记录状态 `lenient`，**两个方向都被断言**；若库变得同样宽松，状态变成
+  `lenient-drift`，harness 立即报错。
+- 开发中抓到的真实缺陷：多行基本字符串吞掉首字符；数字解析失败后符号已被消费
+  导致 `-inf` 报错位置不对；内联表换行与"未闭合"共用错误码；`to_string`
+  多输出一个空行；整数曾用 32 位 `Int`。
+
+### `[已完成]` M5 落地情况
+
+`licenses.mbt`（460 行 / 13 个测试块）实现 PEP 639：
+
+- SPDX 表达式规范化：699 个许可证标识符与 79 个例外的查表、ASCII 大小写折叠、
+  运算符大小写、`+` 后缀、`LicenseRef-` / `DocumentRef-` 形式与其中的 PEP 685
+  规范化、200 层嵌套上限；
+- `canonicalize_license_file` 按 PEP 639 校验许可证文件路径（不规范化）；
+- 差分语料新增 `license`（4086 条，含 4000 条变异表达式），对照
+  `packaging.licenses` **0 不一致**。
+
+### `[已完成]` 语料扩展与"有牙"验收
+
+- 语料从 87 916 条扩到 **120 951 条 / 120 952 行**：来源分布 curated 19 214、
+  generated 20 652、mutated 34 397、pypi 46 688；四后端逐字节一致。
+- `tools/mutation_probe.py` 从 7 处扩到 **16 处**故意缺陷（覆盖 M0–M5），
+  16/16 全部被语料检出；探针失败即实验失败。
+- 多 oracle 矩阵（24.2 / 25.0 / 26.0 / 26.3）按原因分类上游行为变更，
+  固定版本 26.3 仍为 **0 差异**。
+
 ## 技术路线
 
 `[已有]` 版本解析用按 UTF-16 偏移移动的 ASCII 游标，不引入正则；整数组件经
-`BigInt`；比较按键序。四后端 CI。87 916 条语料差分对照 `packaging 26.3`。
+`BigInt`；比较按键序。四后端 CI。120 951 条语料差分对照 `packaging 26.3`，另有 16 处故意缺陷的变异探针证明对照有效。
 
 `[计划]` 新增模块沿用同一套技术路线与**同一套验收方法**，不新造轮子：
 
@@ -200,27 +266,23 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 5. `[已有基础设施]` `target_parity.py` 与 `oracle_matrix.py` 不改即可覆盖新记录。
 
-## 预计交付成果
+## 交付成果
 
-`[已有]` 源码 876 行、测试 507 行（34 个测试块 × 四后端全通过）、
-`examples/basic` `examples/diff` `examples/bench`、`tools/` 四个脚本、
-`fixtures/` 真实语料、四后端 CI + 独立 differential 作业。
+`[已有]` 源码 **4790 行**（不含测试）、测试 **1851 行**（120 个测试块 × 四后端
+全通过）、`examples/basic` `examples/diff`（1570 行确定性发射器）
+`examples/bench`、`tools/` 六个脚本（2255 行 Python）、`fixtures/` 真实语料
+（97 个 PyPI 包 + 83 个 TOML 文档）、四后端 CI + 独立 differential 作业。
 
-`[计划]` 新增：
+`[计划]` 还差：
 
-- 源码约 **+1060 行**（四个模块），测试约 **+500 行**；
-- 差分语料从 87 916 条扩到约 **12–13 万条**（新增四类记录 + 真实元数据）；
-- `examples/` 新增一个"元数据检查"示例：读一份真实 `METADATA`，输出越界项与
-  不适用项清单——即场景 1 的可运行证据；
-- `fixtures/` 增加真实 `Requires-Dist` 与分发文件名两组数组；
-- CI 的 differential 作业覆盖新记录类型。
+- `examples/metadata-check`：读一份真实 `METADATA`，输出越界项与不适用项清单
+  ——即场景 1 的可运行证据（`docs/plan.md` 的 M6）；
+- `metadata.mbt` 与 `index.mbt` / `pylock.mbt`（`docs/plan.md` 的 M6/M7）。
 
 ## 明确不做的范围
 
-`[已有，需要收缩]` 原口径列了"不解析包名、extras、环境标记与平台标签"，
-扩展后**包名、extras、环境标记三项要做**，这段必须改写。
-
-`[计划]` 收缩后的清单：
+`[已改写]` 原口径列了"不解析包名、extras、环境标记与平台标签"；其中**包名、
+extras、环境标记三项已经做完**（M2/M3），只剩平台标签仍然不做。当前清单：
 
 - 不做 pip；不联网、不下载、不安装；
 - 不做完整依赖求解、候选生成或冲突回溯；

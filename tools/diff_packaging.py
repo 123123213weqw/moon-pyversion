@@ -54,7 +54,12 @@ from packaging.markers import UndefinedEnvironmentName as MarkerUndefinedEnviron
 try:  # Python >= 3.11
     import tomllib
 except ImportError:  # pragma: no cover - the oracle venvs run 3.10
-    import tomli as tomllib
+    try:
+        import tomli as tomllib
+    except ImportError:
+        # Only the `toml` records need it, so a missing reader is reported when
+        # one of those records is actually checked rather than at import time.
+        tomllib = None
 
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
@@ -427,7 +432,21 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
         return None
 
     if kind == "toml":
+        if tomllib is None:
+            raise ProtocolError(
+                "toml records need a reference reader: run with Python 3.11+ or "
+                "install tomli in the oracle interpreter"
+            )
         name, document, status, rendered = parts[2], parts[3], parts[4], parts[5]
+        if status == "lenient-drift":
+            # The emitter only writes this when a document that is declared to be
+            # a TOML 1.0 leniency parses anyway, i.e. when the library silently
+            # grew as loose as the reference reader.
+            return (
+                f"TOML case {name!r}: declared a TOML 1.0 leniency (the library "
+                "rejects, the reference reader accepts), but the library accepts "
+                "it now"
+            )
         try:
             expected_value = tomllib.loads(document)
         except tomllib.TOMLDecodeError:
@@ -440,8 +459,9 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
                 return f"TOML case {name!r}: moonbit accepts, the reference reader rejects"
             return None
         if status == "lenient":
-            # The divergence is the point of the record, so both halves of it
-            # must hold: the reference accepts and the library does not.
+            # The divergence is the point of the record, and the emitter only
+            # writes `lenient` after a rejection, so both halves hold here: the
+            # reference accepts and the library does not.
             return None
         if status != "ok":
             return f"TOML case {name!r}: moonbit rejects, the reference reader accepts"

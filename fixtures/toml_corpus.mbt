@@ -175,6 +175,10 @@ pub let toml_cases : Array[(String, String, Bool, String)] = [
     "46_arrays_mixed", "# TOML 1.0.0 removed the 0.5 rule that array members share a type.\nmixed = [1, \"x\", true, 1979-05-27, [2], {b = 3}]\n",
     true, "table:{mixed=array:[int:1,str:x,bool:true,datetime:1979-05-27,array:[int:2],table:{b=int:3}]}",
   ),
+  (
+    "47_int64_range", "# TOML integers are signed 64-bit: the 32-bit boundary is not the limit, and an\n# accumulator narrower than 64 bits silently rejects the ends of this range.\nmax = 9223372036854775807\nmin = -9223372036854775808\nabove32 = 2147483648\nbelow32 = -2147483649\nhex_max = 0x7FFFFFFFFFFFFFFF\noct_max = 0o777777777777777777777\nbin_max = 0b111111111111111111111111111111111111111111111111111111111111111\n",
+    true, "table:{max=int:9223372036854775807,min=int:-9223372036854775808,above32=int:2147483648,below32=int:-2147483649,hex_max=int:9223372036854775807,oct_max=int:9223372036854775807,bin_max=int:9223372036854775807}",
+  ),
   ("90_err_dup_key", "a = 1\na = 2\n", false, ""),
   ("91_err_bad_escape", "a = \"\\q\"\n", false, ""),
   ("92_err_unterminated_string", "a = \"abc\n", false, ""),
@@ -223,11 +227,15 @@ pub let toml_cases : Array[(String, String, Bool, String)] = [
     "",
   ),
   ("9Y_err_hex_escape", "a = \"\\x41\"\n", true, "table:{a=str:A}"),
+  (
+    "9Z_err_int64_overflow", "# TOML 1.0 defines an integer as a signed 64-bit value, but the reference\n# reader's integers are arbitrary precision Python ints, so it accepts these\n# three documents. This library rejects them (see leniencies.txt).\ndec_wide = 9223372036854775808\ndec_wide_negative = -9223372036854775809\nhex_wide = 0x8000000000000000\n",
+    true, "table:{dec_wide=int:9223372036854775808,dec_wide_negative=int:-9223372036854775809,hex_wide=int:9223372036854775808}",
+  ),
 ]
 
 ///|
 /// Case names where TOML 1.0 requires a rejection but the reference
 /// reader accepts one. See `toml_cases/leniencies.txt` for the reason.
 pub let toml_leniencies : Array[String] = [
-  "93_err_inline_trailing_comma", "94_err_inline_newline", "9Y_err_hex_escape",
+  "93_err_inline_trailing_comma", "94_err_inline_newline", "9Y_err_hex_escape", "9Z_err_int64_overflow",
 ]
