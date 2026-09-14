@@ -319,7 +319,7 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 `[已有]` 源码 **8644 行**（不含测试）、测试 **6389 行**（251 个测试块 × 四后端
 全通过）、`examples/basic` `examples/diff`（2550 行确定性发射器）
-`examples/bench`、`tools/` 九个脚本（5447 行 Python）、`fixtures/` 真实语料
+`examples/bench`、`tools/` 九个脚本（5577 行 Python）、`fixtures/` 真实语料
 （97 个 PyPI 包 + 83 个 TOML 文档 + 285 份核心元数据 + 105 份锁文件）、四后端
 CI + 独立 differential 作业。
 

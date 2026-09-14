@@ -45,7 +45,7 @@ https://github.com/123123213weqw/moon-pyversion
 
 **配置文件读取**：内置 TOML 1.0 解析器与规范重序列化器（`Toml::parse` / `get_*` / `to_string`），覆盖四种字符串、四种整数进制、浮点与特殊值、五种日期时间形状、数组、内联表、表与表数组、点号键，并保留文档顺序。
 
-**锁文件**：`Pylock::parse`（PEP 751）读取 `pylock.toml`——`lock-version`、`environments`、`requires-python`、`extras`、`dependency-groups`、`default-groups`、`created-by` 与 `[[packages]]` 的必填性、类型和取值逐项校验，每包的 `marker` / `requires-python` 由 `is_applicable` / `requires_python_set` 判定；`Pylock::packages_named` / `files_for` / `dependencies_of` / `applicable_packages` / `accepts_environment` 供上层做“这份锁文件在我的环境下装哪些包”的判断。错误同样返回稳定码与结构序号。
+**锁文件**：`Pylock::parse`（PEP 751）读取 `pylock.toml`——`lock-version`、`environments`、`requires-python`、`extras`、`dependency-groups`、`default-groups`、`created-by` 与 `[[packages]]` 的必填性、类型和取值逐项校验，每包的 `marker` / `requires-python` 由 `is_applicable` / `requires_python_set` 判定；`Pylock::packages_named` / `files_for` / `dependencies_of` / `applicable_packages` / `accepts_environment` 供上层做“这份锁文件在我的环境下装哪些包”的判断。错误同样返回稳定码与结构序号。库在 **7 处**与规范有意不同（`created-by` 可缺可空、源树旁的冗余 `version`、文件记录可无 `hashes`、`upload-time` 记录原样而不校验 UTC、未实现的次版本 `lock-version` 直接拒绝而非警告、文件列表条目要求 `version`），每一条都登记在 `pylock_cases/divergences.txt` 里并在**两个方向上被断言**：库哪天变得和规范一样松或一样严，差分实验立刻报错。
 
 **索引与候选解析**：`parse_json`（严格 RFC 8259）、`SimpleIndex::parse` / `wheels` / `sdists`（PEP 691）、`LocalIndex::scan` / `packages` / `files_for`（离线目录扫描，列目录函数注入）、`resolve_candidates` / `select_best` / `explain_rejection`（按名称、约束、预发布策略、`Requires-Python`、PEP 425 标签筛选与确定排序）。
 
@@ -59,17 +59,47 @@ https://github.com/123123213weqw/moon-pyversion
 
 版本与约束解析器是按 UTF-16 偏移移动的 ASCII 游标，不引入正则依赖；所有整数组件经 `BigInt` 解析，避免组件溢出。TOML 整数是 `Int64`（TOML 语义就是 64 位有符号），因此 `0xDEADBEEF` 在 wasm32 后端也能通过。比较按键序进行：epoch → 补齐后的 release → pre 相位与序号 → post → dev → local 分段。规范化为公开形式（去前导零、统一 `a`/`b`/`rc`/`.post`/`.dev`、`-`/`_` 归一、local 小写），release 段数保留，因此 `1.0` 与 `1.0.0` 输出不同但比较相等。所有约束以 AND 组合；`~=` 取含下界、上界由倒数第二个 release 段加一构成。库不使用任何第三方依赖，只依赖 `moonbitlang/core`，也不读时钟、环境变量或网络，因此同一输入在四个后端得到逐字节相同的输出。
 
-CI 在 wasm / wasm-gc / js / native 四后端执行格式化检查、构建、测试与示例；另一个作业生成 **122 507 条**确定性语料（手工边界、按文法生成、单字符变异、97 个真实 PyPI 包的元数据、239 份真实 `METADATA`、105 份锁文件）并逐条回放给 CPython `packaging==26.3` 做独立黑盒对照，同时用参考实现 `tomli` 对照 TOML 的接受/拒绝与往返一致性，并在多个 packaging 版本上输出差异分类矩阵（仅作行为参照，不引入其运行时代码）。固定 26.3 是实测选定的：24.2 / 25.0 / 26.0 上分别有数千条差异，全部对应上游已发布的行为变更。
+CI 在 wasm / wasm-gc / js / native 四后端执行格式化检查、构建、测试与示例；另一个作业生成 **122 507 条**确定性语料（手工边界、按文法生成、单字符变异、97 个真实 PyPI 包的元数据、239 份真实 `METADATA`、105 份锁文件）并逐条回放给 CPython `packaging==26.3` 做独立黑盒对照，同时用参考实现 `tomli` 对照 TOML 的接受/拒绝与往返一致性，并在多个 packaging 版本上输出差异分类矩阵（仅作行为参照，不引入其运行时代码）。固定 26.3 是实测选定的：24.2 / 25.0 / 26.0 上分别有数千条差异，全部对应上游已发布的行为变更。四后端各自的语料做 sha256 比对，两个场景示例的报告也要求后端之间逐字节一致；每个提交的 fixture 还要先过一遍“与生成器一致”的校验（把重新生成的结果原地格式化后再比对），避免 fixture 被手工改动、或来自旧版生成器，却仍然被当成对照的输入。
+
+## 验证方法
+
+验证分三层，**哪一层是外部对照、哪一层不是，逐层写明**：
+
+1. **外部 oracle 对照**：122 507 条记录逐条回放给 CPython `packaging==26.3`（3 000 个真实版本、500 条真实约束、600 条真实 `Requires-Dist` 原文、239 份真实 `METADATA`、900 个真实文件名、97 份真实索引响应），**0 不一致**；TOML 的接受/拒绝与往返一致性另外对照参考实现 `tomli`。
+2. **按规范另写第二份读法**：PEP 691 索引文档、离线目录扫描、候选选择与 PEP 751 锁文件**没有**现成的 Python 实现可对照，这几类记录对照的是本仓库按规范写成的第二份读法（`tools/fetch_index_corpus.py`、`tools/fetch_pylock_corpus.py`），投影只写一处、由 harness 直接引用，两侧不会各自漂移。**PEP 751 尤其是这样**：没有任何现成的 `pylock.toml` 实现，因此那一类记录抓不出“两份读法同时读错同一段规范”，这一点写在 `docs/experiment-results.md` 6.9 里，不当作与 `packaging` 同级的证据。
+3. **对照本身能不能失败**：`tools/mutation_probe.py` 向库里注入 **31 处**故意缺陷（名称规范化、标签排序、版本键形式、wheel/sdist 名称切分、local 段比较、标记规范化与词汇表、依赖行标记校验、SPDX 大小写、TOML 内联表与多行字符串与整数宽度、预发布策略、元数据名称与 `Keywords` 去空白、锁文件版本与来源互斥），31/31 全部被语料检出。探针在开始前会拒绝在已经修改过的工作树上运行——被中断的运行会把注入的缺陷留在源码里，那比不跑更糟。此外，逐值对照（`meta_values`，915 条）专门比对“解析出来的值”而不只是“接受与否”：参考实现在读入时就去空白、规范化名称，只比对裁决的话，一个写错的拼写会被**用来检查它的那一步**抹平。
+
+语料中的 4 个 TOML 样例是参考实现的放宽（TOML 1.1 的内联表换行与尾随逗号、`\xHH` 转义、任意精度整数），库按 TOML 1.0 拒绝，这处分歧在两个方向上都被断言。
 
 ## 预计交付成果
 
-公开可复现的 MoonBit 源码与 Apache-2.0 许可证；中文 README 与英文 API 契约；`examples/basic`、`examples/diff`（确定性语料发射器，2550 行）、`examples/metadata-check`（依赖清单检查，场景 1 的端到端证据）、`examples/resolve`（索引到可安装文件，场景 2 的端到端证据，570 行）、`examples/bench`（吞吐）五个可运行示例；覆盖核心路径的 **251 个测试块**（含 PEP 440 官方规范化样例、非法输入拒绝、比较边例、各操作符、预发布规则、标记求值、需求行文法、TOML 一致性、许可证表达式，以及固定版本集上的反自反/反对称/传递性属性测试），四个后端全部通过；`tools/` 下的差分实验工具链（`diff_packaging.py`、`target_parity.py`、`oracle_matrix.py`、`fetch_pypi_corpus.py`、`fetch_toml_corpus.py`、`fetch_metadata_corpus.py`、`fetch_index_corpus.py`、`fetch_pylock_corpus.py`、`mutation_probe.py`）与 `fixtures/` 真实语料（97 个 PyPI 包、83 个 TOML 文档、285 份核心元数据、105 份锁文件）；四后端 CI；MoonCakes 发布。
+公开可复现的 MoonBit 源码与 Apache-2.0 许可证；中文 README 与英文 API 契约；`examples/basic`、`examples/diff`（确定性语料发射器，2550 行）、`examples/metadata-check`（依赖清单检查，场景 1 的端到端证据，372 行）、`examples/resolve`（索引到可安装文件，场景 2 的端到端证据，570 行）、`examples/bench`（吞吐）五个可运行示例；覆盖核心路径的 **6 389 行测试 / 251 个测试块**（含 PEP 440 官方规范化样例、非法输入拒绝、比较边例、各操作符、预发布规则、标记求值、需求行文法、TOML 一致性、许可证表达式，以及固定版本集上的反自反/反对称/传递性属性测试），四个后端各自全通过（251 × 4）；
 
-实验不只报告“0 不一致”，还报告**对照本身能不能失败**：`tools/mutation_probe.py` 向库里注入 31 处故意缺陷（名称规范化、标签排序、版本键形式、wheel/sdist 名称切分、local 段比较、标记规范化与词汇表、依赖行标记校验、SPDX 大小写、TOML 内联表与多行字符串与整数宽度、预发布策略、元数据名称与 `Keywords` 去空白、锁文件版本与来源互斥），31/31 全部被语料检出。语料中的 4 个 TOML 样例是参考实现的放宽（TOML 1.1 的内联表换行与尾随逗号、`\xHH` 转义、任意精度整数），库按 TOML 1.0 拒绝，这处分歧在两个方向上都被断言。
+`tools/` 下 **9 个**差分实验脚本（`diff_packaging.py`、`target_parity.py`、`oracle_matrix.py`、`fetch_pypi_corpus.py`、`fetch_toml_corpus.py`、`fetch_metadata_corpus.py`、`fetch_index_corpus.py`、`fetch_pylock_corpus.py`、`mutation_probe.py`，合计 5 577 行 Python）与 `fixtures/` 真实语料（97 个 PyPI 包、83 份 TOML 文档、285 份核心元数据、21 条手工索引文档 + 97 份真实索引响应、105 份锁文件）；四后端 CI（verify 矩阵 + 独立的 differential 作业）；MoonCakes 发布 `[待确认]`——见下节。
+
+## 后续规划
+
+### `[进行中]` 收尾与发布
+
+- 确认 MoonCakes 上的包名与版本（`moon.mod` 现为 `123123213weqw/moon_pyversion` 0.1.0）并执行首次发布、打 tag。**GitHub 绿灯不等于已发布**，这一项必须单独确认，本仓库当前没有 tag、也没有发布记录。
+- 本文件与 `docs/submission-checklist.md` 按仓库实际状态过最后一遍。
+
+### `[下一步]` 四个具体技术目标
+
+1. **平台兼容性标签的计算**。标签目前只做匹配与排序（表由调用方传入）。下一步补一个**可注入**的展开接口：CPython 的 ABI 标签、manylinux / musllinux 的 glibc 版本与架构、`any` 平台。宿主探测仍留在调用方，保持“库不读运行时环境”这条边界不变——这正是它能在四个后端给出逐字节相同结果的原因。
+2. **给 PEP 751 找到真正的外部对照**。锁文件语料现在的对照物是本仓库按规范另写的读法，抓不出“两份读法同时读错同一段规范”。下一步用 `uv` / `pip` 这类第三方工具对真实项目生成 `pylock.toml`，把**不是本仓库写的**文档纳入语料，让锁文件那一类记录也有独立对照物。这是当前验证体系里最明确的一块短板。
+3. **场景 3 的可运行示例** `examples/upgrade-check`：读当前版本与候选版本列表，输出落在目标区间内的待测试短名单，并把“满足版本约束 ≠ 可以安全升级”做成报告里的显式声明，而不是注释里的免责条款。
+4. **把 7 条锁文件分歧逐条定论**。现在是“声明并在两个方向上断言”，下一步是“逐条决定”：哪些应当收敛到规范（例如 `created-by` 改为必填、`upload-time` 真正校验 UTC、`packages.version` 在文件列表条目上放宽），哪些应当保留（例如未实现的次版本 `lock-version` 拒绝而非警告，因为本库没有警告通道）。决定之后，分歧数量应当**只减不增**，每减一条都由语料记录那次变更。
+
+### `[长期]` 目标与它目前的证据状态
+
+成为 MoonBit 侧消费 Python 生态（离线镜像、锁文件、依赖元数据）时默认的打包元数据基础库：稳定发布、语义化版本，并被至少一个上层工具实际复用。
+
+**这一条目前没有证据**：仓库里没有已知的下游使用者，“可被复用”是设计上的取舍（零依赖、I/O 全部注入、错误稳定），不是既成事实。它是要争取的目标，不写进已完成的能力里。
 
 ## 明确不做的范围
 
-不做 pip；不联网、不下载、不安装；不做完整依赖求解、候选生成或冲突回溯；不做平台标签的**计算**：库不会去探测宿主的平台与 glibc，标签表由调用方给出，库用它对候选做匹配与排序（这一项从 M7 起已实现）；不提供 SemVer 兼容层；不为任意 legacy 版本字符串提供候选接口；不评估升级的安全性或 API 兼容性；不读运行时真实解释器环境（标记求值只接受调用方传入的环境表）。`SpecifierSet` 只做约束筛选，不生成候选集。
+不做 pip；不联网、不下载、不安装；不做完整依赖求解、候选生成或冲突回溯；不做平台标签的**计算**：库不会去探测宿主的平台与 glibc，标签表由调用方给出，库用它对候选做匹配与排序（这一项从 M7 起已实现）；不提供 SemVer 兼容层；不为任意 legacy 版本字符串提供候选接口；不评估升级的安全性或 API 兼容性；不读运行时真实解释器环境（标记求值只接受调用方传入的环境表）。`SpecifierSet` 只做约束筛选，不生成候选集。不实现 PEP 751 的安装算法本身：不挑选文件、不落盘、不做“同一名称的多个条目按目标收敛到一条”的判定（只提供 `is_applicable` / `applicable_packages` 这类判断材料）。
 
 ## 原创 / 参考来源与许可证
 
@@ -87,9 +117,11 @@ MoonBit 生态已有 SemVer 工具，但在处理 Python 包索引、锁文件�
 
 我理解这个项目的价值不在于“再写一个版本比较函数”，而在于把 PEP 440 里容易被忽略的语义显式实现并验证清楚：epoch 的优先级、release 补齐零、无 pre 高于有 pre、`<` 与 `>` 对预发布和后发布的排除规则、local 分段的数值与文本混合比较。我也理解“满足版本约束”只是一个必要条件，不等于可安全升级，因此我刻意不把它包装成求解器或安全评估工具。测试上用 packaging 做独立对照，是为了验证我的实现而不是让它替我做决定；对照版本固定，是因为预发布默认策略会随上游变化。
 
+这轮补锁文件语料时我对这一点有了更具体的理解：**对照的价值完全取决于它能不能失败，而最容易出问题的地方是对照物本身**。PEP 751 没有现成的 Python 实现可对照，于是那份读法只能由我自己按规范写；写的过程中差分实验报出的 4 个问题全部在**我这边的读法**上、不在库里（我原以为文件记录必须有 `url` 或 `path`、以为 `[packages.vcs]` 的 `url` 与 `path` 只能给一个、以为 PEP 685 规范化是读者的义务、又以为 `packages.version` 一律可选），而规范正文的 `Required?` 行逐条否掉了我这几个“想当然”。另一头，逐值对照又会反过来抓库：三处元数据缺陷（`Name` 与 `Provides-Extra` 可下划线结尾、`Keywords` 分段没按 Python 去空白）只在“把文档交给库自己的解析器逐值比对”时才看得见，只比对接受与否的旧记录一条都没报。所以我把“对照物是哪来的、它证明了什么、它证明不了什么”当成交付物的一部分写进文档，而不是当成实验的附属说明。
+
 ## 提交前核对
 
-- 仓库公开、构建与测试可复现、CI 覆盖四后端
-- 有效提交数与作者归属按 GitHub 实际状态核对，不虚报
-- MoonCakes 发布状态单独确认（仅 GitHub 不满足验收）
+- 仓库公开、构建与测试可复现、CI 覆盖四后端（verify 矩阵 + differential 作业）
+- 有效提交数与作者归属按 GitHub 实际状态核对，不虚报（当前 `main` 上 37 个提交，作者均为本人账号）
+- MoonCakes 发布状态单独确认：**当前没有 tag、没有发布记录**，仅 GitHub 不满足验收
 - 本文件为底稿，最终提交版本由本人改写确认

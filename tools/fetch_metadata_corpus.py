@@ -29,7 +29,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import socket
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -251,9 +253,37 @@ def mbt_string(text: str) -> str:
     return "".join(out)
 
 
+def format_with_moon(path: Path) -> str | None:
+    """Run `moon fmt` on `path` in place and return the result.
+
+    `None` means the formatter could not be run, which is reported rather than
+    treated as a pass: a fixture check that cannot run must not look like one that
+    succeeded.
+    """
+    moon = shutil.which("moon")
+    if moon is None:
+        print("`moon` is not on PATH, so the formatted fixture cannot be checked")
+        return None
+    result = subprocess.run(
+        [moon, "fmt", str(path)], capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
+        print(f"moon fmt failed on {path}:\n{result.stdout}{result.stderr}")
+        return None
+    return path.read_text(encoding="utf-8")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--offline", action="store_true", help="use the cached PyPI documents")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help=(
+            "regenerate in memory and compare with the committed fixture instead of "
+            "writing it; use --offline as well to stay off the network"
+        ),
+    )
     args = parser.parse_args(argv)
 
     files = sorted(CASES.glob("*.metadata"))
@@ -317,7 +347,25 @@ def main(argv: list[str] | None = None) -> int:
     for name, expected_accept in divergences:
         lines.append('  (%s, %s),' % (mbt_string(name), "true" if expected_accept else "false"))
     lines.append("]")
-    MBT.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    fixture = "\n".join(lines) + "\n"
+    if args.check:
+        # Compare *after* formatting, because the fixture is a formatted MoonBit
+        # file and this generator emits compact text; comparing the raw generation
+        # would fail on layout alone, and a check that always fails gets ignored.
+        before = MBT.read_text(encoding="utf-8") if MBT.exists() else ""
+        MBT.write_text(fixture, encoding="utf-8")
+        formatted = format_with_moon(MBT)
+        if formatted is None:
+            return 2
+        MBT.write_text(before, encoding="utf-8")
+        if before != formatted:
+            print(f"{MBT} is not what tools/fetch_metadata_corpus.py generates")
+            print("regenerate it, then run `moon fmt` on it and commit both")
+            return 1
+        print(f"{MBT} is up to date")
+        return 0
+
+    MBT.write_text(fixture, encoding="utf-8")
 
     provenance = {
         "reference": "packaging 26.3 Metadata.from_email(data, validate=True)",

@@ -52,6 +52,8 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -1209,6 +1211,26 @@ nothing = true
 """
 
 
+def format_with_moon(path: Path) -> str | None:
+    """Run `moon fmt` on `path` in place and return the result.
+
+    `None` means the formatter could not be run, which is reported rather than
+    treated as a pass: a fixture check that cannot run must not look like one that
+    succeeded.
+    """
+    moon = shutil.which("moon")
+    if moon is None:
+        print("`moon` is not on PATH, so the formatted fixture cannot be checked")
+        return None
+    result = subprocess.run(
+        [moon, "fmt", str(path)], capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
+        print(f"moon fmt failed on {path}:\n{result.stdout}{result.stderr}")
+        return None
+    return path.read_text(encoding="utf-8")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -1403,11 +1425,22 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     if args.check:
-        current = MBT.read_text(encoding="utf-8") if MBT.exists() else ""
-        if current != fixture:
-            print("the committed fixture differs from a fresh generation")
+        # The comparison has to be made *after* `moon fmt`, because the fixture is
+        # a formatted MoonBit file and this generator emits compact text. Comparing
+        # the raw generation would fail on layout alone -- which is exactly how a
+        # stale fixture slipped through once, when the committed file was the
+        # hand-written stub rather than any generation at all.
+        before = MBT.read_text(encoding="utf-8") if MBT.exists() else ""
+        MBT.write_text(fixture, encoding="utf-8")
+        formatted = format_with_moon(MBT)
+        if formatted is None:
+            return 2
+        MBT.write_text(before, encoding="utf-8")
+        if before != formatted:
+            print(f"{MBT} is not what tools/fetch_pylock_corpus.py generates")
+            print("regenerate it, then run `moon fmt` on it and commit both")
             return 1
-        print("fixture is up to date")
+        print(f"{MBT} is up to date")
         return 0
 
     MBT.write_text(fixture, encoding="utf-8")

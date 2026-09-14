@@ -390,6 +390,43 @@ def run(command: list[str], cwd: Path, env: dict) -> subprocess.CompletedProcess
     return subprocess.run(command, cwd=cwd, capture_output=True, env=env, check=False)
 
 
+def modified_sources(root: Path) -> list[str]:
+    """The mutated source files that do not look untouched.
+
+    Two checks, because either can be unavailable. `git status` is the real
+    invariant -- the files this probe edits must be clean before it starts -- and
+    it catches any modification, including one that leaves the mutation anchors
+    intact. Without git (or outside a checkout), each mutation's own anchor is the
+    next best thing: a leftover edit is usually the very edit that removes it.
+    """
+    files = sorted({mutation["file"] for mutation in MUTATIONS})
+    git = shutil.which("git")
+    if git is not None and (root / ".git").exists():
+        result = subprocess.run(
+            [git, "status", "--porcelain", "--", *files],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            print(
+                f"warning: `git status` failed ({result.stderr.strip()}), "
+                "falling back to the anchor check"
+            )
+        else:
+            return [
+                line[3:].strip()
+                for line in result.stdout.splitlines()
+                if line.strip()
+            ]
+    return [
+        mutation["file"]
+        for mutation in MUTATIONS
+        if mutation["old"] not in (root / mutation["file"]).read_text(encoding="utf-8")
+    ]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--target", default="js", choices=["js", "wasm", "wasm-gc", "native"])
@@ -413,6 +450,21 @@ def main(argv: list[str] | None = None) -> int:
     env = dict(os.environ)
     env["PATH"] = f"{Path.home() / '.moon' / 'bin'}{os.pathsep}{env.get('PATH', '')}"
     harness = root / "tools" / "diff_packaging.py"
+
+    # Refuse to start on a tree that is already modified. The `finally` below
+    # restores each file on the way out -- including on a normal failure -- but a
+    # killed process gets no chance to run it, and a leftover mutation is worse
+    # than no run at all: the next run would stack a second edit on top of it, and
+    # a "detected" verdict could be reporting the leftovers rather than the
+    # mutation under test. Restoring is the caller's job; saying so is this
+    # function's.
+    dirty = modified_sources(root)
+    if dirty:
+        print("refusing to run: the sources it would mutate are already modified")
+        for name in dirty:
+            print(f"  {name}")
+        print("restore them (for example `git checkout -- <file>`) and run this again")
+        return 2
 
     undetected: list[str] = []
     print(f"{'mutation':<44} {'mismatches':>10}  verdict")

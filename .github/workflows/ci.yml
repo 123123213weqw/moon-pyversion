@@ -52,6 +52,16 @@ jobs:
         run: python -B tools/target_parity.py --json parity.json
       - name: The TOML reference reader must be the one the fixture came from
         run: python -c "import tomli; assert tomli.__version__ == '2.4.1', tomli.__version__; print('tomli', tomli.__version__)"
+      - name: Every committed fixture must be what its generator produces
+        # A fixture is a build product: if it was hand-edited, or committed from an
+        # older generation, the corpus still runs and still reports agreement --
+        # against the wrong inputs. `--check` regenerates in memory, formats the
+        # result the way the committed file is formatted, and compares. The
+        # metadata one needs `--offline`, since its real documents were downloaded
+        # once and the cache is not committed.
+        run: |
+          python -B tools/fetch_pylock_corpus.py --check
+          python -B tools/fetch_metadata_corpus.py --check --offline
       - name: Differential comparison against packaging 26.3
         run: python -B tools/diff_packaging.py --oracle-version 26.3 --json report-26.3.json
       - name: Corpus must be byte identical across runs
