@@ -1431,11 +1431,16 @@ def main(argv: list[str] | None = None) -> int:
         # stale fixture slipped through once, when the committed file was the
         # hand-written stub rather than any generation at all.
         before = MBT.read_text(encoding="utf-8") if MBT.exists() else ""
-        MBT.write_text(fixture, encoding="utf-8")
-        formatted = format_with_moon(MBT)
+        try:
+            MBT.write_text(fixture, encoding="utf-8")
+            formatted = format_with_moon(MBT)
+        finally:
+            # Always put the committed file back, including on the "no `moon` on
+            # PATH" path: this check asks a question about the fixture, it must
+            # not answer it by rewriting it.
+            MBT.write_text(before, encoding="utf-8")
         if formatted is None:
             return 2
-        MBT.write_text(before, encoding="utf-8")
         if before != formatted:
             print(f"{MBT} is not what tools/fetch_pylock_corpus.py generates")
             print("regenerate it, then run `moon fmt` on it and commit both")

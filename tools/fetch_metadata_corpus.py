@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import socket
 import subprocess
@@ -253,6 +254,71 @@ def mbt_string(text: str) -> str:
     return "".join(out)
 
 
+def array_names(fixture: str, array: str, scalar: bool = False) -> list[str]:
+    """The case names listed by one array in the committed fixture.
+
+    The fixture is `moon fmt` output, so an entry may be written on one line or
+    wrapped over several; each entry begins with the name in a string literal,
+    which is what is read here rather than trying to parse MoonBit.
+    """
+    start = fixture.index(f"pub let {array} :")
+    following = fixture.find("\npub let ", start)
+    region = fixture[start:] if following == -1 else fixture[start:following]
+    # An entry is `("name", ...)`, but `moon fmt` may put the paren on its own
+    # line and indent the name, so the paren and the newline are both optional.
+    if scalar:
+        return re.findall(
+            r'^[ \t]*(?:\([ \t]*)?\n?[ \t]*"([^"]+)",[ \t]*(?:true|false)',
+            region,
+            flags=re.M,
+        )
+    return re.findall(
+        r'^[ \t]*(?:\([ \t]*)?\n?[ \t]*"([^"]+)",[ \t]*"',
+        region,
+        flags=re.M,
+    )
+
+
+def check_cases_only() -> int:
+    """Verify the parts of the fixture the repository can regenerate by itself.
+
+    The full `--check` needs the downloaded `METADATA` cache, which is
+    deliberately not committed, so it cannot run in CI. The *curated* half can:
+    those documents live in `metadata_cases/`, and the divergence list lives in
+    `metadata_cases/divergences.txt`. What that catches is the realistic mistake
+    -- adding a case file, or a divergence, and not regenerating the fixture --
+    which is the same class of staleness the full check catches for the other
+    fixture. What it does **not** check is the 239 real PyPI documents, and it
+    says so instead of implying otherwise.
+    """
+    fixture = MBT.read_text(encoding="utf-8")
+    expected_cases = sorted(path.stem for path in CASES.glob("*.metadata"))
+    listed_cases = array_names(fixture, "metadata_cases")
+    if listed_cases != expected_cases:
+        print(f"{MBT} lists {len(listed_cases)} curated cases, but metadata_cases/")
+        print(f"holds {len(expected_cases)}")
+        for name in sorted(set(expected_cases) - set(listed_cases)):
+            print(f"  missing from the fixture: {name}")
+        for name in sorted(set(listed_cases) - set(expected_cases)):
+            print(f"  in the fixture but not on disk: {name}")
+        return 1
+    expected_divergences = [name for name, _ in read_divergences()]
+    listed_divergences = array_names(fixture, "metadata_divergences", scalar=True)
+    if listed_divergences != expected_divergences:
+        print(f"{MBT} lists divergences {listed_divergences}")
+        print(f"but divergences.txt names {expected_divergences}")
+        return 1
+    print(
+        f"{MBT}: {len(listed_cases)} curated cases and "
+        f"{len(listed_divergences)} divergences match their sources"
+    )
+    print(
+        "  (the real PyPI documents were not checked: their cache is not "
+        "committed, so this check cannot regenerate them)"
+    )
+    return 0
+
+
 def format_with_moon(path: Path) -> str | None:
     """Run `moon fmt` on `path` in place and return the result.
 
@@ -277,6 +343,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--offline", action="store_true", help="use the cached PyPI documents")
     parser.add_argument(
+        "--check-cases",
+        action="store_true",
+        help=(
+            "check only the parts of the fixture the repository can regenerate "
+            "by itself (the curated cases and the divergence list), which needs "
+            "no downloaded cache and therefore can run in CI"
+        ),
+    )
+    parser.add_argument(
         "--check",
         action="store_true",
         help=(
@@ -285,6 +360,9 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     args = parser.parse_args(argv)
+
+    if args.check_cases:
+        return check_cases_only()
 
     files = sorted(CASES.glob("*.metadata"))
     if not files:
@@ -353,11 +431,16 @@ def main(argv: list[str] | None = None) -> int:
         # file and this generator emits compact text; comparing the raw generation
         # would fail on layout alone, and a check that always fails gets ignored.
         before = MBT.read_text(encoding="utf-8") if MBT.exists() else ""
-        MBT.write_text(fixture, encoding="utf-8")
-        formatted = format_with_moon(MBT)
+        try:
+            MBT.write_text(fixture, encoding="utf-8")
+            formatted = format_with_moon(MBT)
+        finally:
+            # Always put the committed file back, including on the "no `moon` on
+            # PATH" path: this check asks a question about the fixture, it must
+            # not answer it by rewriting it.
+            MBT.write_text(before, encoding="utf-8")
         if formatted is None:
             return 2
-        MBT.write_text(before, encoding="utf-8")
         if before != formatted:
             print(f"{MBT} is not what tools/fetch_metadata_corpus.py generates")
             print("regenerate it, then run `moon fmt` on it and commit both")

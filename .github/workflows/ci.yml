@@ -55,13 +55,21 @@ jobs:
       - name: Every committed fixture must be what its generator produces
         # A fixture is a build product: if it was hand-edited, or committed from an
         # older generation, the corpus still runs and still reports agreement --
-        # against the wrong inputs. `--check` regenerates in memory, formats the
-        # result the way the committed file is formatted, and compares. The
-        # metadata one needs `--offline`, since its real documents were downloaded
-        # once and the cache is not committed.
+        # against the wrong inputs. That happened once (a hand-written stub was
+        # committed in place of the generated lock corpus), so both fixtures are
+        # checked here.
+        #
+        # `--check` regenerates in memory, formats the result the way the committed
+        # file is formatted, and compares. The lock fixture can do that in full,
+        # because every input it reads is committed. The metadata fixture cannot:
+        # its 239 real `METADATA` documents were downloaded once and the cache is
+        # deliberately not in the repository, so the PyPI half cannot be rebuilt
+        # here -- `--check-cases` checks the half that can be (the curated cases
+        # and the divergence list, both of which are committed). Running the full
+        # metadata check needs the cache and is part of the local release check.
         run: |
           python -B tools/fetch_pylock_corpus.py --check
-          python -B tools/fetch_metadata_corpus.py --check --offline
+          python -B tools/fetch_metadata_corpus.py --check-cases
       - name: Differential comparison against packaging 26.3
         run: python -B tools/diff_packaging.py --oracle-version 26.3 --json report-26.3.json
       - name: Corpus must be byte identical across runs
