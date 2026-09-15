@@ -141,6 +141,28 @@ def mbt_string(text: str) -> str:
     return "".join(out)
 
 
+def mbt_document(text: str, limit: int = 3000) -> str:
+    """A MoonBit expression for `text`, split so no literal is too long.
+
+    MoonBit's lexer refuses a text segment longer than 65535 characters, and a real
+    lock file written by uv is up to 77 KB, so the document is emitted as a
+    concatenation of escaped chunks. The split happens on the *raw* text and each
+    chunk is escaped on its own, so a chunk boundary can never land inside an escape
+    sequence. A document short enough to fit is emitted as a single literal, because
+    splitting everything would make the short curated cases unreadable.
+    """
+    escaped = mbt_string(text)
+    if len(escaped) <= limit:
+        return escaped
+    chunks = []
+    for start in range(0, len(text), limit):
+        chunks.append(mbt_string(text[start : start + limit]))
+    # `+` has to end the line: a binary operator at the start of a continuation
+    # line is a parse error in this lexer ("Unexpected line break here"). `moon fmt`
+    # indents the continuation itself.
+    return " +\n    ".join(chunks)
+
+
 # --- the reference implementation -------------------------------------------
 
 
@@ -815,6 +837,42 @@ hashes = { sha256 = "3e00" }
 """,
         )
     )
+    # `packages.version` is `Required? : no` -- a SHOULD for an entry that names
+    # files, and a MUST NOT only next to a source tree -- so an entry with wheels
+    # and no version is well formed. This was a declared divergence in the other
+    # direction (the reader demanded the version); the reader no longer does.
+    cases.append(
+        (
+            "24_file_list_entry_without_a_version",
+            LOCK_PREFIX
+            + """
+[[packages]]
+name = "spam"
+[[packages.wheels]]
+name = "spam-1.0-py3-none-any.whl"
+url = "https://example.invalid/spam-1.0-py3-none-any.whl"
+hashes = { sha256 = "aa" }
+""",
+        )
+    )
+    for offset, extra in (("+00:00", "zero offset"), ("-00:00", "negative zero offset")):
+        cases.append(
+            (
+                "25_upload_time_utc_offset_%s" % extra.replace(" ", "_"),
+                LOCK_PREFIX
+                + """
+[[packages]]
+name = "spam"
+version = "1.0"
+[[packages.wheels]]
+name = "spam-1.0-py3-none-any.whl"
+url = "https://example.invalid/spam-1.0-py3-none-any.whl"
+upload-time = 2025-01-25T11:30:10%s
+hashes = { sha256 = "aa" }
+"""
+                % offset,
+            )
+        )
     cases.append(
         (
             "23_vcs_with_both_url_and_path",
@@ -932,7 +990,26 @@ def curated_rejected() -> list[tuple[str, str]]:
     add("A6_package_version_invalid", "\n[[packages]]\nname = \"attrs\"\nversion = \"not a version!\"\npath = \"x\"\n")
     add("A7_package_marker_invalid", "\n[[packages]]\nname = \"attrs\"\nversion = \"1.0\"\npath = \"x\"\nmarker = \"python_version >=\"\n")
     add("A8_package_requires_python_invalid", "\n[[packages]]\nname = \"attrs\"\nversion = \"1.0\"\npath = \"x\"\nrequires-python = \"3.9\"\n")
-    add("A9_source_conflict_vcs_and_directory", "\n[[packages]]\nname = \"spam\"\nversion = \"1.0\"\npath = \"x\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.invalid/spam.git\"\ncommit-id = \"abc\"\n")
+    # Source exclusivity has one case per pair of members, and each records nothing
+    #    but the members themselves: a case that also carried a `version` next to a
+    #    source tree would still be rejected with the exclusivity check disabled,
+    #    which is how the mutation probe found that this rule was not isolated.
+    add(
+        "A9_source_conflict_vcs_and_directory",
+        "\n[[packages]]\nname = \"spam\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.invalid/spam.git\"\ncommit-id = \"abc\"\n[packages.directory]\npath = \"../spam\"\n",
+    )
+    add(
+        "CH_source_conflict_vcs_and_wheels",
+        "\n[[packages]]\nname = \"spam\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.invalid/spam.git\"\ncommit-id = \"abc\"\n[[packages.wheels]]\nname = \"spam-1.0-py3-none-any.whl\"\nhashes = { sha256 = \"aa\" }\n",
+    )
+    add(
+        "CI_source_conflict_path_and_sdist",
+        "\n[[packages]]\nname = \"spam\"\npath = \"vendor/spam\"\n[packages.sdist]\nname = \"spam-1.0.tar.gz\"\nhashes = { sha256 = \"aa\" }\n",
+    )
+    add(
+        "CJ_source_conflict_archive_and_directory",
+        "\n[[packages]]\nname = \"spam\"\n[packages.archive]\nurl = \"https://example.invalid/spam-1.0.tar.gz\"\nhashes = { sha256 = \"aa\" }\n[packages.directory]\npath = \"../spam\"\n",
+    )
     add("B1_vcs_type_missing", "\n[[packages]]\nname = \"spam\"\n[packages.vcs]\nurl = \"https://example.invalid/spam.git\"\ncommit-id = \"abc\"\n")
     add("B2_vcs_type_invalid", "\n[[packages]]\nname = \"spam\"\n[packages.vcs]\ntype = \"github\"\nurl = \"https://example.invalid/spam.git\"\ncommit-id = \"abc\"\n")
     add("B4_vcs_commit_missing", "\n[[packages]]\nname = \"spam\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.invalid/spam.git\"\n")
@@ -951,27 +1028,20 @@ def curated_rejected() -> list[tuple[str, str]]:
     add("C8_upload_time_type", "\n[[packages]]\nname = \"spam\"\nversion = \"1.0\"\n[[packages.wheels]]\nname = \"spam-1.0-py3-none-any.whl\"\nurl = \"https://example.invalid/spam-1.0-py3-none-any.whl\"\nhashes = { sha256 = \"aa\" }\nupload-time = \"2024-03-01\"\n")
     add("C9_size_negative", "\n[[packages]]\nname = \"spam\"\nversion = \"1.0\"\n[[packages.wheels]]\nname = \"spam-1.0-py3-none-any.whl\"\nurl = \"https://example.invalid/spam-1.0-py3-none-any.whl\"\nhashes = { sha256 = \"aa\" }\nsize = -1\n")
     add("CA_not_toml", "", prefix="this is not a TOML document at all\n")
-    return entries
-
-
-# The divergences the library documents in `pylock.mbt`, each as a document whose
-# verdict the two sides disagree about. `True` means the *reference* accepts it.
-def divergences() -> list[tuple[str, str, bool]]:
-    return [
-        (
-            "D1_created_by_missing",
-            'lock-version = "1.0"\npackages = []\n',
-            False,
-        ),
-        (
-            "D2_created_by_empty",
-            'lock-version = "1.0"\ncreated-by = ""\npackages = []\n',
-            False,
-        ),
-        (
-            "D3_redundant_version_next_to_a_source_tree",
-            LOCK_PREFIX
-            + """
+    # The six rules that used to be declared divergences. The specification states
+    # each as a MUST, so both sides reject them now. They stay in the corpus as
+    # ordinary rejection cases: a divergence that has been settled has to be pinned
+    # by ordinary records, or nothing protects the settlement.
+    add("CB_created_by_missing", "packages = []\n", prefix='lock-version = "1.0"\n')
+    add(
+        "CC_created_by_empty",
+        "created-by = \"\"\npackages = []\n",
+        prefix='lock-version = "1.0"\n',
+    )
+    add(
+        "CD_version_next_to_a_source_tree",
+        LOCK_PREFIX
+        + """
 [[packages]]
 name = "spam"
 version = "1.0"
@@ -980,12 +1050,12 @@ type = "git"
 url = "https://example.invalid/spam.git"
 commit-id = "abc"
 """,
-            False,
-        ),
-        (
-            "D4_file_record_without_hashes",
-            LOCK_PREFIX
-            + """
+        prefix="",
+    )
+    add(
+        "CE_file_record_without_hashes",
+        LOCK_PREFIX
+        + """
 [[packages]]
 name = "spam"
 version = "1.0"
@@ -993,12 +1063,12 @@ version = "1.0"
 name = "spam-1.0-py3-none-any.whl"
 url = "https://example.invalid/spam-1.0-py3-none-any.whl"
 """,
-            False,
-        ),
-        (
-            "D5_upload_time_not_utc",
-            LOCK_PREFIX
-            + """
+        prefix="",
+    )
+    add(
+        "CF_upload_time_not_utc",
+        LOCK_PREFIX
+        + """
 [[packages]]
 name = "spam"
 version = "1.0"
@@ -1008,21 +1078,49 @@ url = "https://example.invalid/spam-1.0-py3-none-any.whl"
 upload-time = 2025-01-25T11:30:10+02:00
 hashes = { sha256 = "aa" }
 """,
-            False,
-        ),
-        (
-            "D7_version_omitted_on_a_file_list_entry",
-            LOCK_PREFIX
-            + """
+        prefix="",
+    )
+    add(
+        "CG_upload_time_has_no_offset",
+        LOCK_PREFIX
+        + """
 [[packages]]
 name = "spam"
+version = "1.0"
 [[packages.wheels]]
 name = "spam-1.0-py3-none-any.whl"
 url = "https://example.invalid/spam-1.0-py3-none-any.whl"
+upload-time = 2025-01-25T11:30:10
 hashes = { sha256 = "aa" }
 """,
-            True,
-        ),
+        prefix="",
+    )
+    return entries
+
+
+# The divergences the library documents in `pylock.mbt`, each as a document whose
+# verdict the two sides disagree about. `True` means the *reference* accepts it.
+def divergences() -> list[tuple[str, str, bool]]:
+    """The documents where this library deliberately answers differently.
+
+    Six of the seven divergences that were declared while the lock-file reader was
+    written have since been settled *towards* the specification, so they are no
+    longer listed here. Five were the reader being lenient where the specification
+    says MUST -- `created-by` is `Required? : yes`, a file record needs a non-empty
+    `hashes` table (also `Required? : yes`), `upload-time` must be recorded in UTC
+    (the specification's own MUST), and a `version` may not sit next to a source
+    tree (a MUST NOT). The sixth was the reader being *stricter* than a SHOULD: it
+    demanded a `version` on an entry that names files, which the specification makes
+    optional. All six documents now live in the accepted and rejected lists, where
+    both sides agree about them -- strictly better evidence than a declared
+    difference, because a settled rule is pinned by ordinary records.
+
+    What remains is a real choice rather than a shortcut: the specification says a
+    reader that supports the major version but not the minor one should *warn*, and
+    this library has no warning channel. Rejecting is the honest alternative to
+    accepting a file whose meaning the reader cannot vouch for.
+    """
+    return [
         (
             "D6_lock_version_minor_not_implemented",
             'lock-version = "1.1"\ncreated-by = "mousebender"\npackages = []\n',
@@ -1177,6 +1275,37 @@ def mutations(accepted: list[tuple[str, str]]) -> list[tuple[str, str]]:
     return out
 
 
+# --- real lock files, written by a third party ---------------------------------
+
+UV_DIR = CASES / "uv"
+
+
+def uv_documents() -> list[tuple[str, str]]:
+    """Real `pylock.toml` files written by `uv`, as `(project, document)`.
+
+    These are the only documents in the corpus that this repository did not write.
+    They are committed as **inputs** under `pylock_cases/uv/` and are never
+    regenerated, exactly like the real `METADATA` documents behind
+    `metadata_pypi_cases`; `pylock_cases/uv/provenance.txt` records the tool version
+    and the command that produced them.
+
+    What they add is worth stating precisely, because it is easy to overstate. The
+    *verdict and projection* for these records is still this file's reading of the
+    specification -- `uv` cannot be asked for a verdict. What is independent is the
+    **input**: a tool with its own reading of PEP 751 wrote these documents, so the
+    library accepting them is evidence that uv's writing and this reader's reading
+    agree, across real indexes, real hashes and real `wheels = [...]` inline arrays.
+    The corpus's self-authored documents could not show that, because one person
+    wrote both sides of them.
+    """
+    if not UV_DIR.exists():
+        return []
+    return [
+        (path.stem, path.read_text(encoding="utf-8"))
+        for path in sorted(UV_DIR.glob("*.toml"))
+    ]
+
+
 # --- the PEP's own example ---------------------------------------------------
 
 PEP751_EXAMPLE = """\
@@ -1261,6 +1390,16 @@ def main(argv: list[str] | None = None) -> int:
             sys.exit(f"the derived document for {name} is rejected: {reason}")
         derived.append((name, document, projected or ""))
 
+    # Real third-party lock files: accepted, and they have to stay accepted.
+    uv_cases: list[tuple[str, str, str]] = []
+    for name, document in uv_documents():
+        ok, reason, projected = reference_pylock(document)
+        if not ok:
+            sys.exit(f"the real uv lock file {name} is rejected: {reason}")
+        if projected is None:
+            sys.exit(f"the real uv lock file {name} has no projection")
+        uv_cases.append((name, document, projected))
+
     # Every accepted case must be accepted by the reference, or it belongs in the
     # rejected list (or in the declared divergences).
     cases = []
@@ -1328,7 +1467,10 @@ def main(argv: list[str] | None = None) -> int:
     ))
     lines.append("pub let pylock_cases : Array[(String, String, String)] = [")
     for name, document, projected in cases:
-        lines.append("  (%s, %s, %s)," % (mbt_string(name), mbt_string(document), mbt_string(projected)))
+        lines.append(
+            "  (%s, %s, %s),"
+            % (mbt_string(name), mbt_document(document), mbt_string(projected))
+        )
     lines.append("]")
     lines.append("")
     lines.append(comment(
@@ -1339,7 +1481,7 @@ def main(argv: list[str] | None = None) -> int:
     ))
     lines.append("pub let pylock_bad_cases : Array[(String, String)] = [")
     for name, document in rejected + mutated:
-        lines.append("  (%s, %s)," % (mbt_string(name), mbt_string(document)))
+        lines.append("  (%s, %s)," % (mbt_string(name), mbt_document(document)))
     lines.append("]")
     lines.append("")
     lines.append(comment(
@@ -1359,7 +1501,27 @@ def main(argv: list[str] | None = None) -> int:
     ))
     lines.append("pub let pylock_pypi_cases : Array[(String, String, String)] = [")
     for name, document, projected in derived:
-        lines.append("  (%s, %s, %s)," % (mbt_string(name), mbt_string(document), mbt_string(projected)))
+        lines.append(
+            "  (%s, %s, %s),"
+            % (mbt_string(name), mbt_document(document), mbt_string(projected))
+        )
+    lines.append("]")
+    lines.append("")
+    lines.append(comment(
+        "Real `pylock.toml` files written by `uv`, a third-party implementation, as\n"
+        "`(project, document, projection)`. The *inputs* are independent -- a tool\n"
+        "with its own reading of PEP 751 wrote them -- even though the verdict and\n"
+        "the projection are this file's reading of the specification, because `uv`\n"
+        "cannot be asked for a verdict. What these records show is that such a tool\n"
+        "writes documents this reader accepts, over real indexes and real hashes.\n"
+        "`pylock_cases/uv/provenance.txt` records how they were produced."
+    ))
+    lines.append("pub let pylock_uv_cases : Array[(String, String, String)] = [")
+    for name, document, projected in uv_cases:
+        lines.append(
+            "  (%s, %s, %s),"
+            % (mbt_string(name), mbt_document(document), mbt_string(projected))
+        )
     lines.append("]")
     lines.append("")
     lines.append(comment(
@@ -1381,7 +1543,7 @@ def main(argv: list[str] | None = None) -> int:
     ))
     lines.append("pub let pylock_divergence_cases : Array[(String, String)] = [")
     for name, document, _expected in declared:
-        lines.append("  (%s, %s)," % (mbt_string(name), mbt_string(document)))
+        lines.append("  (%s, %s)," % (mbt_string(name), mbt_document(document)))
     lines.append("]")
     fixture = "\n".join(lines) + "\n"
 
@@ -1408,6 +1570,10 @@ def main(argv: list[str] | None = None) -> int:
                 ],
                 "derived": [
                     {"name": name, "bytes": len(document)} for name, document, _p in derived
+                ],
+                "uv": [
+                    {"name": name, "bytes": len(document), "third_party": True}
+                    for name, document, _p in uv_cases
                 ],
                 "derived_skipped": skipped,
                 "max_derived_versions": MAX_DERIVED_VERSIONS,
@@ -1460,6 +1626,7 @@ def main(argv: list[str] | None = None) -> int:
             len(derived),
             MBT.name,
         )
+        + "\n  %d real uv lock files" % len(uv_cases)
     )
     return 0
 
@@ -1477,38 +1644,12 @@ HEADER = """///|
 # Why each declared divergence goes the way it does. Kept here so the fixture and
 # `pylock_cases/divergences.txt` cannot tell different stories.
 REASONS = {
-    "D1_created_by_missing": (
-        "PEP 751 requires `created-by`; this reader treats it as optional, because a "
-        "lock file without it is still a usable lock file and the field is provenance."
-    ),
-    "D2_created_by_empty": (
-        "An empty string counts as an absent value here, the rule `metadata.mbt` "
-        "applies to an empty header value; PEP 751 would reject it."
-    ),
-    "D3_redundant_version_next_to_a_source_tree": (
-        "The specification says a source tree MUST NOT record `version`; this reader "
-        "keeps it, because a version key is what a resolved set is checked against and "
-        "the MUST NOT is a locker-side rule."
-    ),
-    "D4_file_record_without_hashes": (
-        "`hashes` is required on `wheels`, `sdist` and `archive`; this reader accepts a "
-        "record without it -- the digest is then simply unknown -- but still rejects an "
-        "empty `hashes` table, which the specification forbids outright."
-    ),
-    "D5_upload_time_not_utc": (
-        "`upload-time` must be recorded in UTC; this reader only checks that it is a "
-        "TOML datetime and records the spelling verbatim, because no date arithmetic "
-        "happens anywhere in the library."
-    ),
-    "D7_version_omitted_on_a_file_list_entry": (
-        "`packages.version` is only a SHOULD for an entry that names files; this "
-        "reader requires it unless the entry is a direct reference, because the "
-        "version key is what a resolved set is checked against."
-    ),
     "D6_lock_version_minor_not_implemented": (
-        "The specification tells a reader that supports the major version but not the "
-        "minor one to warn; there is no warning channel here, so `1.1` is rejected "
-        "instead of being silently accepted."
+        "The specification tells a reader that supports the major version but not "
+        "the minor one to warn about it; there is no warning channel here, so `1.1` "
+        "is rejected instead of being silently accepted. The `MUST raise an error` "
+        "in the same paragraph is about an unsupported *major* version, which is "
+        "rejected for the same reason, so the two share a code."
     ),
 }
 

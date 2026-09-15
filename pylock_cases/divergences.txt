@@ -5,23 +5,5 @@ why. The corpus asserts the difference in both directions: a divergence that
 stops being one fails the differential run, and a difference that is not
 declared here is reported as a mismatch.
 
-D1_created_by_missing: reference rejects, library accepts
-    PEP 751 requires `created-by`; this reader treats it as optional, because a lock file without it is still a usable lock file and the field is provenance.
-
-D2_created_by_empty: reference rejects, library accepts
-    An empty string counts as an absent value here, the rule `metadata.mbt` applies to an empty header value; PEP 751 would reject it.
-
-D3_redundant_version_next_to_a_source_tree: reference rejects, library accepts
-    The specification says a source tree MUST NOT record `version`; this reader keeps it, because a version key is what a resolved set is checked against and the MUST NOT is a locker-side rule.
-
-D4_file_record_without_hashes: reference rejects, library accepts
-    `hashes` is required on `wheels`, `sdist` and `archive`; this reader accepts a record without it -- the digest is then simply unknown -- but still rejects an empty `hashes` table, which the specification forbids outright.
-
-D5_upload_time_not_utc: reference rejects, library accepts
-    `upload-time` must be recorded in UTC; this reader only checks that it is a TOML datetime and records the spelling verbatim, because no date arithmetic happens anywhere in the library.
-
-D7_version_omitted_on_a_file_list_entry: reference accepts, library rejects
-    `packages.version` is only a SHOULD for an entry that names files; this reader requires it unless the entry is a direct reference, because the version key is what a resolved set is checked against.
-
 D6_lock_version_minor_not_implemented: reference accepts, library rejects
-    The specification tells a reader that supports the major version but not the minor one to warn; there is no warning channel here, so `1.1` is rejected instead of being silently accepted.
+    The specification tells a reader that supports the major version but not the minor one to warn about it; there is no warning channel here, so `1.1` is rejected instead of being silently accepted. The `MUST raise an error` in the same paragraph is about an unsupported *major* version, which is rejected for the same reason, so the two share a code.

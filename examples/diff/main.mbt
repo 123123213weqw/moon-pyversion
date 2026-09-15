@@ -2092,7 +2092,7 @@ fn pylock_projection(
   out.write_string(";default-groups=")
   out.write_string(pylock_list(lock.default_groups()))
   out.write_string(";created-by=")
-  out.write_string(pylock_optional(lock.created_by()))
+  out.write_string(escape_projection(lock.created_by()))
   let packages = lock.packages()
   out.write_string(";packages=")
   out.write_string(packages.length().to_string())
@@ -2532,7 +2532,10 @@ fn main {
     emit_resolve("curated", sb, entry.0, entry.1, entry.2, entry.3, entry.4)
   }
   // 14. PEP 751 lock files: the curated documents, the documents derived from
-  //     real index responses, and the declared divergences.
+  //     real index responses, the real lock files uv wrote, and the declared
+  //     divergences. The uv ones carry their own source name so a report can tell
+  //     "a document this repository wrote" from "a document a third-party tool
+  //     wrote" without a second table.
   emit_pylock_divergences(sb)
   for entry in @fixtures.pylock_cases {
     emit_pylock("curated", sb, entry.0, entry.1)
@@ -2545,6 +2548,9 @@ fn main {
   }
   for entry in @fixtures.pylock_pypi_cases {
     emit_pylock("pypi_lock", sb, entry.0, entry.1)
+  }
+  for entry in @fixtures.pylock_uv_cases {
+    emit_pylock("uv_lock", sb, entry.0, entry.1)
   }
   println(sb.to_string())
 }

@@ -23,7 +23,7 @@ oracle 只在测试期运行，不出现在 MoonBit 库的依赖里（`moon.mod`
 | `mutated` | 3000 个版本、1244 条约束 | 对上述合法串做单字符替换/删除/插入，外加固定垃圾串，用来压拒绝行为 |
 | `pypi` | 3000 个真实版本、500 条真实约束、600 条真实需求行、900 个真实文件名 | 来自 PyPI JSON API（`releases`、`Requires-Dist`、`Requires-Python`、`urls[].filename`），见 `fixtures/` |
 | `pypi`（元数据/索引） | 239 份真实 `METADATA`、97 份真实 PEP 691 索引响应 | 真实 wheel 的 PEP 658 边上文件；公开索引的 JSON 响应，见 `fixtures/metadata_corpus.mbt`、`fixtures/index_corpus.mbt` |
-| `curated`（文档类） | 83 个 TOML 文档、46 条元数据规则样例、21 个索引文档、105 份锁文件 | 规范本身：TOML 1.0、核心元数据、PEP 691、PEP 751 |
+| `curated`（文档类） | 83 个 TOML 文档、46 条元数据规则样例、21 个索引文档、114 份手工锁文件 + 6 份 `uv` 锁文件 | 规范本身：TOML 1.0、核心元数据、PEP 691、PEP 751 |
 
 `pypi` 语料由 `tools/fetch_pypi_corpus.py` 生成：抓取 97 个知名包的元数据，
 每包最多取 60 个版本（轮转、按字典序），去重排序后写成
@@ -106,7 +106,9 @@ tools/mutation_probe.py ─► 注入故意缺陷，断言上面的对照能报�
   PEP 691 的索引文档、离线目录扫描、候选选择与 PEP 751 锁文件**没有**现成的
   Python 参考实现，这几类记录对照的是**本仓库按规范另写的一份实现**（分别写在
   `tools/fetch_index_corpus.py` 与 `tools/fetch_pylock_corpus.py` 里，PEP 751 的
-  那份连"对照物是别人写的"都做不到，见 experiment-results.md 6.9）。它们能
+  那份连"对照物是别人写的"都做不到，见 experiment-results.md 6.9：语料里唯一不
+  由本仓库生成的输入是 `pylock_cases/uv/` 那 6 份 `uv` 写出的锁文件，而 `uv` 只写
+  不读、不给出裁决）。它们能
   抓出"库与规范不一致"，抓不出"两份实现同时读错同一段规范"。这一点写在每类记录
   的说明里，不当作等价于 0 不一致的强证据。
 - 语料是抽样的：PyPI 上的版本与约束远多于此处收录的量。

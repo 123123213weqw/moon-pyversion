@@ -20,6 +20,9 @@
     "17_unknown_keys_ignored",
     "18_file_members",
     "19_names_are_normalized_on_comparison",
+    "24_file_list_entry_without_a_version",
+    "25_upload_time_utc_offset_zero_offset",
+    "25_upload_time_utc_offset_negative_zero_offset",
     "23_vcs_with_both_url_and_path",
     "22_unnormalized_spellings_are_accepted",
     "21_file_record_with_a_name_but_no_location",
@@ -50,6 +53,9 @@
     "A7_package_marker_invalid",
     "A8_package_requires_python_invalid",
     "A9_source_conflict_vcs_and_directory",
+    "CH_source_conflict_vcs_and_wheels",
+    "CI_source_conflict_path_and_sdist",
+    "CJ_source_conflict_archive_and_directory",
     "B1_vcs_type_missing",
     "B2_vcs_type_invalid",
     "B4_vcs_commit_missing",
@@ -67,7 +73,13 @@
     "C6_dependency_self_reference",
     "C8_upload_time_type",
     "C9_size_negative",
-    "CA_not_toml"
+    "CA_not_toml",
+    "CB_created_by_missing",
+    "CC_created_by_empty",
+    "CD_version_next_to_a_source_tree",
+    "CE_file_record_without_hashes",
+    "CF_upload_time_not_utc",
+    "CG_upload_time_has_no_offset"
   ],
   "derived": [
     {
@@ -457,38 +469,8 @@
   ],
   "divergences": [
     {
-      "name": "D1_created_by_missing",
-      "reason": "PEP 751 requires `created-by`; this reader treats it as optional, because a lock file without it is still a usable lock file and the field is provenance.",
-      "reference_accepts": false
-    },
-    {
-      "name": "D2_created_by_empty",
-      "reason": "An empty string counts as an absent value here, the rule `metadata.mbt` applies to an empty header value; PEP 751 would reject it.",
-      "reference_accepts": false
-    },
-    {
-      "name": "D3_redundant_version_next_to_a_source_tree",
-      "reason": "The specification says a source tree MUST NOT record `version`; this reader keeps it, because a version key is what a resolved set is checked against and the MUST NOT is a locker-side rule.",
-      "reference_accepts": false
-    },
-    {
-      "name": "D4_file_record_without_hashes",
-      "reason": "`hashes` is required on `wheels`, `sdist` and `archive`; this reader accepts a record without it -- the digest is then simply unknown -- but still rejects an empty `hashes` table, which the specification forbids outright.",
-      "reference_accepts": false
-    },
-    {
-      "name": "D5_upload_time_not_utc",
-      "reason": "`upload-time` must be recorded in UTC; this reader only checks that it is a TOML datetime and records the spelling verbatim, because no date arithmetic happens anywhere in the library.",
-      "reference_accepts": false
-    },
-    {
-      "name": "D7_version_omitted_on_a_file_list_entry",
-      "reason": "`packages.version` is only a SHOULD for an entry that names files; this reader requires it unless the entry is a direct reference, because the version key is what a resolved set is checked against.",
-      "reference_accepts": true
-    },
-    {
       "name": "D6_lock_version_minor_not_implemented",
-      "reason": "The specification tells a reader that supports the major version but not the minor one to warn; there is no warning channel here, so `1.1` is rejected instead of being silently accepted.",
+      "reason": "The specification tells a reader that supports the major version but not the minor one to warn about it; there is no warning channel here, so `1.1` is rejected instead of being silently accepted. The `MUST raise an error` in the same paragraph is about an unsupported *major* version, which is rejected for the same reason, so the two share a code.",
       "reference_accepts": true
     }
   ],
@@ -540,6 +522,9 @@
     "17_unknown_keys_ignored_name-is-not-a-string",
     "18_file_members_lock-version-dropped",
     "19_names_are_normalized_on_comparison_lock-version-dropped",
+    "24_file_list_entry_without_a_version_lock-version-dropped",
+    "25_upload_time_utc_offset_zero_offset_lock-version-dropped",
+    "25_upload_time_utc_offset_negative_zero_offset_lock-version-dropped",
     "23_vcs_with_both_url_and_path_lock-version-dropped",
     "22_unnormalized_spellings_are_accepted_lock-version-dropped",
     "22_unnormalized_spellings_are_accepted_name-gets-a-trailing-dash",
@@ -549,5 +534,37 @@
     "20_attestation_identities_are_ignored_name-gets-a-trailing-dash",
     "20_attestation_identities_are_ignored_name-is-not-a-string"
   ],
-  "reference": "PEP 751 read a second time in reference_pylock, plus packaging.markers for marker syntax/evaluation and packaging.version/specifiers for versions; there is no external pylock.toml implementation to compare against."
+  "reference": "PEP 751 read a second time in reference_pylock, plus packaging.markers for marker syntax/evaluation and packaging.version/specifiers for versions; there is no external pylock.toml implementation to compare against.",
+  "uv": [
+    {
+      "bytes": 3815,
+      "name": "cattrs",
+      "third_party": true
+    },
+    {
+      "bytes": 6877,
+      "name": "django",
+      "third_party": true
+    },
+    {
+      "bytes": 36653,
+      "name": "flask",
+      "third_party": true
+    },
+    {
+      "bytes": 10237,
+      "name": "httpx",
+      "third_party": true
+    },
+    {
+      "bytes": 76833,
+      "name": "numpy",
+      "third_party": true
+    },
+    {
+      "bytes": 63505,
+      "name": "requests",
+      "third_party": true
+    }
+  ]
 }

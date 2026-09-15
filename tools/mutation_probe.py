@@ -287,6 +287,77 @@ MUTATIONS = [
         "covers": "a Keywords part is stripped with Python's whitespace, not with WSP",
     },
     {
+        # `created-by` is `Required? : yes`. Accepting its absence again is exactly
+        # the leniency this milestone removed, and the corpus's
+        # `CB_created_by_missing` / `CC_created_by_empty` cases are what notice.
+        "name": "pylock-created-by-may-be-absent",
+        "file": "pylock.mbt",
+        "old": """  let created_by = match document.get("created-by") {
+    Some(TString(value)) if !value.is_empty() => value
+    Some(TString(_)) | None => raise pylock_error("CREATED_BY_REQUIRED", 0)
+    Some(_) => raise pylock_error("CREATED_BY_TYPE", 0)
+  }""",
+        "new": """  let created_by = match document.get("created-by") {
+    Some(TString(value)) => value
+    Some(_) => raise pylock_error("CREATED_BY_TYPE", 0)
+    None => ""
+  }""",
+        "covers": "the tool that wrote a lock file must be recorded",
+    },
+    {
+        # `hashes` is `Required? : yes`, with "The table MUST contain at least one
+        # entry"; the corpus's `CE_file_record_without_hashes` notices a reader that
+        # treats the table as optional.
+        "name": "pylock-file-record-without-hashes",
+        "file": "pylock.mbt",
+        "old": """    None => raise pylock_error("FILE_HASHES_REQUIRED", ordinal)""",
+        "new": """    None => []""",
+        "covers": "a file record must carry a non-empty hashes table",
+    },
+    {
+        # "The date and time MUST be recorded in UTC." The corpus's
+        # `CF_upload_time_not_utc` and `CG_upload_time_has_no_offset` are the two
+        # shapes that have to be refused.
+        "name": "pylock-upload-time-offset-not-checked",
+        "file": "pylock.mbt",
+        "old": """      if !is_utc_datetime(text) {
+        raise pylock_error("FILE_UPLOAD_TIME_NOT_UTC", ordinal)
+      }""",
+        "new": """      if false {
+        raise pylock_error("FILE_UPLOAD_TIME_NOT_UTC", ordinal)
+      }""",
+        "covers": "upload-time must be recorded in UTC",
+    },
+    {
+        # "The version MUST NOT be included when ... a source tree is used". The
+        # corpus's `CD_version_next_to_a_source_tree` notices a reader that keeps it.
+        "name": "pylock-version-allowed-next-to-a-source-tree",
+        "file": "pylock.mbt",
+        "old": """      if source_tree {
+        raise pylock_error("PACKAGE_VERSION_NOT_ALLOWED", ordinal)
+      } else {""",
+        "new": """      if false {
+        raise pylock_error("PACKAGE_VERSION_NOT_ALLOWED", ordinal)
+      } else {""",
+        "covers": "a version may not be recorded next to a source tree",
+    },
+    {
+        # `packages.version` is `Required? : no`; demanding it again is the old
+        # divergence, and `24_file_list_entry_without_a_version` is what notices.
+        "name": "pylock-version-demanded-on-a-file-list-entry",
+        "file": "pylock.mbt",
+        "old": """    Some(TString(_)) | None => None
+    Some(_) => raise pylock_error("PACKAGE_VERSION_TYPE", ordinal)""",
+        "new": """    Some(TString(_)) | None =>
+      if has_member(table, "vcs") || has_member(table, "directory") {
+        None
+      } else {
+        raise pylock_error("PACKAGE_VERSION_TYPE", ordinal)
+      }
+    Some(_) => raise pylock_error("PACKAGE_VERSION_TYPE", ordinal)""",
+        "covers": "packages.version is optional unless a source tree is recorded",
+    },
+    {
         # PEP 751 records the major/minor version the file was written for, and
         # this reader rejects anything but 1.0 instead of warning. Accepting every
         # value would make the declared divergence disappear, which the harness
@@ -436,6 +507,16 @@ def main(argv: list[str] | None = None) -> int:
         help="python with packaging 26.3 installed (defaults to ~/oracle-versions/venv26.3)",
     )
     parser.add_argument("--pinned-oracle", default="26.3")
+    parser.add_argument(
+        "--allow-dirty",
+        action="store_true",
+        help=(
+            "run even though the files it mutates differ from the committed state; "
+            "for development, where the difference is the work in progress. The "
+            "strict default exists because a leftover injection from an interrupted "
+            "run makes a 'detected' verdict meaningless"
+        ),
+    )
     parser.add_argument("--list", action="store_true", help="list mutations and exit")
     args = parser.parse_args(argv)
 
@@ -459,12 +540,25 @@ def main(argv: list[str] | None = None) -> int:
     # mutation under test. Restoring is the caller's job; saying so is this
     # function's.
     dirty = modified_sources(root)
-    if dirty:
+    if dirty and not args.allow_dirty:
         print("refusing to run: the sources it would mutate are already modified")
         for name in dirty:
             print(f"  {name}")
         print("restore them (for example `git checkout -- <file>`) and run this again")
+        print(
+            "during development, when the edit is intentional, pass --allow-dirty "
+            "and accept that a leftover injection can inflate a count"
+        )
         return 2
+    if dirty:
+        print(
+            "warning: running on a modified tree (--allow-dirty); every mutation's "
+            "own anchor was checked, but a leftover injection from an interrupted "
+            "run would still count as detection"
+        )
+        for name in dirty:
+            print(f"  {name}")
+        print()
 
     undetected: list[str] = []
     print(f"{'mutation':<44} {'mismatches':>10}  verdict")

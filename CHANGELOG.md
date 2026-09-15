@@ -1,6 +1,68 @@
 # Changelog
 
+## Unreleased — M8 (continued): six PEP 751 divergences settled, real `uv` lock files
+
+### Changed
+
+- Six of the seven declared divergences from PEP 751 are gone. Re-reading the
+  specification's own `Required?` lines settled all six towards the specification,
+  because each of them was this library being *more permissive* than the spec — a
+  defect rather than a design choice: `created-by` is required
+  (`CREATED_BY_REQUIRED`, and `Pylock::created_by` returns `String` rather than
+  `String?`), a file record must carry a non-empty `hashes` table
+  (`FILE_HASHES_REQUIRED`), `upload-time` must be in UTC
+  (`FILE_UPLOAD_TIME_NOT_UTC`; the spelling is still recorded verbatim, `Z` is not
+  rewritten), `packages.version` may not sit next to a source tree
+  (`PACKAGE_VERSION_NOT_ALLOWED` — `vcs` and `directory` are trees, `archive` and a
+  local `path` are files), and `packages.version` is no longer *demanded* on an
+  entry that names files (`PACKAGE_VERSION_REQUIRED` is gone; it is `Required? :
+  no`, and only a SHOULD for an entry whose version is stable). The seventh stays:
+  an unimplemented `lock-version` minor is rejected rather than warned about,
+  because there is no warning channel here, which is the MUST side of the same
+  paragraph. `pylock_cases/divergences.txt` went from seven entries to one.
+- Every settled rule is pinned by an *ordinary* record, not merely removed from the
+  divergence list: an accepted entry with wheels and no version, the two UTC
+  spellings (`+00:00` and `-00:00`), one source-conflict case per pair of members,
+  and a rejected case for each of the four rules, so a future regression fails as a
+  plain mismatch instead of as a change of verdict on a declared divergence.
+- The corpus grew from 122 507 to **122 516** records, 215 of them `pylock`, still
+  0 mismatches against `packaging` 26.3, and the drift matrix is unchanged
+  (24.2: 4474, 25.0: 2736, 26.0: 826, 26.3: 0).
+- Library source is 8710 lines, tests 6459 lines (251 blocks, all four backends).
+- `tools/mutation_probe.py` gained `--allow-dirty` for working on a deliberately
+  modified tree, with an explicit warning that a leftover injection inflates the
+  counts. The strict default is unchanged, and every mutation's own anchor is
+  checked either way, so a table of source files this probe never edited is
+  reported instead of silently accepted.
+
+### Added
+
+- `pylock_cases/uv/`: six `pylock.toml` files written by `uv 0.11.32`
+  (`uv export --format pylock.toml`) for flask, requests, numpy, django, httpx and
+  cattrs — 50 packages with real index URLs, real sha256 digests and sizes, and
+  inline `wheels = [...]` arrays up to 77 KB. They are the only documents in the
+  PEP 751 corpus that this repository did not write. `uv` writes and never reads,
+  so they add independent *inputs*, not a second reading of the specification, and
+  the verdict is still ours; what they do prove is that tightening the six rules
+  did not cost real-world compatibility, because all six are accepted *after* the
+  change. `pylock_cases/uv/provenance.txt` records where they came from and
+  `regenerate.sh` how they were made; they are committed as inputs and never
+  regenerated. `mbt_document` emits a long document as a concatenation of escaped
+  chunks, because MoonBit's lexer refuses a single text segment past 65535
+  characters and the numpy lock file is 77 KB.
+- Five mutations in `tools/mutation_probe.py` (36 total now), one per settled rule,
+  each restoring the leniency that was removed. The probe reported
+  `pylock-ignores-source-exclusivity` as NOT DETECTED on its first run, and that
+  was a gap in the *corpus* rather than in the library: the case meant to pin that
+  rule also carried a `version` next to a source tree, so switching the check off
+  still left the document rejected — by the version rule. A case only pins a rule
+  when it is otherwise valid, which is now one conflict case per pair of members.
+
 ## Unreleased — M8 (continued): PEP 751 differential corpus, per-value metadata records
+
+> The aggregate numbers in this section are the state at that increment. The section
+> above supersedes them: 122 516 records, 8710 library lines, 6459 test lines,
+> 36 mutations, one declared PEP 751 divergence, 120 lock-file documents.
 
 ### Added
 

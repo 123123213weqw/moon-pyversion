@@ -187,7 +187,7 @@ test "pylock: a minimal lock file parses and every accessor is empty" {
     #|version = "25.1.0"
   let lock = lock_of(text)
   assert_eq(lock.lock_version(), "1.0")
-  assert_eq(lock.created_by(), Some("moon-pyversion"))
+  assert_eq(lock.created_by(), "moon-pyversion")
   assert_eq(lock.environments(), [])
   assert_eq(lock.requires_python(), None)
   assert_eq(lock.extras(), [])
@@ -264,10 +264,12 @@ test "pylock: packages is required, is an array of tables, and reports a positio
   )
   assert_lock_error(lock_document("packages = [1]\n"), "PACKAGE_NOT_TABLE")
   // The `Int` of the error is the ordinal of the offending entry, not an offset.
+  // The third entry is broken with an unparsable version: leaving the member out
+  // is not an error any more, since `packages.version` is `Required? : no`.
   let broken = lock_document(
-    "\n[[packages]]\nname = \"attrs\"\nversion = \"25.1.0\"\n\n[[packages]]\nname = \"cattrs\"\nversion = \"24.1.2\"\n\n[[packages]]\nname = \"numpy\"\n",
+    "\n[[packages]]\nname = \"attrs\"\nversion = \"25.1.0\"\n\n[[packages]]\nname = \"cattrs\"\nversion = \"24.1.2\"\n\n[[packages]]\nname = \"numpy\"\nversion = \"not a version\"\n",
   )
-  assert_lock_error_at(broken, "PACKAGE_VERSION_REQUIRED", 2)
+  assert_lock_error_at(broken, "PACKAGE_VERSION_INVALID", 2)
 }
 
 ///|
@@ -287,29 +289,52 @@ test "pylock: packages.name is required, a string and a valid project name" {
 }
 
 ///|
-test "pylock: packages.version is required unless a direct reference is recorded" {
+test "pylock: packages.version is optional, and forbidden next to a source tree" {
+  // `packages.version` is `Required? : no`, and a SHOULD for an entry that names
+  // files ("The version SHOULD be specified when the version is known to be
+  // stable"), so an entry that omits it is well formed and simply has no version
+  // to report. This reader used to demand one unless a direct reference was
+  // recorded; that was a declared divergence and it is settled now.
+  let no_version = lock_entry("name = \"attrs\"\n")
+  assert_true(no_version.version is None)
+  assert_false(no_version.is_source_tree())
+  assert_false(no_version.is_direct_reference())
+  let wheel_only = lock_entry(
+    "name = \"attrs\"\n[[packages.wheels]]\nname = \"attrs-25.1.0-py3-none-any.whl\"\nhashes = { sha256 = \"abc\" }\n",
+  )
+  assert_true(wheel_only.version is None)
+  assert_eq(wheel_only.wheels.length(), 1)
+  // An empty value counts as absent, so it is no more an error than omission is.
+  assert_true(lock_entry("name = \"attrs\"\nversion = \"\"\n").version is None)
+  // A version that is present is still parsed, and a bad one is still rejected.
   assert_entry_codes([
-    ("name = \"attrs\"\n", "PACKAGE_VERSION_REQUIRED"),
-    ("name = \"attrs\"\nversion = \"\"\n", "PACKAGE_VERSION_REQUIRED"),
     ("name = \"attrs\"\nversion = 1.0\n", "PACKAGE_VERSION_TYPE"),
     ("name = \"attrs\"\nversion = true\n", "PACKAGE_VERSION_TYPE"),
     (
       "name = \"attrs\"\nversion = \"not a version\"\n", "PACKAGE_VERSION_INVALID",
     ),
   ])
-  // A wheel list is not a source tree, so the version is still required.
-  assert_lock_error(
-    lock_document(
-      "\n[[packages]]\nname = \"attrs\"\n[[packages.wheels]]\nname = \"attrs-25.1.0-py3-none-any.whl\"\n",
+  // A *source tree* is the case the specification forbids it in: "The version MUST
+  // NOT be included when it cannot be guaranteed to be consistent with the code
+  // used (i.e. when a source tree is used)".
+  assert_entry_codes([
+    (
+      "name = \"attrs\"\nversion = \"25.1.0\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.invalid/attrs.git\"\ncommit-id = \"0f1e2d3c\"\n",
+      "PACKAGE_VERSION_NOT_ALLOWED",
     ),
-    "PACKAGE_VERSION_REQUIRED",
+    (
+      "name = \"attrs\"\nversion = \"25.1.0\"\n[packages.directory]\npath = \"../attrs\"\n",
+      "PACKAGE_VERSION_NOT_ALLOWED",
+    ),
+  ])
+  // An *archive* is a file rather than a tree, so a version is allowed next to it.
+  let with_archive = lock_entry(
+    "name = \"attrs\"\nversion = \"25.1.0\"\n[packages.archive]\nurl = \"https://example.invalid/attrs-25.1.0.tar.gz\"\nhashes = { sha256 = \"abc\" }\n",
   )
-  // A source tree has no version that can be guaranteed, so the member may be
-  // absent, and a lock file that records one anyway is accepted (see the
-  // divergence block below).
+  assert_eq(with_archive.version.unwrap().to_string(), "25.1.0")
+  // ... and the version stays absent when the entry is a source tree.
   let fields =
     #|name = "attrs"
-    #|version = ""
     #|[packages.vcs]
     #|type = "git"
     #|url = "https://example.invalid/attrs.git"
@@ -504,18 +529,23 @@ test "pylock: extras, dependency-groups and default-groups" {
 }
 
 ///|
-test "pylock: created-by is read, and its absence is accepted" {
+test "pylock: created-by is required" {
   assert_eq(
     lock_of(lock_document("packages = []\n")).created_by(),
-    Some("moon-pyversion"),
+    "moon-pyversion",
   )
-  // Documented divergence: PEP 751 requires `created-by`.
-  let without = lock_of(lock_without_created_by("packages = []\n"))
-  assert_eq(without.created_by(), None)
-  assert_eq(without.packages(), [])
-  // Built without the prefix, because `created-by` may only appear once: with
-  // the prefix the document fails on the duplicate key instead of the type.
+  // The specification's `created-by` line is `Required? : yes`, and this reader
+  // used to accept its absence; it no longer does. Absence and an empty value are
+  // both rejections now, and the emptiness is a rejection of its own because an
+  // empty string cannot name the tool that wrote the file.
   assert_codes([
+    (lock_without_created_by("packages = []\n"), "CREATED_BY_REQUIRED"),
+    (
+      lock_without_created_by("created-by = \"\"\npackages = []\n"),
+      "CREATED_BY_REQUIRED",
+    ),
+    // Built without the prefix, because `created-by` may only appear once: with
+    // the prefix the document fails on the duplicate key instead of the type.
     (
       lock_without_created_by("created-by = 1\npackages = []\n"),
       "CREATED_BY_TYPE",
@@ -525,12 +555,6 @@ test "pylock: created-by is read, and its absence is accepted" {
       "CREATED_BY_TYPE",
     ),
   ])
-  // An empty value counts as absent, the rule `metadata.mbt` applies to an empty
-  // header value.
-  assert_eq(
-    lock_of(lock_without_created_by("created-by = \"\"\npackages = []\n")).created_by(),
-    None,
-  )
 }
 
 ///|
@@ -656,12 +680,15 @@ test "pylock: the source forms are mutually exclusive" {
   let archive =
     #|[packages.archive]
     #|url = "https://example.invalid/spam-1.0.tar.gz"
+    #|hashes = { sha256 = "abc" }
   let wheels =
     #|[[packages.wheels]]
     #|name = "spam-1.0-py3-none-any.whl"
+    #|hashes = { sha256 = "abc" }
   let sdist =
     #|[packages.sdist]
     #|name = "spam-1.0.tar.gz"
+    #|hashes = { sha256 = "abc" }
   // two direct references, or a direct reference next to a file list
   assert_codes([
     (
@@ -746,49 +773,47 @@ test "pylock: [packages.vcs] needs a type, a location and a commit" {
     ),
   ])
   let entry_cases : Array[(String, String)] = [
-    ("name = \"spam\"\nversion = \"1.0\"\nvcs = \"git\"\n", "VCS_NOT_TABLE"),
+    ("name = \"spam\"\nvcs = \"git\"\n", "VCS_NOT_TABLE"),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.vcs]\nurl = \"https://example.invalid/spam.git\"\ncommit-id = \"x\"\n",
+      "name = \"spam\"\n[packages.vcs]\nurl = \"https://example.invalid/spam.git\"\ncommit-id = \"x\"\n",
       "VCS_TYPE_REQUIRED",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.vcs]\ntype = \"\"\nurl = \"https://example.invalid/spam.git\"\ncommit-id = \"x\"\n",
+      "name = \"spam\"\n[packages.vcs]\ntype = \"\"\nurl = \"https://example.invalid/spam.git\"\ncommit-id = \"x\"\n",
       "VCS_TYPE_REQUIRED",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.vcs]\ntype = 1\ncommit-id = \"x\"\n",
+      "name = \"spam\"\n[packages.vcs]\ntype = 1\ncommit-id = \"x\"\n", "VCS_TYPE_INVALID",
+    ),
+    (
+      "name = \"spam\"\n[packages.vcs]\ntype = \"github\"\nurl = \"https://example.invalid/spam.git\"\ncommit-id = \"x\"\n",
       "VCS_TYPE_INVALID",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.vcs]\ntype = \"github\"\nurl = \"https://example.invalid/spam.git\"\ncommit-id = \"x\"\n",
-      "VCS_TYPE_INVALID",
+      "name = \"spam\"\n[packages.vcs]\ntype = \"git\"\ncommit-id = \"x\"\n", "VCS_URL_REQUIRED",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.vcs]\ntype = \"git\"\ncommit-id = \"x\"\n",
-      "VCS_URL_REQUIRED",
-    ),
-    (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.vcs]\ntype = \"git\"\nurl = 1\ncommit-id = \"x\"\n",
+      "name = \"spam\"\n[packages.vcs]\ntype = \"git\"\nurl = 1\ncommit-id = \"x\"\n",
       "VCS_URL_TYPE",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.vcs]\ntype = \"git\"\npath = 1\ncommit-id = \"x\"\n",
+      "name = \"spam\"\n[packages.vcs]\ntype = \"git\"\npath = 1\ncommit-id = \"x\"\n",
       "VCS_PATH_TYPE",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.invalid/spam.git\"\n",
+      "name = \"spam\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.invalid/spam.git\"\n",
       "VCS_COMMIT_ID_REQUIRED",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.invalid/spam.git\"\ncommit-id = 1\n",
+      "name = \"spam\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.invalid/spam.git\"\ncommit-id = 1\n",
       "VCS_COMMIT_ID_TYPE",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.invalid/spam.git\"\ncommit-id = \"x\"\nrequested-revision = 1\n",
+      "name = \"spam\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.invalid/spam.git\"\ncommit-id = \"x\"\nrequested-revision = 1\n",
       "VCS_REQUESTED_REVISION_TYPE",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.invalid/spam.git\"\ncommit-id = \"x\"\nsubdirectory = 1\n",
+      "name = \"spam\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.invalid/spam.git\"\ncommit-id = \"x\"\nsubdirectory = 1\n",
       "VCS_SUBDIRECTORY_TYPE",
     ),
   ]
@@ -810,22 +835,17 @@ test "pylock: [packages.directory] needs a path and defaults editable to false" 
   assert_true(editable.directory.unwrap().editable)
   assert_true(editable.directory.unwrap().subdirectory is None)
   assert_entry_codes([
+    ("name = \"spam\"\ndirectory = \"../spam\"\n", "DIRECTORY_NOT_TABLE"),
     (
-      "name = \"spam\"\nversion = \"1.0\"\ndirectory = \"../spam\"\n", "DIRECTORY_NOT_TABLE",
+      "name = \"spam\"\n[packages.directory]\neditable = true\n", "DIRECTORY_PATH_REQUIRED",
     ),
+    ("name = \"spam\"\n[packages.directory]\npath = 1\n", "DIRECTORY_PATH_TYPE"),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.directory]\neditable = true\n",
-      "DIRECTORY_PATH_REQUIRED",
-    ),
-    (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.directory]\npath = 1\n", "DIRECTORY_PATH_TYPE",
-    ),
-    (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.directory]\npath = \"../spam\"\neditable = \"yes\"\n",
+      "name = \"spam\"\n[packages.directory]\npath = \"../spam\"\neditable = \"yes\"\n",
       "DIRECTORY_EDITABLE_TYPE",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.directory]\npath = \"../spam\"\nsubdirectory = 1\n",
+      "name = \"spam\"\n[packages.directory]\npath = \"../spam\"\nsubdirectory = 1\n",
       "DIRECTORY_SUBDIRECTORY_TYPE",
     ),
   ])
@@ -849,15 +869,15 @@ test "pylock: [packages.archive] is a file record that has to say where it is" {
       "name = \"spam\"\nversion = \"1.0\"\narchive = \"spam-1.0.tar.gz\"\n", "ARCHIVE_NOT_TABLE",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.archive]\nname = \"spam-1.0.tar.gz\"\n",
+      "name = \"spam\"\nversion = \"1.0\"\n[packages.archive]\nname = \"spam-1.0.tar.gz\"\nhashes = { sha256 = \"abc\" }\n",
       "ARCHIVE_URL_REQUIRED",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.archive]\nurl = \"https://example.invalid/spam-1.0.tar.gz\"\nsize = -1\n",
+      "name = \"spam\"\nversion = \"1.0\"\n[packages.archive]\nurl = \"https://example.invalid/spam-1.0.tar.gz\"\nsize = -1\nhashes = { sha256 = \"abc\" }\n",
       "FILE_SIZE_NEGATIVE",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[packages.archive]\nurl = \"https://example.invalid/spam-1.0.tar.gz\"\nupload-time = \"2025-01-25T11:30:10Z\"\n",
+      "name = \"spam\"\nversion = \"1.0\"\n[packages.archive]\nurl = \"https://example.invalid/spam-1.0.tar.gz\"\nupload-time = \"2025-01-25T11:30:10Z\"\nhashes = { sha256 = \"abc\" }\n",
       "FILE_UPLOAD_TIME_TYPE",
     ),
   ])
@@ -911,14 +931,14 @@ test "pylock: files entries carry name, url, path, hashes, size and upload-time"
   // The last component of `url` or `path` names the file when `name` is absent,
   // which the specification allows, with any query or fragment removed.
   let from_url = lock_entry(
-    "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nurl = \"https://example.invalid/dists/spam-1.0.tar.gz#sha256=abc\"\n",
+    "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nurl = \"https://example.invalid/dists/spam-1.0.tar.gz#sha256=abc\"\nhashes = { sha256 = \"abc\" }\n",
   )
   assert_eq(from_url.files[0].filename(), Some("spam-1.0.tar.gz"))
   let from_path = lock_entry(
-    "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\npath = \"dist/spam-1.0.tar.gz\"\n",
+    "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\npath = \"dist/spam-1.0.tar.gz\"\nhashes = { sha256 = \"abc\" }\n",
   )
   assert_eq(from_path.files[0].filename(), Some("spam-1.0.tar.gz"))
-  assert_true(from_path.files[0].hashes.is_empty())
+  assert_eq(from_path.files[0].hashes, [("sha256", "abc")])
   assert_entry_codes([
     (
       "name = \"spam\"\nversion = \"1.0\"\nfiles = \"spam-1.0.tar.gz\"\n", "FILES_NOT_ARRAY",
@@ -929,14 +949,15 @@ test "pylock: files entries carry name, url, path, hashes, size and upload-time"
       "FILE_NAME_REQUIRED",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = 1\n", "FILE_NAME_TYPE",
+      "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = 1\nhashes = { sha256 = \"abc\" }\n",
+      "FILE_NAME_TYPE",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nurl = 1\n",
+      "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nurl = 1\nhashes = { sha256 = \"abc\" }\n",
       "FILE_URL_TYPE",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\npath = 1\n",
+      "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\npath = 1\nhashes = { sha256 = \"abc\" }\n",
       "FILE_PATH_TYPE",
     ),
     (
@@ -948,19 +969,19 @@ test "pylock: files entries carry name, url, path, hashes, size and upload-time"
       "FILE_HASH_TYPE",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nsize = \"63152\"\n",
+      "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nsize = \"63152\"\nhashes = { sha256 = \"abc\" }\n",
       "FILE_SIZE_TYPE",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nsize = -1\n",
+      "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nsize = -1\nhashes = { sha256 = \"abc\" }\n",
       "FILE_SIZE_NEGATIVE",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nupload-time = \"2025-01-25T11:30:10Z\"\n",
+      "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nupload-time = \"2025-01-25T11:30:10Z\"\nhashes = { sha256 = \"abc\" }\n",
       "FILE_UPLOAD_TIME_TYPE",
     ),
     (
-      "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nsubdirectory = 1\n",
+      "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nsubdirectory = 1\nhashes = { sha256 = \"abc\" }\n",
       "FILE_SUBDIRECTORY_TYPE",
     ),
   ])
@@ -986,12 +1007,20 @@ test "pylock: a hashes table must hold at least one entry when it is present" {
       "FILE_HASHES_EMPTY",
     ),
   ])
-  // Documented divergence: the specification requires `hashes` on all of them,
-  // and a record without it is accepted here.
-  let entry = lock_entry(
-    "name = \"spam\"\nversion = \"1.0\"\n[packages.sdist]\nname = \"spam-1.0.tar.gz\"\n",
+  // The specification requires `hashes` on all three of them -- `Required? : yes`,
+  // "The table MUST contain at least one entry" -- and this reader enforces both
+  // halves now: a record with no table, and a table with no entry, are different
+  // rejections. A record that carries one is read as before.
+  assert_lock_error(
+    lock_document(
+      "\n[[packages]]\nname = \"spam\"\nversion = \"1.0\"\n[packages.sdist]\nname = \"spam-1.0.tar.gz\"\n",
+    ),
+    "FILE_HASHES_REQUIRED",
   )
-  assert_eq(entry.sdist.unwrap().hashes, [])
+  let entry = lock_entry(
+    "name = \"spam\"\nversion = \"1.0\"\n[packages.sdist]\nname = \"spam-1.0.tar.gz\"\nhashes = { sha256 = \"abc\" }\n",
+  )
+  assert_eq(entry.sdist.unwrap().hashes, [("sha256", "abc")])
 }
 
 ///|
@@ -1004,6 +1033,7 @@ test "pylock: wheels is an array of tables and sdist is one table" {
     #|hashes = { sha256 = "83807d445817326b4bcdaaaf8e8e9f1753da04341eceec705c001ff342002e5d" }
     #|[[packages.wheels]]
     #|name = "numpy-2.2.3-cp312-cp312-manylinux_2_17_x86_64.whl"
+    #|hashes = { sha256 = "abc" }
     #|[packages.sdist]
     #|name = "numpy-2.2.3.tar.gz"
     #|hashes = { sha256 = "abc123" }
@@ -1034,7 +1064,7 @@ test "pylock: wheels is an array of tables and sdist is one table" {
 test "pylock: the example from PEP 751 parses" {
   let lock = lock_of(pep751_example())
   assert_eq(lock.lock_version(), "1.0")
-  assert_eq(lock.created_by(), Some("mousebender"))
+  assert_eq(lock.created_by(), "mousebender")
   assert_eq(lock.environments(), [
     "sys_platform == 'win32'", "sys_platform == 'linux'",
   ])
@@ -1078,6 +1108,7 @@ test "pylock: the accessors look a name up under PEP 503 normalization" {
     #|dependencies = [{ name = "setuptools" }]
     #|[[packages.wheels]]
     #|name = "zope_interface-5.0-cp312-cp312-linux_x86_64.whl"
+    #|hashes = { sha256 = "abc" }
   let text = lock_document(
     "\n[[packages]]\n" +
     fields +
@@ -1098,7 +1129,7 @@ test "pylock: the accessors look a name up under PEP 503 normalization" {
   assert_eq(lock.dependencies_of("nothing"), [])
   // `name` wins over the last component of `url` when both are present.
   let named = lock_entry(
-    "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nurl = \"https://example.invalid/other/file.tar.gz\"\n",
+    "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nurl = \"https://example.invalid/other/file.tar.gz\"\nhashes = { sha256 = \"abc\" }\n",
   )
   assert_eq(named.files[0].filename(), Some("spam-1.0.tar.gz"))
 }
@@ -1211,6 +1242,7 @@ test "pylock: unknown keys are ignored, as a forward-compatible reader must" {
     #|name = "spam-1.0-py3-none-any.whl"
     #|future-key = 1
     #|
+    #|hashes = { sha256 = "abc" }
     #|[tool.moonpyversion]
     #|inputs = ["pyproject.toml"]
   let lock = lock_of(text)
@@ -1224,40 +1256,76 @@ test "pylock: unknown keys are ignored, as a forward-compatible reader must" {
 }
 
 ///|
-test "pylock: the documented divergences are what the module doc says" {
-  // 1. A redundant `version` next to a source tree is accepted here, although the
-  //    specification says it MUST NOT be included.
-  let redundant = lock_entry(
-    "name = \"spam\"\nversion = \"1.0\"\n[packages.directory]\npath = \"../spam\"\n",
+test "pylock: the settled rules, and the one divergence that remains" {
+  // 1. A `version` next to a source tree is rejected: "The version MUST NOT be
+  //    included when it cannot be guaranteed to be consistent with the code used
+  //    (i.e. when a source tree is used)". This used to be a declared divergence.
+  assert_entry_codes([
+    (
+      "name = \"spam\"\nversion = \"1.0\"\n[packages.directory]\npath = \"../spam\"\n",
+      "PACKAGE_VERSION_NOT_ALLOWED",
+    ),
+  ])
+  // 2. `upload-time` is *recorded* verbatim -- `Z` is not rewritten to `+00:00` or
+  //    the other way round -- but it now has to be UTC, which is the
+  //    specification's own MUST. Both UTC spellings are accepted, a local datetime
+  //    and a non-zero offset are not.
+  let zulu = lock_entry(
+    "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nupload-time = 2025-01-25T11:30:10Z\nhashes = { sha256 = \"abc\" }\n",
   )
-  assert_eq(redundant.version.unwrap().to_string(), "1.0")
-  assert_true(redundant.is_source_tree())
-  // 2. `upload-time` is recorded verbatim: a non-UTC offset is not normalized and
-  //    not rejected, and neither is a missing UTC designator.
+  assert_eq(zulu.files[0].upload_time, Some("2025-01-25T11:30:10Z"))
   let offset = lock_entry(
-    "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nupload-time = 2025-01-25T11:30:10-07:00\n",
+    "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nupload-time = 2025-01-25T11:30:10.164985+00:00\nhashes = { sha256 = \"abc\" }\n",
   )
-  assert_eq(offset.files[0].upload_time, Some("2025-01-25T11:30:10-07:00"))
-  // 3. Hash algorithm names are compared verbatim, so the specification's
-  //    lowercase guidance is not enforced.
+  assert_eq(
+    offset.files[0].upload_time,
+    Some("2025-01-25T11:30:10.164985+00:00"),
+  )
+  assert_codes([
+    (
+      lock_document(
+        "\n[[packages]]\nname = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nupload-time = 2025-01-25T11:30:10-07:00\nhashes = { sha256 = \"abc\" }\n",
+      ),
+      "FILE_UPLOAD_TIME_NOT_UTC",
+    ),
+    (
+      lock_document(
+        "\n[[packages]]\nname = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nupload-time = 2025-01-25T11:30:10\nhashes = { sha256 = \"abc\" }\n",
+      ),
+      "FILE_UPLOAD_TIME_NOT_UTC",
+    ),
+  ])
+  // 3. Hash algorithm names are compared verbatim. The specification says the keys
+  //    SHOULD be lowercase, which is guidance for a writer rather than a rule a
+  //    reader can enforce, so no normalization happens -- and this is not a
+  //    divergence, it is the specification's own "SHOULD".
   let mixed_case = lock_entry(
     "name = \"spam\"\nversion = \"1.0\"\n[[packages.files]]\nname = \"spam-1.0.tar.gz\"\nhashes = { SHA256 = \"abc123\" }\n",
   )
   assert_eq(mixed_case.files[0].hash_for("SHA256"), Some("abc123"))
   assert_eq(mixed_case.files[0].hash_for("sha256"), None)
-  // 4. A name is not required to be normalized, and an empty marker counts as an
-  //    absent one.
+  // 4. A name is not required to be normalized -- PEP 685 normalization is a
+  //    writer's job -- and an empty marker counts as an absent one.
   let unnormalized = lock_entry(
     "name = \"Zope_Interface\"\nversion = \"5.0\"\nmarker = \"\"\n",
   )
   assert_eq(unnormalized.name, "Zope_Interface")
   assert_true(unnormalized.marker is None)
   assert_true(unnormalized.is_applicable(marker_environment_of([])))
-  // 5. `created-by` may be absent, and so may `hashes`.
-  assert_eq(
-    lock_of(lock_without_created_by("packages = []\n")).created_by(),
-    None,
-  )
+  // 5. The one divergence that remains: a `lock-version` whose minor version this
+  //    reader does not implement is rejected, where the specification asks for a
+  //    warning. There is no warning channel, and accepting a file whose meaning the
+  //    reader cannot vouch for would be worse than rejecting it. Everything else
+  //    that used to be listed here is enforced now, and the corpus pins each of
+  //    those rules with ordinary records.
+  assert_codes([
+    (
+      "lock-version = \"1.1\"\ncreated-by = \"x\"\npackages = []\n", "LOCK_VERSION_INVALID",
+    ),
+    (
+      "lock-version = \"2.0\"\ncreated-by = \"x\"\npackages = []\n", "LOCK_VERSION_INVALID",
+    ),
+  ])
 }
 
 ///|
@@ -1273,12 +1341,14 @@ test "pylock: two entries for one name are both kept" {
     #|[[packages.wheels]]
     #|name = "attrs-24.2.0-py3-none-any.whl"
     #|
+    #|hashes = { sha256 = "abc" }
     #|[[packages]]
     #|name = "attrs"
     #|version = "25.1.0"
     #|marker = "python_version >= '3.9'"
     #|[[packages.wheels]]
     #|name = "attrs-25.1.0-py3-none-any.whl"
+    #|hashes = { sha256 = "abc" }
   let lock = lock_of(text)
   assert_eq(lock.packages().length(), 2)
   assert_eq(lock.packages_named("attrs").length(), 2)

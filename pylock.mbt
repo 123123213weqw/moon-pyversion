@@ -62,10 +62,10 @@
 /// | 4 `extras` | `EXTRAS_NOT_ARRAY`, `EXTRAS_ENTRY_TYPE`, `EXTRA_INVALID` |
 /// | 5 `dependency-groups` | `DEPENDENCY_GROUPS_NOT_ARRAY`, `DEPENDENCY_GROUPS_ENTRY_TYPE`, `DEPENDENCY_GROUP_INVALID` |
 /// | 6 `default-groups` | `DEFAULT_GROUPS_NOT_ARRAY`, `DEFAULT_GROUPS_ENTRY_TYPE`, `DEFAULT_GROUP_INVALID` |
-/// | 7 `created-by` | `CREATED_BY_TYPE`; absence is accepted, see below |
+/// | 7 `created-by` | `CREATED_BY_REQUIRED`, `CREATED_BY_TYPE` |
 /// | 8 `packages` | `PACKAGES_REQUIRED`, `PACKAGES_NOT_ARRAY`, `PACKAGE_NOT_TABLE` |
 /// | 9 `packages.name` | `PACKAGE_NAME_REQUIRED`, `PACKAGE_NAME_TYPE`, `PACKAGE_NAME_INVALID` |
-/// | 10 `packages.version` | `PACKAGE_VERSION_REQUIRED`, `PACKAGE_VERSION_TYPE`, `PACKAGE_VERSION_INVALID` |
+/// | 10 `packages.version` | `PACKAGE_VERSION_NOT_ALLOWED`, `PACKAGE_VERSION_TYPE`, `PACKAGE_VERSION_INVALID` |
 /// | 11 `packages.marker` | `PACKAGE_MARKER_TYPE`, `PACKAGE_MARKER_INVALID` |
 /// | 12 `packages.requires-python` | `PACKAGE_REQUIRES_PYTHON_TYPE`, `PACKAGE_REQUIRES_PYTHON_INVALID` |
 /// | 13 `[[packages.dependencies]]` | `DEPENDENCIES_NOT_ARRAY`, `DEPENDENCY_NOT_TABLE`, `DEPENDENCY_NAME_REQUIRED`, `DEPENDENCY_NAME_TYPE`, `DEPENDENCY_NAME_INVALID`, `DEPENDENCY_VERSION_TYPE`, `DEPENDENCY_VERSION_INVALID`, `DEPENDENCY_MARKER_TYPE`, `DEPENDENCY_MARKER_INVALID`, `DEPENDENCY_EXTRAS_NOT_ARRAY`, `DEPENDENCY_EXTRAS_ENTRY_TYPE`, `DEPENDENCY_EXTRA_INVALID` |
@@ -75,7 +75,7 @@
 /// | 17 `[packages.directory]` | `DIRECTORY_NOT_TABLE`, `DIRECTORY_PATH_REQUIRED`, `DIRECTORY_PATH_TYPE`, `DIRECTORY_EDITABLE_TYPE`, `DIRECTORY_SUBDIRECTORY_TYPE` |
 /// | 18 `[packages.archive]` | `ARCHIVE_NOT_TABLE`, `ARCHIVE_URL_REQUIRED`, and the file record codes of rule 20 |
 /// | 19 `packages.index`, `packages.path` | `INDEX_TYPE`, `PATH_TYPE` |
-/// | 20 `[[packages.files]]`, `[[packages.wheels]]`, `[packages.sdist]` | `FILES_NOT_ARRAY`, `WHEELS_NOT_ARRAY`, `SDIST_NOT_TABLE`, `FILE_NOT_TABLE`, `FILE_NAME_REQUIRED`, `FILE_NAME_TYPE`, `FILE_URL_TYPE`, `FILE_PATH_TYPE`, `FILE_HASHES_NOT_TABLE`, `FILE_HASHES_EMPTY`, `FILE_HASH_TYPE`, `FILE_SIZE_TYPE`, `FILE_SIZE_NEGATIVE`, `FILE_UPLOAD_TIME_TYPE`, `FILE_SUBDIRECTORY_TYPE` |
+/// | 20 `[[packages.files]]`, `[[packages.wheels]]`, `[packages.sdist]` | `FILES_NOT_ARRAY`, `WHEELS_NOT_ARRAY`, `SDIST_NOT_TABLE`, `FILE_NOT_TABLE`, `FILE_NAME_REQUIRED`, `FILE_NAME_TYPE`, `FILE_URL_TYPE`, `FILE_PATH_TYPE`, `FILE_HASHES_REQUIRED`, `FILE_HASHES_NOT_TABLE`, `FILE_HASHES_EMPTY`, `FILE_HASH_TYPE`, `FILE_SIZE_TYPE`, `FILE_SIZE_NEGATIVE`, `FILE_UPLOAD_TIME_TYPE`, `FILE_UPLOAD_TIME_NOT_UTC`, `FILE_SUBDIRECTORY_TYPE` |
 ///
 /// What a source is has one rule (rule 15): the mutually exclusive members are
 /// `vcs`, `directory`, `archive` and `path` -- a package is a source tree or a
@@ -87,34 +87,50 @@
 /// combines with anything.
 ///
 /// Where this file deliberately differs from the accepted specification, each
-/// difference is also marked at the code that implements it:
+/// difference is also marked at the code that implements it. There is **one** left:
 ///
-/// - `created-by` is required by the specification; this reader accepts its
-///   absence and reports `Pylock::created_by` as `None`, so that a hand-written
-///   or partially written lock file is still readable. Every other member is
-///   validated as strictly as the specification demands.
-/// - `packages.version` is optional in the specification and MUST NOT be present
-///   when a source tree is recorded. This reader requires it unless a direct
-///   reference (`vcs`, `directory`, `archive`, `path`) is recorded, and accepts a
-///   redundant `version` next to one: a version key is what a resolved set is
-///   checked against, and the specification's MUST NOT is a locker-side rule.
+/// - `lock-version` is rejected unless it is exactly `"1.0"`. The specification
+///   says a reader that supports the major version but not the minor one SHOULD
+///   warn about it, and that a reader that does not support the major version MUST
+///   raise an error. This reader has no warning channel, so it rejects both, which
+///   is stricter than the SHOULD and exactly the MUST. Accepting a file whose
+///   meaning the reader cannot vouch for would be worse than refusing it.
+///
+/// Six differences that this file used to declare have since been settled
+/// *towards* the specification, and are now ordinary rules that the differential
+/// corpus pins in both directions (see `pylock_cases/divergences.txt`, which lists
+/// what is left and what was settled):
+///
+/// - `created-by` is required (`Required? : yes`), and an empty value is rejected
+///   because an empty string cannot name the tool that wrote the file.
+/// - `hashes` is required on `archive`, `sdist` and `wheels` (`Required? : yes`),
+///   and a `hashes` table with no entry is rejected ("The table MUST contain at
+///   least one entry").
+/// - `upload-time` must be recorded in UTC ("The date and time MUST be recorded in
+///   UTC"). The spelling is still recorded verbatim -- `Z` is not rewritten -- but
+///   a local datetime and a non-zero offset are rejected.
+/// - `packages.version` may not be present next to a source tree ("The version MUST
+///   NOT be included when it cannot be guaranteed to be consistent with the code
+///   used (i.e. when a source tree is used)"). This means `vcs` and `directory`,
+///   not `archive` or a local `path`, which are files rather than trees.
+/// - `packages.version` is *not* required on an entry that names files: it is
+///   `Required? : no`, and only a SHOULD for an entry whose version is stable.
+///
+/// Three things that look like differences are not, because the specification
+/// leaves them open or states them as guidance for a writer:
+///
 /// - `packages.name` is written normalized by a locker; this reader accepts any
 ///   valid project name and compares names with `canonicalize_name`, so
 ///   `Zope.Interface` is readable and matches `zope-interface`.
-/// - `hashes` is required on `archive`, `sdist` and `wheels`; this reader accepts
-///   a file record without it (the digest is then simply unknown) but rejects a
-///   `hashes` table with no entry, which the specification forbids outright.
-/// - `upload-time` must be recorded in UTC and hash algorithm keys SHOULD be
-///   lowercase; the reader only checks that `upload-time` is a TOML datetime and
-///   records the spelling verbatim, and it compares algorithm names verbatim.
-/// - Unknown keys are ignored everywhere: `[tool]`, `[packages.tool]`,
-///   `[[packages.attestation-identities]]` and any key a later minor version
-///   adds. The specification asks a reader that supports the major version to
-///   warn about an unknown key; there is no warning channel here.
-/// - `lock-version` is rejected unless it is exactly `"1.0"`. The specification
-///   says a reader that supports the major version but not the minor one SHOULD
-///   warn; a silent acceptance would be worse than a rejection, so `"1.1"` is
-///   `LOCK_VERSION_INVALID`.
+/// - Hash algorithm names are compared verbatim. The specification says the keys
+///   SHOULD be lowercase, which a reader cannot enforce without inventing a rule.
+/// - An empty `marker` counts as an absent one, the rule `metadata.mbt` applies to
+///   an empty header value.
+///
+/// Unknown keys are ignored everywhere: `[tool]`, `[packages.tool]`,
+/// `[[packages.attestation-identities]]` and any key a later minor version
+/// adds. The specification asks a reader that supports the major version to warn
+/// about an unknown key; there is no warning channel here, so they are ignored.
 /// - Text that is not TOML at all is rejected by `Toml::parse` and surfaces as
 ///   `VersionError::InvalidToml`, not as `InvalidPylock`: the TOML reader owns
 ///   that diagnosis and it carries the offset this file cannot.
@@ -423,7 +439,7 @@ pub struct Pylock {
   extras : Array[String]
   dependency_groups : Array[String]
   default_groups : Array[String]
-  created_by : String?
+  created_by : String
   packages : Array[PylockPackage]
 } derive(Eq, @debug.Debug)
 
@@ -488,9 +504,9 @@ pub fn Pylock::default_groups(self : Pylock) -> Array[String] {
 }
 
 ///|
-/// `created-by`, or `None` when the member is absent. The specification requires
-/// the member; see the module doc for why its absence is accepted here.
-pub fn Pylock::created_by(self : Pylock) -> String? {
+/// `created-by`: the tool that wrote the lock file. The specification requires the
+/// member, so this reader does too and the value is a plain string.
+pub fn Pylock::created_by(self : Pylock) -> String {
   self.created_by
 }
 
@@ -734,7 +750,7 @@ fn parse_hashes(
   ordinal : Int,
 ) -> Array[(String, String)] raise VersionError {
   match table.get("hashes") {
-    None => []
+    None => raise pylock_error("FILE_HASHES_REQUIRED", ordinal)
     Some(TTable(hashes)) => {
       if hashes.entries.length() == 0 {
         raise pylock_error("FILE_HASHES_EMPTY", ordinal)
@@ -778,9 +794,59 @@ fn parse_size(table : Toml, ordinal : Int) -> Int64? raise VersionError {
 fn parse_upload_time(table : Toml, ordinal : Int) -> String? raise VersionError {
   match table.get("upload-time") {
     None => None
-    Some(TDatetime(text)) => Some(text)
+    Some(TDatetime(text)) => {
+      if !is_utc_datetime(text) {
+        raise pylock_error("FILE_UPLOAD_TIME_NOT_UTC", ordinal)
+      }
+      Some(text)
+    }
     Some(_) => raise pylock_error("FILE_UPLOAD_TIME_TYPE", ordinal)
   }
+}
+
+///|
+/// True when a TOML datetime spelling records UTC.
+///
+/// "The date and time MUST be recorded in UTC" is the specification's own MUST,
+/// and a TOML datetime either carries an offset or does not, so this is a question
+/// about the *text*: `Z` is UTC, `+00:00` and `-00:00` are UTC, a local datetime
+/// (no offset) is not, and neither is any other offset. The two `-00:00` cases are
+/// checked by value rather than by spelling, so `-00:00` is accepted and `-05:00`
+/// is not even though both are negative.
+fn is_utc_datetime(text : String) -> Bool {
+  let chars = text.to_array()
+  let n = chars.length()
+  if n == 0 {
+    return false
+  }
+  if chars[n - 1] == 'Z' || chars[n - 1] == 'z' {
+    return true
+  }
+  // A datetime short enough to have no offset cannot be UTC, and `+` / `-` cannot
+  // appear in a date or a time, so an offset is exactly the last six characters.
+  if n < 6 {
+    return false
+  }
+  let sign = chars[n - 6]
+  if sign != '+' && sign != '-' {
+    return false
+  }
+  let c0 = chars[n - 5]
+  let c1 = chars[n - 4]
+  let colon = chars[n - 3]
+  let c2 = chars[n - 2]
+  let c3 = chars[n - 1]
+  if colon != ':' {
+    return false
+  }
+  for c in [c0, c1, c2, c3] {
+    if c < '0' || c > '9' {
+      return false
+    }
+  }
+  let hour = (c0.to_int() - 48) * 10 + (c1.to_int() - 48)
+  let minute = (c2.to_int() - 48) * 10 + (c3.to_int() - 48)
+  hour == 0 && minute == 0
 }
 
 ///|
@@ -1021,21 +1087,17 @@ fn parse_package(
   }
   validate_name(name, "PACKAGE_NAME_INVALID", ordinal)
   check_sources(table, ordinal)
-  let direct_reference = has_member(table, "vcs") ||
-    has_member(table, "directory") ||
-    has_member(table, "archive") ||
-    has_member(table, "path")
+  let source_tree = has_member(table, "vcs") || has_member(table, "directory")
   let version = match table.get("version") {
     Some(TString(value)) if !value.is_empty() =>
-      Some(Version::parse(value)) catch {
-        _ => raise pylock_error("PACKAGE_VERSION_INVALID", ordinal)
-      }
-    Some(TString(_)) | None =>
-      if direct_reference {
-        None
+      if source_tree {
+        raise pylock_error("PACKAGE_VERSION_NOT_ALLOWED", ordinal)
       } else {
-        raise pylock_error("PACKAGE_VERSION_REQUIRED", ordinal)
+        Some(Version::parse(value)) catch {
+          _ => raise pylock_error("PACKAGE_VERSION_INVALID", ordinal)
+        }
       }
+    Some(TString(_)) | None => None
     Some(_) => raise pylock_error("PACKAGE_VERSION_TYPE", ordinal)
   }
   let marker = optional_text(table, "marker", "PACKAGE_MARKER_TYPE", ordinal)
@@ -1185,7 +1247,11 @@ pub fn Pylock::parse(text : String) -> Pylock raise VersionError {
   }
   // Rule 7. The specification requires created-by; see the module doc for why its
   // absence is accepted.
-  let created_by = optional_text(document, "created-by", "CREATED_BY_TYPE", 0)
+  let created_by = match document.get("created-by") {
+    Some(TString(value)) if !value.is_empty() => value
+    Some(TString(_)) | None => raise pylock_error("CREATED_BY_REQUIRED", 0)
+    Some(_) => raise pylock_error("CREATED_BY_TYPE", 0)
+  }
   // Rule 8.
   let packages = match document.get("packages") {
     None => raise pylock_error("PACKAGES_REQUIRED", 0)

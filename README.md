@@ -169,36 +169,48 @@ python -B tools/fetch_pypi_corpus.py
 
 ## 与 packaging 的一致性
 
-不是自我声明，而是实测的：`examples/diff` 生成 **122 507 条**确定性记录
+不是自我声明，而是实测的：`examples/diff` 生成 **122 516 条**确定性记录
 （手工边界、按文法生成、单字符变异、97 个 PyPI 包的真实元数据：3000 个版本、
 500 条约束、600 条需求行、471 条真实标记、900 个分发文件名、239 份真实
-`METADATA`、97 份真实 PEP 691 索引响应、95 份由这些响应派生的锁文件），逐条
+`METADATA`、97 份真实 PEP 691 索引响应、114 份手工锁文件、95 份由这些响应
+派生的锁文件、6 份 `uv` 写出的真实锁文件），逐条
 回放给 CPython `packaging 26.3`，**0 不一致**。TOML 记录另外对照参考实现
 `tomli`，核心元数据记录对照 `packaging.metadata`（裁决与重排往返之外，另按值
 逐条比对一遍），PEP 691 与 PEP 751 记录对照规范本身写成的投影，都是逐条比较
 "接受/拒绝"与"重序列化后重新解析的结果"。
 
-PEP 751 要单独说明：**没有任何现成的 `pylock.toml` 实现可对照**，那份语料的
-裁决与投影是本仓库按规范另写的一份读法，因此它抓不出"两份读法同时读错同一段
-规范"，见 [experiment-results.md 6.9](docs/experiment-results.md)。
+PEP 751 要单独说明：**没有任何现成的 `pylock.toml` 读取实现可对照**，那份语料
+的裁决与投影是本仓库按规范另写的一份读法，因此它抓不出"两份读法同时读错同一
+段规范"，见 [experiment-results.md 6.9](docs/experiment-results.md)。语料里补了
+6 份**由 `uv` 写出的真实锁文件**（`uv export --format pylock.toml`，50 个包、
+真实索引 URL 与 sha256），这是 PEP 751 语料里唯一不由本仓库生成的输入；`uv`
+只写不读、不给裁决，所以补的是输入的独立性，不是第二份读法。库对该规范的分歧
+也从 7 条收敛到 1 条：6 条是库比规范松（`created-by` 可缺可空、文件记录可无
+`hashes`、`upload-time` 不校验 UTC、源树旁的冗余 `version`、文件列表条目强制
+要求 `version`），已逐条对着规范正文的 `Required?` 行收紧，每条都另配一条
+"除此之外完全合法"的样例钉住，见 6.10。
 
 同一份语料在 24.2 / 25.0 / 26.0 上分别有数千条差异，全部按原因分类为上游
 行为变更（自动预发布准入、`<`/`>` 的区间实现、`~=` 上界、26.3 的文件名
 验收与标记语法收紧），`tools/oracle_matrix.py` 输出这张矩阵。
 
-另外 `tools/mutation_probe.py` 会向库里注入 31 处**故意缺陷**并断言对照能报错，
-31/31 全部检出 —— 即"0 不一致"不是因为对照失效。
+另外 `tools/mutation_probe.py` 会向库里注入 36 处**故意缺陷**并断言对照能报错，
+36/36 全部检出 —— 即"0 不一致"不是因为对照失效。其中 5 处是为锁文件那几条被
+收紧的规则新加的：谁把放宽注回去，谁就必须被检出。探针默认拒绝在改过的工作树
+上运行（被中断的运行会把注入的缺陷留在源码里），`--allow-dirty` 只能显式打开。
 
 CI 在 wasm / wasm-gc / js / native 四后端执行 `fmt/check/build/test/run`，
 differential 作业固定 `packaging==26.3` 与 `tomli==2.4.1`（TOML fixture 的
 裁决来自后者），并断言读取器版本，避免对照工具随环境漂移。
 
 库里还有几处与参考实现**故意不同的地方**，都在
-`toml_cases/leniencies.txt`、`metadata_cases/divergences.txt` 与
-`index_cases/divergences.txt` 里逐条登记了方向，
-由 harness 断言"两边答案相反"：TOML 按 1.0 实现而参考实现带了 1.1 的放宽，
-元数据则拒绝 `Metadata-Version: 2.5`、执行 PEP 639 的 `License-Expression`
-互斥规则、并对 `Author-email` 做解析（解析失败只报告，不让文档失败）。
+`toml_cases/leniencies.txt`、`metadata_cases/divergences.txt`、
+`index_cases/divergences.txt` 与 `pylock_cases/divergences.txt` 里逐条登记了
+方向，由 harness 断言"两边答案相反"：TOML 按 1.0 实现而参考实现带了 1.1 的
+放宽，元数据则拒绝 `Metadata-Version: 2.5`、执行 PEP 639 的
+`License-Expression` 互斥规则、并对 `Author-email` 做解析（解析失败只报告，
+不让文档失败），锁文件只剩 1 条且方向相反——规范对"支持主版本但不支持次
+版本"只说 SHOULD warn，而本库没有警告通道，因此按同段的 MUST 那一侧拒绝。
 
 实验设计、数据和查出的真实缺陷见 [docs/experiment.md](docs/experiment.md) 与
 [docs/experiment-results.md](docs/experiment-results.md)。

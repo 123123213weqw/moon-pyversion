@@ -128,12 +128,13 @@ Unicode 感知的正则。PEP 427 要求 wheel 文件名是转义后的 ASCII，
 共 251 个测试块，在 wasm、wasm-gc、js、native 四目标全部通过。
 CI 在四个目标执行 `fmt/check/build/test/run`。
 
-另有独立差分实验：`examples/diff` 生成 122 507 条确定性记录（手工语料、
+另有独立差分实验：`examples/diff` 生成 122 516 条确定性记录（手工语料、
 按 PEP 440 文法生成、单字符变异、真实 PyPI 元数据四种来源，加上 TOML 文档、
 PEP 691 索引响应、核心元数据与 PEP 751 锁文件），逐条回放给 CPython
 `packaging 26.3`；TOML 另有参考实现 `tomli`，PEP 691 与 PEP 751 则对照按规范
 另写的第二份读法（后者没有现成实现可对照，见
-[experiment-results.md](experiment-results.md) 6.9）。设计与数据见
+[experiment-results.md](experiment-results.md) 6.9；语料里唯一不由本仓库生成
+的输入是 6 份 `uv` 写出的真实 `pylock.toml`，而 `uv` 只写不读、不给裁决）。设计与数据见
 [experiment.md](experiment.md)、[experiment-results.md](experiment-results.md)。
 
 版本固定为 26.3 不是随手选的：`tools/oracle_matrix.py` 实测 24.2 有 4474 条、

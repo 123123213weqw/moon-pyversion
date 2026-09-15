@@ -91,22 +91,24 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
   `===` 与 `.*` 通配，可控预发布策略；
 - `VersionError` 稳定错误码 + UTF-16 偏移。
 
-### 六个模块（M1–M5 已落地，M6 计划中）
+### 各模块（M1–M8 均已落地）
 
 | 模块 | 公开 API | 关掉哪个场景 | 实际行数 |
 | --- | --- | --- | ---: |
-| `version.mbt` `[已有]` | `Version::parse/normalize/to_string/compare`、`VersionError` | 场景 1、3 | 545 |
+| `version.mbt` `[已有]` | `Version::parse/normalize/to_string/compare`、`VersionError` | 场景 1、3 | 551 |
 | `specifier.mbt` `[已有]` | `SpecifierSet::parse/contains/filter`、`Specifier` | 场景 1、3 | 394 |
 | `utils.mbt` `[已有]` | `canonicalize_name`、`canonicalize_version`、`parse_wheel_filename`、`parse_sdist_filename` | 场景 2 | 368 |
 | `requirements.mbt` `[已有]` | `Requirement::parse`、`Requirement::to_string` | 场景 1 | 411 |
 | `markers.mbt` `[已有]` | `Marker::parse/to_string/evaluate/clauses/variables`、`MarkerEnvironment`、`validate_marker_text` | 场景 1、2 | 1032 |
 | `toml.mbt` `[已有]` | `Toml::parse/get/…/to_string`（TOML 1.0） | 场景 1、2 | 1580 |
 | `licenses.mbt` `[已有]` | `canonicalize_license_expression`、`is_valid_license_expression`、`canonicalize_license_file` | 场景 1 | 460 |
-| `metadata.mbt` `[已有]` | `Metadata::parse/requirements/requires_python/extras/is_compatible/diagnostics/to_string` | 场景 1（端到端） | 1336 |
+| `metadata.mbt` `[已有]` | `Metadata::parse/requirements/requires_python/extras/is_compatible/diagnostics/to_string` | 场景 1（端到端） | 1378 |
+| `index.mbt` `[已有]` | `SimpleIndex::parse/versions/files/wheels/sdists`、`LocalIndex::scan/files_for`、`resolve_candidates` / `select_best` / `explain_rejection`、`parse_json` | 场景 2 | 1256 |
+| `pylock.mbt` `[已有]` | `Pylock::parse/lock_version/created_by/packages_named/files_for/dependencies_of/is_applicable/applicable_packages/accepts_environment` | 场景 1、2 | 1280 |
 
-库源码合计 **8644 行**（不含测试与示例），测试 **6389 行**（`*_test.mbt`，
+库源码合计 **8710 行**（不含测试与示例），测试 **6459 行**（`*_test.mbt`，
 251 个测试块 × 四后端），示例 2550（`diff`）+ 372（`metadata-check`）+ 570
-（`resolve`）+ 180（`basic`/`bench`）行，工具链 3677 行 Python。
+（`resolve`）+ 180（`basic`/`bench`）行，工具链 5900 行 Python。
 
 **`utils.mbt` 设计要点** `[已完成，见下]`（已用 packaging 26.3 核实）：
 
@@ -173,7 +175,7 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
   两类记录，共 **11 104 条**，其中真实文件名的 `pypi/file` 记录 900 条；
 - 对照 `packaging 26.3` **0 不一致**；
 - `tools/mutation_probe.py` 对故意注入的缺陷全部检出（M1 阶段为 7 处，
-  现为 31 处），证明语料对这部分行为有覆盖。
+  现为 36 处），证明语料对这部分行为有覆盖。
 
 `utils_test.mbt` 在开发中抓到一处真实缺陷：标签排序用了 MoonBit 默认的
 `String` 比较（先比长度），与 `packaging` 的 `sorted()`（按码点）不一致 ——
@@ -278,18 +280,23 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 ### `[已完成]` 语料扩展与"有牙"验收
 
-- 语料从 87 916 条扩到 **122 507 条 / 122 508 行**：来源分布 curated 19 296、
-  curated_bad 12、generated 20 652、mutated 34 397、pypi 46 927、pypi_index 97；
-  四后端逐字节一致。
-- `tools/mutation_probe.py` 从 7 处扩到 **31 处**故意缺陷（覆盖 M0–M8），
-  31/31 全部被语料检出；探针失败即实验失败。
+- 语料从 87 916 条扩到 **122 516 条 / 122 517 行**：来源分布 curated 19 494、
+  curated_bad 98、generated 20 652、mutated 34 397、pypi 47 677、pypi_index 97、
+  pypi_lock 95、uv_lock 6；四后端逐字节一致。
+- `tools/mutation_probe.py` 从 7 处扩到 **36 处**故意缺陷（覆盖 M0–M8），
+  36/36 全部被语料检出；探针失败即实验失败。
+- M8 之后的收尾：PEP 751 的 **7 条声明分歧收敛到 1 条**（6 条是库比规范松，
+  逐条对着规范正文的 `Required?` 行收紧，并各补一条"除此之外完全合法"的普通
+  样例钉住；保留的 1 条是库有意比规范严），语料补入 **6 份 `uv` 写出的真实
+  `pylock.toml`**（不由本仓库生成的输入），变异探针同步从 31 处扩到 36 处，
+  每条收紧各配一处。
 - 多 oracle 矩阵（24.2 / 25.0 / 26.0 / 26.3）按原因分类上游行为变更，
   固定版本 26.3 仍为 **0 差异**。
 
 ## 技术路线
 
 `[已有]` 版本解析用按 UTF-16 偏移移动的 ASCII 游标，不引入正则；整数组件经
-`BigInt`；比较按键序。四后端 CI。122 507 条语料差分对照 `packaging 26.3`，另有 31 处故意缺陷的变异探针证明对照有效。
+`BigInt`；比较按键序。四后端 CI。122 516 条语料差分对照 `packaging 26.3`，另有 36 处故意缺陷的变异探针证明对照有效。
 
 `[计划]` 新增模块沿用同一套技术路线与**同一套验收方法**，不新造轮子：
 
@@ -317,10 +324,10 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 ## 交付成果
 
-`[已有]` 源码 **8644 行**（不含测试）、测试 **6389 行**（251 个测试块 × 四后端
+`[已有]` 源码 **8710 行**（不含测试）、测试 **6459 行**（251 个测试块 × 四后端
 全通过）、`examples/basic` `examples/diff`（2550 行确定性发射器）
-`examples/bench`、`tools/` 九个脚本（5577 行 Python）、`fixtures/` 真实语料
-（97 个 PyPI 包 + 83 个 TOML 文档 + 285 份核心元数据 + 105 份锁文件）、四后端
+`examples/bench`、`tools/` 九个脚本（5900 行 Python）、`fixtures/` 真实语料
+（97 个 PyPI 包 + 83 个 TOML 文档 + 285 份核心元数据 + 114 份手工锁文件 + 6 份真实 `uv` 锁文件）、四后端
 CI + 独立 differential 作业。
 
 `[计划]` 还差：
@@ -332,15 +339,17 @@ CI + 独立 differential 作业。
 - `[已完成]` `examples/resolve`（570 行）：一份 PEP 691 索引响应 + 目标标签表 +
   一个 wheelhouse 目录，输出 yank 策略、每个被拒文件的首条失败规则、候选排序与
   最终选择——场景 2 的可运行证据，四后端输出一致，CI 已纳入（含逐后端比对）；
-- `[已完成]` `pylock.mbt`（1214 行 / 32 个测试块，`docs/plan.md` 的 M8）：
+- `[已完成]` `pylock.mbt`（1280 行 / 32 个测试块，`docs/plan.md` 的 M8）：
   `pylock.toml`（PEP 751）的读取与校验——`lock-version` / `environments` /
   `requires-python` / `extras` / `dependency-groups` / `default-groups` /
   `created-by` / `[[packages]]` 全部成员的必填性、类型与取值校验，每包
   `marker` 与 `requires-python` 的应用判断，以及 20 余条稳定的
   `InvalidPylock(code, ordinal)` 错误码。PEP 751 自己打印的示例文档逐字节可读。
-  差分语料同一轮补齐：**200 条 `pylock` 记录**（24 条手工接受 + 42 条手工拒绝 +
-  32 条单字符变异 + 7 条声明分歧 + 95 份由真实索引响应派生的锁文件），由
-  `tools/fetch_pylock_corpus.py` 里按规范另写的第二份读法给出裁决与投影。
+  差分语料同一轮补齐：**215 条 `pylock` 记录**（27 条手工接受 + 51 条手工拒绝 +
+  35 条单字符变异 + 1 条声明分歧 + 95 份由真实索引响应派生的锁文件 + 6 份 `uv`
+  写出的真实锁文件），由 `tools/fetch_pylock_corpus.py` 里按规范另写的第二份读法
+  给出裁决与投影；分歧的收敛过程与那 6 份第三方文档写在
+  `docs/experiment-results.md` 6.10 里。
   PEP 751 **没有**现成的 Python 实现可对照，这一点写在
   `docs/experiment-results.md` 6.9 里，不当作与 `packaging` 同级的证据；
 - `[已完成]` `meta_values` 记录（915 条）：核心元数据的**逐值**比对。原先的
