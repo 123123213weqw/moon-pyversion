@@ -54,6 +54,18 @@ MUTATIONS = [
         "covers": "wheel tags are ordered by code point, not by length",
     },
     {
+        "name": "wheel-tag-case-not-normalized",
+        "file": "utils.mbt",
+        # `packaging`'s `Tag` lowercases the interpreter, ABI and platform, so
+        # `CP312-CP312-Manylinux_2_17_X86_64` and the lowercase spelling are the
+        # same tag. Keeping the caller's case is what this library did until the
+        # tag corpus spelled one of them in upper case; the curated wheel list
+        # carries five such filenames now.
+        "old": "      parts.push(text.to_lower())",
+        "new": "      parts.push(text)",
+        "covers": "tag components are lowercased, the way the reference Tag is",
+    },
+    {
         "name": "version-key-keeps-trailing-zeros",
         "file": "utils.mbt",
         "old": "        Version::to_string({ ..v, release: trim_release(v.release), })",
@@ -498,6 +510,24 @@ def modified_sources(root: Path) -> list[str]:
     ]
 
 
+def leftover_injections(root: Path) -> list[str]:
+    """Mutations whose *injected* form is already in the source.
+
+    An interrupted run cannot restore the file it was editing: the process died
+    between the write and the `finally`. The signature is precise -- the injected
+    text is present and the anchor it replaced is gone -- so it can be named as a
+    leftover instead of showing up later as a missing anchor. That difference
+    matters: a missing anchor fails the run, but a leftover sitting next to a
+    *different* mutation's anchor would quietly inflate the counts.
+    """
+    found: list[str] = []
+    for mutation in MUTATIONS:
+        text = (root / mutation["file"]).read_text(encoding="utf-8")
+        if mutation["new"] in text and mutation["old"] not in text:
+            found.append(mutation["name"])
+    return found
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--target", default="js", choices=["js", "wasm", "wasm-gc", "native"])
@@ -539,6 +569,14 @@ def main(argv: list[str] | None = None) -> int:
     # a "detected" verdict could be reporting the leftovers rather than the
     # mutation under test. Restoring is the caller's job; saying so is this
     # function's.
+    leftovers = leftover_injections(root)
+    if leftovers and not args.allow_dirty:
+        print("refusing to run: the sources already contain an injected mutation")
+        for name in leftovers:
+            print(f"  {name}")
+        print("an interrupted run cannot restore what it rewrote; restore the file")
+        print("(for example `git checkout -- <file>`) and run this again")
+        return 2
     dirty = modified_sources(root)
     if dirty and not args.allow_dirty:
         print("refusing to run: the sources it would mutate are already modified")
@@ -558,6 +596,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         for name in dirty:
             print(f"  {name}")
+        if leftovers:
+            print("  already injected (count these with suspicion):")
+            for name in leftovers:
+                print(f"    {name}")
         print()
 
     undetected: list[str] = []

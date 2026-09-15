@@ -617,6 +617,10 @@ fn curated_filenames() -> Array[String] {
     "numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", "torch-2.4.0+cu121-cp311-cp311-linux_x86_64.whl",
     "Zope.Interface-5.4.0-cp311-cp311-linux_x86_64.whl", "foo-1.0-1abc-py3-none-any.whl",
     "foo-01.02-py3-none-any.whl",
+    // tag components are case-insensitive: `packaging`'s `Tag` lowercases all
+    // three, so a wheel may spell them either way and both readings agree
+     "Zope.Interface-5.4.0-CP311-CP311-Linux_x86_64.whl", "numpy-1.26.4-cp312-cp312-ManyLinux_2_17_X86_64.manylinux2014_x86_64.whl",
+    "Flask-3.0.3-Py3-None-Any.whl", "foo-1.0-PY2.PY3-NONE-ANY.whl", "foo-1.0-CP39.Cp310-ABI3-Manylinux1_X86_64.whl",
     // invalid wheels
      "foo-1.0-py3-none-any.zip", "foo-1.0-py3-none.whl", "foo-.whl", "a-b-c.whl",
     "foo-1.0-py3-none-any-extra-part.whl", "foo__bar-1.0-py3-none-any.whl", "foo-bar-1.0-py3-none-any.whl",

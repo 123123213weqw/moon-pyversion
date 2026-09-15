@@ -284,6 +284,13 @@ fn split_build_tag(text : String) -> (Int, String)? {
 /// `interpreter-abi-platform` strings. Rejects empty components and
 /// interpreters that are not identifiers, and requires exactly three
 /// dash separated components.
+///
+/// Every component is lowercased, because `packaging`'s `Tag` lowercases all
+/// three in its constructor: `CP312-CP312-Manylinux_2_17_X86_64` and
+/// `cp312-cp312-manylinux_2_17_x86_64` are the same tag, and the corpus
+/// projection is the lowercase spelling. A wheel filename is allowed to spell
+/// them either way, so this is not a leniency -- it is the normalization the
+/// reference implementation performs.
 fn parse_tag_set(tag : String) -> Array[String] raise VersionError {
   let components = tag.split("-")
   let groups : Array[Array[String]] = []
@@ -294,7 +301,7 @@ fn parse_tag_set(tag : String) -> Array[String] raise VersionError {
       if text.is_empty() {
         raise VersionError::InvalidFilename("TAG_EMPTY_COMPONENT", 0)
       }
-      parts.push(text)
+      parts.push(text.to_lower())
     }
     groups.push(parts)
   }

@@ -121,6 +121,31 @@ test "compressed tag sets expand to sorted tag triples" {
 }
 
 ///|
+test "tag components are lowercased the way the reference Tag is" {
+  // `packaging` lowercases the interpreter, ABI and platform in `Tag.__init__`,
+  // so a wheel may spell them in any case and both readings agree. This was a
+  // real hole: the curated corpus only ever spelled them lowercase, so the
+  // differential run could not see that this library kept the caller's case.
+  assert_eq(
+    parse_wheel_filename("Zope.Interface-5.4.0-CP311-CP311-Linux_x86_64.whl").tags,
+    ["cp311-cp311-linux_x86_64"],
+  )
+  // The interpreter check runs on the original spelling, so case never turns an
+  // invalid identifier into a valid one.
+  assert_eq(parse_wheel_filename("Flask-3.0.3-Py3-None-Any.whl").tags, [
+    "py3-none-any",
+  ])
+  assert_eq(parse_wheel_filename("foo-1.0-PY2.PY3-NONE-ANY.whl").tags, [
+    "py2-none-any", "py3-none-any",
+  ])
+  // Compression and case interact: the expanded set is deduplicated after
+  // lowercasing, so `py3.PY3` collapses to one tag.
+  assert_eq(parse_wheel_filename("foo-1.0-py3.PY3-none-any.whl").tags, [
+    "py3-none-any",
+  ])
+}
+
+///|
 test "invalid wheel filenames are rejected" {
   let bad : Array[String] = [
     // wrong or missing extension
