@@ -66,6 +66,49 @@ MUTATIONS = [
         "covers": "tag components are lowercased, the way the reference Tag is",
     },
     {
+        "name": "tag-threading-detection-ignored",
+        "file": "tags.mbt",
+        # A free-threaded ABI is spelled with a `t` (`cp313t`), and it swaps the
+        # stable ABI for `abi3t`. Never seeing the `t` puts `abi3` back, which is
+        # exactly what those wheels cannot use.
+        "old": "    if chars[j] == 't' {",
+        "new": "    if false {",
+        "covers": "a free-threaded ABI selects abi3t rather than abi3",
+    },
+    {
+        "name": "tag-platform-list-not-validated",
+        "file": "tags.mbt",
+        # `platforms or platform_tags()`: an empty list means "probe the host" in
+        # the reference and "no platforms" to a caller. Dropping the refusal makes
+        # the three declared divergences stop being divergences.
+        "old": """  if platforms.length() == 0 {
+    // `platforms or platform_tags()`: an empty list means "probe the host"
+    // there, and an empty tag list here. Refusing is the honest reading.
+    raise VersionError::InvalidTag("TAG_PLATFORMS_REQUIRED", 0)
+  }
+""",
+        "new": "",
+        "covers": "an empty platform list is refused instead of answered",
+    },
+    {
+        "name": "tag-case-not-lowered",
+        "file": "tags.mbt",
+        # `Tag` lowercases all three components, so `CP310-CP310-ANY` and the
+        # lowercase spelling are the same tag.
+        "old": "  \"\\{interpreter.to_lower()}-\\{abi.to_lower()}-\\{platform.to_lower()}\"",
+        "new": "  \"\\{interpreter}-\\{abi}-\\{platform}\"",
+        "covers": "generated tags are lowercased, the way the reference Tag is",
+    },
+    {
+        "name": "tag-stable-abi-tail-not-generated",
+        "file": "tags.mbt",
+        # Older `abi3` wheels stay usable, so the stable ABI is replayed for every
+        # earlier minor version down to cp32.
+        "old": "  if use_abi3 || use_abi3t {",
+        "new": "  if false {",
+        "covers": "the abi3 tail is generated down to cp32",
+    },
+    {
         "name": "version-key-keeps-trailing-zeros",
         "file": "utils.mbt",
         "old": "        Version::to_string({ ..v, release: trim_release(v.release), })",
