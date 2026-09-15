@@ -1,48 +1,35 @@
 # 申报前技术事实清单
 
-> 这不是申报书，只记录提交前应逐项核实的事实。
+> 本文件不是申报书。提交前由参赛者逐项核实，并确认最终申报文字符合本人实际工作与理解。
 
 ## 项目事实
 
-- 项目名：Moon PyVersion；
-- 本地目录：`D:\Codex\moon-pyversion`；
-- 仓库地址：`https://github.com/123123213weqw/moon-pyversion`；
-- MoonCakes 包名：`123123213weqw/moon_pyversion`；
-- 版本：`0.1.0`；
-- 许可证：Apache-2.0；
-- 依赖：仅 `moonbitlang/core`；
-- 语言：MoonBit，源码扩展名 `.mbt`。
+- 项目：Moon PyVersion — Python 打包元数据工具库；
+- 仓库：https://github.com/123123213weqw/moon-pyversion；
+- MoonCakes：`123123213weqw/moon_pyversion`；仓库版本 0.2.0；
+- 许可证：Apache-2.0；运行依赖仅 `moonbitlang/core`；
+- 生产代码口径：`python -B tools/source_metrics.py`，不把测试、示例或生成 fixture 算作核心源码。
 
-## 功能事实
+## 当前能力
 
-- 已实现 PEP 440 版本解析、规范化、比较；
-- 已实现 PEP 440 specifier 的解析、`contains`、`filter`；
-- 支持 `==`、`!=`、`<`、`<=`、`>`、`>=`、`~=`、`===`；
-- 支持 `==1.4.*`/`!=1.4.*` 通配后缀；
-- 支持 epoch、pre/post/dev、local、implicit post、`v` 前缀；
-- 错误类型为 `VersionError`，含稳定 code 与 UTF-16 偏移。
+- PEP 440、503、508、639、691、751，PEP 427/625，TOML 1.0 与 core metadata；
+- `resolve_candidates` 完成候选过滤与确定排序；
+- `audit_package` 统一检查需求、元数据、索引、锁文件和目标环境；
+- 明确不联网、不下载、不安装、不做完整依赖求解或安全性判断。
 
 ## 验证事实
 
-- 已运行 `moon fmt --check`；
-- 已运行 `moon check/build/test/run`（wasm、wasm-gc、js）；
-- native 本地是否通过取决于本机 C 工具链；CI 仍覆盖 native；
-- 测试块数量：219，四个后端全部通过（以实际运行结果为准）；
-- 独立差分实验：122 516 条记录对照 CPython packaging 26.3，0 不一致；
-  旧版本 oracle 的差异按原因分类记录，见 docs/experiment-results.md；
-- Git 提交数量及归属须核对 GitHub main；不得把数量直接称为官方认可的有效提交。
+- 259 个 MoonBit 测试块；CI 覆盖 wasm、wasm-gc、js、native；
+- `examples/metadata-check`、`examples/resolve`、`examples/audit` 为三个端到端场景；
+- audit 场景使用真实 PyPI Flask 0.12.5 `METADATA`，索引和锁为确定性验收输入；
+- 独立差分实验：122 516 条记录对照 CPython packaging 26.3，0 不一致；PEP 751 的
+  锁文件语料含 6 份 `uv` 写出的真实锁文件，声明分歧 1 条；变异探针 36 处全部检出；
+- 差分语料、oracle 版本、声明分歧与 mutation probe 以最新 CI 输出为准；
+- 0.2.0 发布后必须从注册表独立下载安装验证，不能用 GitHub CI 代替。
 
-## 范围事实
+## 提交前仍需本人确认
 
-- 不做 pip、联网下载安装；
-- 不做完整依赖求解器；
-- 不做包名、extras、环境标记、平台标签；
-- 不与 SemVer 互换，与 `mizchi/semver` 是相邻功能。
-
-## 申报提醒
-
-- 用本人语言改写申报书；
-- 核实账号、提交数、测试数、CI 状态；
-- 不要声称官方已认可或已发布；
-- 搜索未命中不代表绝对无同类。
-- 完整赛事与人工申报要求见 [提交核对表](submission-checklist.md)。
+- 申报书是否准确反映本人实际贡献与理解；
+- 最新提交 SHA、提交总数、作者归属和 CI 链接；
+- MoonCakes 0.2.0 是否已发布且未 yanked；
+- 赛事表格是否附上最新 Markdown，而非旧版本。

@@ -19,7 +19,8 @@ PEP 508 依赖行与环境标记、PEP 639 许可证表达式、TOML 1.0 与 cor
 
 ## 安装
 
-已发布到 MoonCakes：`123123213weqw/moon_pyversion` 0.1.0
+已发布到 MoonCakes：`123123213weqw/moon_pyversion` 0.1.0；当前仓库 0.2.0
+在完成复审升级后待发布。0.1.0 的安装命令为
 （`https://mooncakes.io/api/v0/modules/123123213weqw/moon_pyversion` 返回
 `"version":"0.1.0"`、`"yanked":false`）。消费项目可直接：
 
@@ -99,6 +100,21 @@ println(meta.name)                       // demo
 
 可运行示例位于 `examples/basic`。
 
+## 跨制品审计（0.2.0）
+
+`audit_package` 把一条 PEP 508 需求、真实 core metadata、PEP 691 索引响应、
+PEP 751 锁文件和调用方明确给出的 Python/平台环境合并为一个 `PackageAudit`。
+它统一检查名称、`Requires-Python`、环境标记、锁定版本、最终候选版本和 sha256，
+返回 `Ready`、`Blocked` 或 `NotRequired`，并给出稳定问题码；不联网、不下载、不执行文件。
+
+```sh
+moon run examples/audit --target js
+```
+
+该场景使用仓库中由真实 PyPI wheel 的 PEP 658 sidecar 保存的 Flask 0.12.5
+`METADATA`，配合可审查的索引和锁文件，完成从需求到可安装文件的一次端到端决策。
+输入来源、预期输出、验收边界见 [docs/audit-scenario.md](docs/audit-scenario.md)。
+
 ## 验证命令
 
 ```sh
@@ -114,7 +130,7 @@ done
 ### 差分实验（可复现，见 `docs/experiment.md`）
 
 ```sh
-# 1. 四个后端必须产出逐字节相同的语料
+# 1. 四后端语料在规范化平台换行后必须内容相同；报告同时保留原始摘要
 python -B tools/target_parity.py
 
 # 2. 语料逐条回放给 CPython packaging 26.3（独立 oracle）

@@ -28,7 +28,9 @@
 - The corpus grew from 122 507 to **122 516** records, 215 of them `pylock`, still
   0 mismatches against `packaging` 26.3, and the drift matrix is unchanged
   (24.2: 4474, 25.0: 2736, 26.0: 826, 26.3: 0).
-- Library source is 8710 lines, tests 6459 lines (251 blocks, all four backends).
+- Root production MoonBit is 9042 lines and tests 6675 lines (259 blocks, all
+  four backends) once the audit module below is included; this settlement added
+  66 lines of library and 70 lines of tests on its own.
 - `tools/mutation_probe.py` gained `--allow-dirty` for working on a deliberately
   modified tree, with an explicit warning that a leftover injection inflates the
   counts. The strict default is unchanged, and every mutation's own anchor is
@@ -58,10 +60,28 @@
   still left the document rejected — by the version rule. A case only pins a rule
   when it is otherwise valid, which is now one conflict case per pair of members.
 
+## 0.2.0 — cross-artifact package audit, 2026-09-15
+
+### Added
+
+- `audit_package`: a high-level join across PEP 508 requirements, core metadata,
+  PEP 691 index responses, PEP 751 locks and an explicit target environment.
+- Stable audit findings for identity, Python, environment, selected-version and
+  sha256 inconsistencies, plus deterministic `PackageAudit::render` output.
+- A runnable audit using real PyPI Flask metadata, five integration tests, and
+  four-backend output parity in CI.
+- `tools/source_metrics.py`, which reports production code separately from tests,
+  examples, generated fixtures and Python verification tools.
+
+### Changed
+
+- Broaden the module description from a PEP 440 helper to the implemented Python
+  packaging metadata toolkit; retain the no-network, no-install boundary.
+
 ## Unreleased — M8 (continued): PEP 751 differential corpus, per-value metadata records
 
 > The aggregate numbers in this section are the state at that increment. The section
-> above supersedes them: 122 516 records, 8710 library lines, 6459 test lines,
+> above supersedes them: 122 516 records, 9042 production lines, 6675 test lines,
 > 36 mutations, one declared PEP 751 divergence, 120 lock-file documents.
 
 ### Added

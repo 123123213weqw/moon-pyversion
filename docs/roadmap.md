@@ -1,4 +1,8 @@
-# Moon PyVersion — 扩展工作项（按申报书格式）
+# Moon PyVersion — 扩展工作项（历史路线与当前状态）
+
+> 2026-09-15 更新：M1–M11 已落地，当前模块版本 0.2.0。最新申报事实以
+> `docs/proposal.md`、`README.md` 和 `tools/source_metrics.py` 为准；下文保留施工前的
+> `[已有]` / `[计划]` 记录，用于说明范围如何扩展，不应再作为当前状态直接引用。
 
 > 本文件是**工作项清单**，沿用 [项目申报书](proposal.md) 的章节结构，说明"还要做什么、
 > 做到什么算完成、怎么验收"。它不是申报书，也不直接提交。
@@ -9,7 +13,7 @@
 
 ## 项目名称
 
-`[已有]` Moon PyVersion（MoonBit 模块 `123123213weqw/moon_pyversion`，当前 0.1.0）
+`[已有]` Moon PyVersion（MoonBit 模块 `123123213weqw/moon_pyversion`，当前 0.2.0）
 
 `[计划]` 扩展后定位从"版本字符串比较器"改为 **Python 包元数据与版本工具库**。
 包名与版本号是否一并升到 0.2.0，待扩展落地后再定。
@@ -106,9 +110,10 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 | `index.mbt` `[已有]` | `SimpleIndex::parse/versions/files/wheels/sdists`、`LocalIndex::scan/files_for`、`resolve_candidates` / `select_best` / `explain_rejection`、`parse_json` | 场景 2 | 1256 |
 | `pylock.mbt` `[已有]` | `Pylock::parse/lock_version/created_by/packages_named/files_for/dependencies_of/is_applicable/applicable_packages/accepts_environment` | 场景 1、2 | 1280 |
 
-库源码合计 **8710 行**（不含测试与示例），测试 **6459 行**（`*_test.mbt`，
-251 个测试块 × 四后端），示例 2550（`diff`）+ 372（`metadata-check`）+ 570
-（`resolve`）+ 180（`basic`/`bench`）行，工具链 5900 行 Python。
+截至 M11，根目录生产 MoonBit 合计 **9042 行**（不含测试与示例，含 `audit.mbt` 332 行），
+测试 **6675 行**（`*_test.mbt`，259 个测试块 × 四后端），示例 2550（`diff`）+ 372
+（`metadata-check`）+ 570（`resolve`）+ 36（`audit`）+ 180（`basic`/`bench`）行，
+工具链 5974 行 Python（含 `tools/source_metrics.py`）。
 
 **`utils.mbt` 设计要点** `[已完成，见下]`（已用 packaging 26.3 核实）：
 
@@ -324,9 +329,9 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 ## 交付成果
 
-`[已有]` 源码 **8710 行**（不含测试）、测试 **6459 行**（251 个测试块 × 四后端
+`[已有]` 源码 **9042 行**（不含测试）、测试 **6675 行**（259 个测试块 × 四后端
 全通过）、`examples/basic` `examples/diff`（2550 行确定性发射器）
-`examples/bench`、`tools/` 九个脚本（5900 行 Python）、`fixtures/` 真实语料
+`examples/bench`、`tools/` 十个脚本（5974 行 Python）、`fixtures/` 真实语料
 （97 个 PyPI 包 + 83 个 TOML 文档 + 285 份核心元数据 + 114 份手工锁文件 + 6 份真实 `uv` 锁文件）、四后端
 CI + 独立 differential 作业。
 
