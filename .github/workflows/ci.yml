@@ -61,8 +61,11 @@ jobs:
         # checked here.
         #
         # `--check` regenerates in memory, formats the result the way the committed
-        # file is formatted, and compares. The lock fixture can do that in full,
-        # because every input it reads is committed. The metadata fixture cannot:
+        # file is formatted, and compares. The lock and tag fixtures can do that in
+        # full, because every input they read is committed -- and the tag fixture's
+        # inputs are argument tuples, so the reference cannot reach the host through
+        # them (the cases that would are registered as declared divergences). The
+        # metadata fixture cannot:
         # its 239 real `METADATA` documents were downloaded once and the cache is
         # deliberately not in the repository, so the PyPI half cannot be rebuilt
         # here -- `--check-cases` checks the half that can be (the curated cases
@@ -70,6 +73,7 @@ jobs:
         # metadata check needs the cache and is part of the local release check.
         run: |
           python -B tools/fetch_pylock_corpus.py --check
+          python -B tools/fetch_tag_corpus.py --check
           python -B tools/fetch_metadata_corpus.py --check-cases
       - name: Differential comparison against packaging 26.3
         run: python -B tools/diff_packaging.py --oracle-version 26.3 --json report-26.3.json

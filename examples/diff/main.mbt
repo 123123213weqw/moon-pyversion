@@ -26,6 +26,8 @@
 /// - `<source>\tindex_dir\t<directory>\t<entries as a|b>\t<ok|bad>\t<projection or error code>`
 /// - `<source>\tpylock\t<case name>\t<document>\t<ok|bad>\t<projection or error code>`
 /// - `<source>\tpylock_divergence\t<case name>\t<accept|reject>` (input, not a check)
+/// - `<source>\ttag\t<case name>\t<payload>\t<ok|bad>\t<tag list or error code>`
+/// - `<source>\ttag_divergence\t<case name>\t<accept|reject>` (input, not a check)
 /// - `<source>\tresolve\t<requirement>\t<tags as a|b>\t<python or ->\t<mode>\t<kept as a|b>\t<rejected as f=reason|...>`
 ///
 /// `mode` is `auto` (the library default policy), `any` (prereleases forced
@@ -2243,6 +2245,181 @@ fn emit_pylock_divergences(sb : StringBuilder) -> Unit {
 }
 
 ///|
+/// Emit every PEP 425 tag case, plus the declared divergences. The payload holds
+/// the arguments; `tag_compute` decodes them and `tools/fetch_tag_corpus.py`
+/// decodes the same payload for the reference, so the two sides are given the
+/// same input rather than a transcript of each other's output.
+fn emit_tag_cases(sb : StringBuilder) -> Unit {
+  for entry in @fixtures.tag_divergences {
+    let expectation = if entry.1 { "accept" } else { "reject" }
+    sb.write_string(
+      "curated\ttag_divergence\t\{escape_record(entry.0)}\t\{expectation}\n",
+    )
+  }
+  for entry in @fixtures.tag_cases {
+    sb.write_string(
+      "curated\ttag\t\{escape_record(entry.0)}\t\{escape_record(entry.1)}\t",
+    )
+    let (accepted, detail) = tag_record(entry.0, entry.1)
+    if accepted {
+      sb.write_string("ok\t\{escape_record(detail)}\n")
+    } else {
+      sb.write_string("bad\t\{escape_record(detail)}\n")
+    }
+  }
+}
+
+///|
+/// One tag case: `(accepted, projection or error code)`. A rejection is a stable
+/// code from `VersionError::InvalidTag`, which is how the three host-probing
+/// cases are spelled.
+fn tag_record(name : String, payload : String) -> (Bool, String) {
+  (true, tag_compute(name, payload)) catch {
+    @pyversion.InvalidTag(code, _) => (false, code)
+    _ => (false, "OTHER_ERROR")
+  }
+}
+
+///|
+/// The projection of a tag case: the ordered tag list, space separated, or for
+/// the `select` mode the indices the ranking rule selects, best first.
+fn tag_compute(
+  name : String,
+  payload : String,
+) -> String raise @pyversion.VersionError {
+  let parts : Array[String] = []
+  for part in payload.split("|") {
+    parts.push(part.to_owned())
+  }
+  let mode = name.split("/").collect()[0].to_owned()
+  match mode {
+    "cpython" => {
+      let version = tag_version(parts[0])
+      let abis = tag_list(parts[1])
+      let platforms = tag_list(parts[2])
+      tag_join(@pyversion.cpython_tags(version, abis, platforms))
+    }
+    "generic" => {
+      let abis = tag_list(parts[1])
+      let platforms = tag_list(parts[2])
+      tag_join(@pyversion.generic_tags(parts[0], abis, platforms))
+    }
+    "pure" => tag_join(@pyversion.pure_python_tags(tag_version(parts[0])))
+    "compatible" => {
+      let version = tag_version(parts[0])
+      let interpreter : String? = if parts[1] == "-" {
+        None
+      } else {
+        Some(parts[1])
+      }
+      let platforms = tag_list(parts[2])
+      tag_join(@pyversion.compatible_tags(version, interpreter, platforms))
+    }
+    "mac" => {
+      let version_parts = tag_version(parts[0])
+      let version = (version_parts[0], version_parts[1])
+      tag_join(@pyversion.mac_platforms(version, parts[1]))
+    }
+    "select" => {
+      let supported = tag_list(parts[0])
+      let items = if parts.length() > 1 { parts[1] } else { "" }
+      select_projection(supported, items)
+    }
+    _ => raise @pyversion.InvalidTag("TAG_UNKNOWN_MODE", 0)
+  }
+}
+
+///|
+/// The ranking rule as a selection: which items the supported list selects, best
+/// first. This is `packaging.tags.create_compatible_tags_selector` -- an item
+/// with no matching tag is not selected at all, and one matched by several tags
+/// is ranked by its earliest -- and the reference decides the answer with its own
+/// selector rather than with a second copy of the rule.
+fn select_projection(supported : Array[String], items : String) -> String {
+  let ranks : Array[Int] = []
+  if !items.is_empty() {
+    for segment in items.split(";") {
+      ranks.push(@pyversion.tag_rank(tag_list(segment.to_owned()), supported))
+    }
+  }
+  let taken : Array[Bool] = []
+  ranks.each(fn(_rank) { taken.push(false) })
+  let chosen : Array[String] = []
+  while true {
+    let mut best = -1
+    let mut best_rank = supported.length()
+    for i = 0; i < ranks.length(); i = i + 1 {
+      if !taken[i] && ranks[i] < best_rank {
+        best_rank = ranks[i]
+        best = i
+      }
+    }
+    if best < 0 {
+      break
+    }
+    taken[best] = true
+    chosen.push(best.to_string())
+  }
+  chosen.join(" ")
+}
+
+///|
+/// `"3.12"` to `[3, 12]`; an empty field is an empty version, which is a case in
+/// its own right: the library rejects it instead of reading the host.
+fn tag_version(text : String) -> Array[Int] {
+  if text.is_empty() {
+    return []
+  }
+  let out : Array[Int] = []
+  for part in text.split(".") {
+    match tag_int(part.to_owned()) {
+      Some(value) => out.push(value)
+      None => ()
+    }
+  }
+  out
+}
+
+///|
+/// ASCII digits to a non-negative `Int`, or `None`. Written out rather than
+/// imported because this example package does not depend on `moonbitlang/core/string`,
+/// and the payloads are all plain integers.
+fn tag_int(text : String) -> Int? {
+  let chars = text.to_array()
+  if chars.length() == 0 {
+    return None
+  }
+  let mut value = 0
+  for c in chars {
+    if c < '0' || c > '9' {
+      return None
+    }
+    value = value * 10 + (c.to_int() - '0'.to_int())
+  }
+  Some(value)
+}
+
+///|
+/// A comma separated field; an empty field is an empty list.
+fn tag_list(text : String) -> Array[String] {
+  if text.is_empty() {
+    return []
+  }
+  let out : Array[String] = []
+  for part in text.split(",") {
+    out.push(part.to_owned())
+  }
+  out
+}
+
+///|
+/// The projection of a tag list: space separated, in order. Order is the point,
+/// so this never sorts.
+fn tag_join(tags : Array[String]) -> String {
+  tags.join(" ")
+}
+
+///|
 fn main {
   let sb = StringBuilder()
   let rng = Rng::new(0x5EED202644000001UL)
@@ -2556,5 +2733,9 @@ fn main {
   for entry in @fixtures.pylock_uv_cases {
     emit_pylock("uv_lock", sb, entry.0, entry.1)
   }
+  // 15. PEP 425 tag generation for a described target. The reference is asked the
+  //     same question with the same arguments, so this is the one kind whose
+  //     oracle is a function call rather than a document reading.
+  emit_tag_cases(sb)
   println(sb.to_string())
 }

@@ -14,6 +14,7 @@ pub(all) suberror VersionError {
   InvalidMetadata(String, Int)
   InvalidIndex(String, Int)
   InvalidPylock(String, Int)
+  InvalidTag(String, Int)
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -30,6 +31,7 @@ pub fn VersionError::diagnostic(self : VersionError) -> String {
     InvalidMetadata(code, pos) => "\{code} at \{pos}"
     InvalidIndex(code, pos) => "\{code} at \{pos}"
     InvalidPylock(code, pos) => "\{code} at \{pos}"
+    InvalidTag(code, pos) => "\{code} at \{pos}"
   }
 }
 

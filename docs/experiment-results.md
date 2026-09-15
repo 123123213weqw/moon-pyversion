@@ -8,30 +8,30 @@
 
 | 来源 | parse | spec | cmp | contains | filter | order | canon | file | req | marker | marker_eval | toml | license | meta |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| curated | 81 | 47 | 6561 | 11421 | 141 | 1 | 57 | 45 | 62 | 104 | 520 | 83 | 86 | 42 |
+| curated | 81 | 47 | 6561 | 11421 | 141 | 1 | 57 | 50 | 62 | 104 | 520 | 83 | 86 | 42 |
 | generated | 4000 | 700 | 3000 | 12600 | 351 | 1 | — | — | — | — | — | — | — | — |
 | mutated | 3051 | 1244 | — | — | — | — | 6102 | 4000 | 4000 | 4000 | 8000 | — | 4000 | — |
 | pypi | 3000 | 500 | 3866 | 36849 | 501 | 1 | — | 900 | 600 | 471 | — | — | — | 239 |
-| **合计** | **10132** | **2491** | **13427** | **60870** | **993** | **3** | **6159** | **4945** | **4662** | **4575** | **8520** | **83** | **4086** | **285** |
+| **合计** | **10132** | **2491** | **13427** | **60870** | **993** | **3** | **6159** | **4950** | **4662** | **4575** | **8520** | **83** | **4086** | **285** |
 
 M6 之后新增的几类记录不进上面这张表，因为它们与"版本/约束/文件名"的三条来源
 轴不是同一个切分方式，单独列出：
 
-| 来源 | meta_values | pylock |
-| --- | ---: | ---: |
-| curated | 165 | 28 |
-| curated_bad | — | 86 |
-| pypi | 750 | — |
-| pypi_lock | — | 95 |
-| uv_lock | — | 6 |
-| **合计** | **915** | **215** |
+| 来源 | meta_values | pylock | tag |
+| --- | ---: | ---: | ---: |
+| curated | 165 | 28 | 62 |
+| curated_bad | — | 86 | — |
+| pypi | 750 | — | — |
+| pypi_lock | — | 95 | — |
+| uv_lock | — | 6 | — |
+| **合计** | **915** | **215** | **62** |
 
 另有 5 条 `marker_env`（环境定义，不是断言）、7 条 `meta_divergence`、1 条
-`index_divergence` 与 1 条 `pylock_divergence`（都是声明分歧，不是断言），
-合计 **122 516 条记录 / 122 517 行语料**，其中 **61 863** 条带显式预发布模式
+`index_divergence`、1 条 `pylock_divergence` 与 6 条 `tag_divergence`（都是声明
+分歧，不是断言），合计 **122 589 条记录 / 122 590 行语料**，其中 **61 863** 条带显式预发布模式
 （`auto`/`any`/`none`）。
 
-- 来源分布：curated 19 494、curated_bad 98（其中 86 条是 pylock 的拒绝样例）、
+- 来源分布：curated 19 567、curated_bad 98（其中 86 条是 pylock 的拒绝样例）、
   generated 20 652、mutated 34 397、pypi 47 677、pypi_index 97、pypi_lock 95、
   uv_lock 6。
 - oracle 侧接受的**互不相同**的版本字符串 11 035 个、约束集合 1 595 个。
@@ -53,6 +53,9 @@ M6 之后新增的几类记录不进上面这张表，因为它们与"版本/约
   参考实现的裁决）。下载 593 份、入库 239 份，其余按"超过 12 000 字符"丢弃
   （体积计入语料，一份 200 kB 的描述会压过整个语料），丢弃数量写在 provenance
   里而不是静默省略。
+- 标签一类（`tag`）是唯一**没有输入文档**的记录：`packaging.tags` 是一组从
+  "解释器 + ABI 表 + 平台表"到有序标签表的纯函数，因此语料是一列参数元组，
+  两侧回答同一个问题（见 6.12）。62 个用例 + 6 条声明分歧。
 - M8 加 `pylock`（PEP 751 锁文件）与 `meta_values`（核心元数据的逐值比对）：
   锁文件语料是 27 条手工接受 + 51 条手工拒绝 + 35 条单字符变异 + 1 条声明分歧，
   外加 **95 份从上面那 97 份真实索引响应派生的锁文件**（文件名、URL、sha256、
@@ -65,10 +68,10 @@ M6 之后新增的几类记录不进上面这张表，因为它们与"版本/约
 ```
 oracle: packaging 26.3 (python 3.10.12), library targets packaging 26.3
 toml reference reader: tomli
-records: 122516 (61863 with a prerelease mode)
+records: 122589 (61863 with a prerelease mode)
 mismatches per source, kind and mode:
   none
-OK: 122516 records agree with packaging 26.3
+OK: 122589 records agree with packaging 26.3
 ```
 
 退出码 0。**0 不一致**。
@@ -78,14 +81,14 @@ OK: 122516 records agree with packaging 26.3
 ```
 reference: wasm
 target      records      bytes  seconds  digest
-wasm         122517   12398780     5.31  f0df3a6a8a712d9a
-wasm-gc      122517   12398780     4.21  f0df3a6a8a712d9a identical
-js           122517   12398780     3.32  f0df3a6a8a712d9a identical
-native       122517   12398780     4.91  f0df3a6a8a712d9a identical
+wasm         122590   12425279     5.21  df7cd80290cfd38d
+wasm-gc      122590   12425279     3.84  df7cd80290cfd38d identical
+js           122590   12425279     4.03  df7cd80290cfd38d identical
+native       122590   12425279     4.69  df7cd80290cfd38d identical
 ```
 
 语料生成器在四个后端输出逐字节相同（sha256 前 16 位一致）。重复运行的
-js 输出与捕获文件 md5 一致（`bf035823181e307540663d517939b795`），即生成
+js 输出与捕获文件 md5 一致（`b9d0df199cfe94cdd42fcb64b5787b8a`），即生成
 过程可重复。
 
 ## 4. 多 oracle 漂移矩阵
@@ -94,12 +97,12 @@ js 输出与捕获文件 md5 一致（`bf035823181e307540663d517939b795`），�
 
 | packaging | records | differences | fatal | causes |
 | --- | ---: | ---: | ---: | --- |
-| 24.2 | 122516 | 4474 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, index-scan x1, license-expression x153, marker-evaluation x1998, marker-grammar x184, metadata-rules x1, oracle-crash x28 |
-| 25.0 | 122516 | 2736 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, index-scan x1, license-expression x153, marker-evaluation x357, marker-grammar x87, metadata-rules x1, oracle-crash x28 |
-| 26.0 | 122516 | 826 | 0 | compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x148, index-scan x1, license-expression x66, marker-evaluation x285, marker-grammar x87, oracle-crash x27 |
-| **26.3（目标版本）** | 122516 | **0** | **0** | — |
+| 24.2 | 122589 | 4492 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x142, index-scan x1, license-expression x153, marker-evaluation x1998, marker-grammar x184, metadata-rules x1, oracle-crash x28, tag-generation x24 |
+| 25.0 | 122589 | 2754 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x142, index-scan x1, license-expression x153, marker-evaluation x357, marker-grammar x87, metadata-rules x1, oracle-crash x28, tag-generation x24 |
+| 26.0 | 122589 | 844 | 0 | compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x142, index-scan x1, license-expression x66, marker-evaluation x285, marker-grammar x87, oracle-crash x27, tag-generation x24 |
+| **26.3（目标版本）** | 122589 | **0** | **0** | — |
 
-四个 oracle 都能回放全部 122 516 条记录，fatal 都是 0（旧版本按 `--tolerate-drift`
+四个 oracle 都能回放全部 122 589 条记录，fatal 都是 0（旧版本按 `--tolerate-drift`
 记为容忍漂移）。`index-scan` 那 1 条与 `filename-grammar` 是同一处上游变更：目录清单里有
 `-1.0-py3-none-any.whl`（项目名为空），26.3 起拒绝，旧版本接受，所以同一次扫描
 在旧 oracle 上少识别出一个文件。`oracle-crash` 是新增的
@@ -158,10 +161,21 @@ M8 收尾时把核心元数据语料逐条回放，又查出**三处**库与 `pa
 删掉，因此修复本身也被断言。第二处与第三处是同一个判断函数和同一个去空白函数，
 反转后"`_` 只在中间合法"与"哪些字符算空白"都被逐值钉住。
 
+写标签语料时又查出**一处**同类缺陷，而且它的成因是语料本身：
+
+| 缺陷 | 现象 | 原因 |
+| --- | --- | --- |
+| wheel 标签大小写未归一 | 库把 `Zope.Interface-5.4.0-CP311-CP311-Linux_x86_64.whl` 的标签读成大写，`packaging` 的 `Tag` 在构造时把三段全部小写 | `parse_tag_set` 直接拼接原文。语料里**每一个**文件名（手工的与真实的）都写小写，因此这条差异此前一次都没被触发 |
+
+补了 5 个大小写混写的文件名（其中两个连项目名也是大写），语料从 122 516 条涨到
+122 521 条，并加了 `wheel-tag-case-not-normalized` 探针把它钉住：修复前那处注入
+是**绿的**。这条缺陷值得单独记一笔，因为它说明"0 不一致"的作用域只有语料覆盖到
+的地方——两侧对同一个拼写都不产生输入时，语料无法就那个拼写表态。
+
 ## 5.5 语料是否有牙：变异探针
 
 0 不一致只有在"对照能失败"的前提下才有意义。`tools/mutation_probe.py` 向库
-里注入 36 处**故意缺陷**（涵盖 M0–M8 的行为），重跑语料并断言 harness 报错：
+里注入 41 处**故意缺陷**（涵盖 M0–M11 的行为），重跑语料并断言 harness 报错：
 
 | 注入的缺陷 | 检出条数 |
 | --- | ---: |
@@ -169,6 +183,7 @@ M8 收尾时把核心元数据语料逐条回放，又查出**三处**库与 `pa
 | 标签排序退回默认 `String` 比较（按长度） | 214 |
 | 版本键形式保留尾部零 | 401 |
 | wheel 项目名不做规范化 | 396 |
+| wheel 标签不转小写 | 105 |
 | sdist 从第一个连字符切分 | 36 |
 | local 文本段按长度比较 | 1 |
 | 标记环境里的 `extra` 不做规范化 | 6 |
@@ -200,9 +215,14 @@ M8 收尾时把核心元数据语料逐条回放，又查出**三处**库与 `pa
 | 锁文件文件名不从 URL 推导 | 8 |
 | 解析器忽略 PEP 425 标签 | 3 |
 | 解析器忽略 `Requires-Python` | 10 |
+| 标签：自由线程 ABI 识别失效（`abi3t` 退回 `abi3`） | 13 |
+| 标签：空平台表不再被拒绝（三条声明分歧失效） | 3 |
+| 标签：生成结果不转小写 | 5 |
+| 标签：`abi3` 的历史回溯段不再生成 | 41 |
 | 解析器忽略预发布策略 | 12 |
 
-36/36 全部检出。两个 TOML 探针各只检出 1 条，是**故意**的：它们的现象只在
+41/41 全部检出（上面各条的数字取自当前语料；把标签那四处注入打开时，检出条数
+分别是 13、3、5、41）。两个 TOML 探针各只检出 1 条，是**故意**的：它们的现象只在
 单个语料样例上出现，如果未来那条样例被改坏，检出数会掉到 0，探针就会失败。
 
 两条 `License-Expression` 冲突探针各只检出 1 条，同样是因为只有一个语料样例
@@ -229,7 +249,7 @@ M8 收尾时把核心元数据语料逐条回放，又查出**三处**库与 `pa
 | 检查 | 结果 |
 | --- | --- |
 | `moon fmt --check` | 通过 |
-| `moon check/build/test --deny-warn`（wasm / wasm-gc / js / native） | 全部通过，每个后端 **259 个测试块全部通过**（合计 1036） |
+| `moon check/build/test --deny-warn`（wasm / wasm-gc / js / native） | 全部通过，每个后端 **277 个测试块全部通过**（合计 1108） |
 | `moon run examples/basic`（四后端） | 通过 |
 | `moon run examples/diff`（四后端） | 122 517 行语料，四端字节一致 |
 | `moon run examples/metadata-check`（四后端） | 四端字节一致（md5 `2cedc437f5b3`） |
@@ -239,7 +259,7 @@ M8 收尾时把核心元数据语料逐条回放，又查出**三处**库与 `pa
 ## 6.5 各阶段新增能力的覆盖
 
 每一阶段都不是"新写一套验证"，而是**只增加记录类型**，被测代码换、验证方法
-不换。到 M8 为止的记录构成（全部对 `packaging` 26.3，**0 不一致**，合计 122 516，
+不换。到 M12 为止的记录构成（全部对 `packaging` 26.3，**0 不一致**，合计 122 589，
 下表逐类相加即得该数）：
 
 | 记录类型 | 条数 | 对照的 packaging API | 来源 |
@@ -249,7 +269,7 @@ M8 收尾时把核心元数据语料逐条回放，又查出**三处**库与 `pa
 | `parse` | 10 132 | `Version` | curated + generated + mutated + pypi |
 | `marker_eval` | 8520 | `Marker.evaluate(env)` | curated + mutated × 5 套环境 |
 | `canon` | 6159 | `canonicalize_name` / `canonicalize_version` | curated + mutated |
-| `file` | 4945 | `parse_wheel_filename` / `parse_sdist_filename` | curated + mutated + pypi |
+| `file` | 4950 | `parse_wheel_filename` / `parse_sdist_filename` | curated + mutated + pypi |
 | `req` | 4662 | `packaging.requirements.Requirement` | curated + mutated + pypi（600 条真实 `Requires-Dist`） |
 | `marker` | 4575 | `packaging.markers.Marker` | curated + mutated + 471 条真实标记 |
 | `license` | 4086 | `packaging.licenses.canonicalize_license_expression` | curated + mutated |
@@ -259,6 +279,8 @@ M8 收尾时把核心元数据语料逐条回放，又查出**三处**库与 `pa
 | `meta_values` | 915 | `Metadata.from_email` 的**逐值**结果 | 46 条手工规则样例 + 239 份真实 PyPI `METADATA` |
 | `meta` | 285 | `Metadata.from_email(data, validate=True)` | 46 条手工规则样例 + 239 份真实 PyPI `METADATA` |
 | `pylock` | 215 | PEP 751 的**第二份读法**（`tools/fetch_pylock_corpus.py` 里独立重算） | 27 条手工接受 + 51 条手工拒绝 + 35 条变异 + 1 条声明分歧 + 95 份由真实索引响应派生 + 6 份真实 `uv` 输出 |
+| `tag` | 62 | `packaging.tags` 的六个函数（参数逐项注入，不探测宿主） | 62 组参数：`cpython` 18 / `mac` 15 / `generic` 9 / `pure` 7 / `compatible` 7 / `select` 6 |
+| `tag_divergence` | 6 | —（声明分歧，非断言） | curated |
 | `index` | 118 | 规范本身（写成一处投影，Python 侧独立重算） | 21 条手工文档 + 97 份真实 PEP 691 响应 |
 | `index_dir` | 5 | 规范本身（`parse_wheel_filename` / `parse_sdist_filename` + 排序规则） | 5 个目录清单 |
 | `resolve` | 18 | 用 `packaging` 重写的候选选择与排序 | 18 组（需求 × 标签 × 解释器 × 预发布策略） |
@@ -540,6 +562,48 @@ Python、环境、锁定版本、最佳候选版本与 sha256 声明六项全部
 不一致都会换成对应的稳定问题码，因此这十行不是"没有报错"，而是六条判定都过了。四后端
 输出逐字节一致（md5 `9d3cadf92d80`）。
 
+## 6.12 PEP 425 标签生成：唯一不读文档的一类记录
+
+前面每一类记录的形状都是"一份输入 + 两侧各自的裁决"。标签不是：`packaging.tags` 是
+一组**纯函数**，从"解释器 + ABI 表 + 平台表"算出有序标签表。所以 `tag` 记录是一列
+参数元组（`name` 说明用哪个函数，`payload` 编码参数），harness 在回放时用同一组参数
+调用参考实现，两侧比较**有序标签表**本身。这也是整份语料里唯一一个可以指着参考实现
+说"同一句话问了两遍"的记录类型。
+
+六个模式，62 组参数：
+
+| 模式 | 组数 | 对照的 `packaging.tags` 函数 | 覆盖的点 |
+| --- | ---: | --- | --- |
+| `cpython` | 18 | `cpython_tags` | 显式 ABI → `abi3` → `none` 的顺序；`abi3` 回溯到 `cp32`；自由线程 ABI（`cp313t`）换成 `abi3t`；3.1（无稳定 ABI）、3.2（回溯边界）、只有主版本；旧式 `cp27mu`；大小写 |
+| `mac` | 15 | `mac_platforms` | 10.x 逐个小版本回溯；11+ 的 `macosx_<major>_0_*` 与 x86_64 专属的 10.x 重放；早于架构支持年份的空结果（10.3 + x86_64、10.6 + ppc64、10.7 + ppc） |
+| `generic` | 9 | `generic_tags` | `none` 的三元判断（`["NONE"]` 会**多加一条**同名标签）；ABI 表为空；多平台；大小写 |
+| `pure` | 7 | `pure_python_tags` | `py312 → py3 → py311 … → py30` 的降序；只有主版本 |
+| `compatible` | 7 | `compatible_tags` | `py*` 与平台表交叉、`<interpreter>-none-any` 的位置、`None` 与空串等价、纯 Python 尾巴 |
+| `select` | 6 | `create_compatible_tags_selector` | 一个文件被多条标签命中时取**最早**的那条；无交集的文件不被选中；重复标签；空支持表 |
+
+`select` 不比对"库算出的名次"，而是比对**参考实现自己的选择器挑出哪些条目、按什么
+顺序**（投影是条目下标）。库这一侧用 `tag_rank` 排序后给出同样的列表，而 `tag_rank`
+正是 `index.mbt` 的候选排序所用的规则——也就是说这一类记录同时验证了解析器那条链路里
+"标签优先级"的实现。
+
+**六条声明分歧**都是同一件事：参考实现在这些输入上会去读**运行中的机器**，而本库
+拒绝猜测。
+
+| 输入 | 参考实现 | 库 | 为什么这样定 |
+| --- | --- | --- | --- |
+| `cpython_tags` 的版本为空 | 读 `sys.version_info` | `TAG_VERSION_REQUIRED` | 调用方必须说明它在描述哪个解释器 |
+| `compatible_tags` 的版本为空 | 读 `sys.version_info` | `TAG_VERSION_REQUIRED` | 同上 |
+| `generic_tags` 的解释器名为空 | 问运行中的解释器是谁 | `TAG_INTERPRETER_REQUIRED` | 同上 |
+| 三者的**平台表为空** | `platforms or platform_tags()`：读宿主平台（Linux 上还要看运行中的 libc） | `TAG_PLATFORMS_REQUIRED` | 这一条最值得记：空列表看起来像"没有平台"，在参考实现里却是"问本机"。两边对同一个 `[]` 回答不同的问题，所以本库按字面读并拒绝 |
+
+平台表为空的这三条是被差分实验**当场抓出来**的：我原先把它们当成普通用例（库返回空
+表、参考实现返回本机平台表），于是三条记录的投影必然不同，而且 fixture 里会写进生成
+机器的平台表——一份依赖机器的 fixture。改成声明分歧之后，方向在两个方向都被断言。
+
+`manylinux` / `musllinux` / `linux` 的平台表**不由本库计算**：那需要检测运行中的 glibc，
+是 `platform_tags()` 的职责，仍然由调用方注入（与 `docs/experiment.md` 的"局限"一节
+一致）。因此 `tag` 记录覆盖的是"给定平台表之后的展开与排序"，不包括"平台表怎么来"。
+
 ## 7. 吞吐（`examples/bench`，本机墙钟，非跨语言基准）
 
 | 操作 | js | native |
@@ -555,11 +619,13 @@ Python、环境、锁定版本、最佳候选版本与 sha256 声明六项全部
 ## 8. 这次实验**没有**证明什么
 
 - 不证明与 PEP 440 规范本身完全一致：oracle 是另一份实现，不是规范。
-- 不证明覆盖全部现实输入：122 516 条是一次抽样，PyPI 的真实版本远多于 3000 个；
+- 不证明覆盖全部现实输入：122 589 条是一次抽样，PyPI 的真实版本远多于 3000 个；
   真实 `METADATA` 只覆盖 239 份（有 PEP 658 边上文件的那些），且丢弃了 12 000
   字符以上的文档。
-- 不覆盖平台兼容性标签的**计算**（标签表由调用方传入，库不探测宿主平台；
-  匹配与排序在 M7 已实现并对照过）、不覆盖依赖求解与冲突回溯。
+- 不覆盖**宿主探测**：标签的计算（PEP 425）已实现并逐条对照 `packaging.tags`，
+  但 `sys_tags()` 与 `platform_tags()` 要读 `sys.version_info`、`sysconfig`、
+  `EXT_SUFFIX` 与运行中的 libc，这三类输入仍由调用方注入（三条空输入被登记为
+  声明分歧，见 6.12）。依赖求解与冲突回溯不做。
 - TOML、许可证表达式与核心元数据的对照各用了一个参考实现（`tomli` 2.4.1、
   `packaging.licenses`、`packaging.metadata`），PEP 691 与 PEP 751 的对照则是
   "把规范写成一处投影、在两份实现里各算一遍"，其中 PEP 751 **没有**任何现成的

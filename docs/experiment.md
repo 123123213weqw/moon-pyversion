@@ -55,6 +55,9 @@ oracle 只在测试期运行，不出现在 MoonBit 库的依赖里（`moon.mod`
 | `index_dir` | 目录扫描的分类与排序 |
 | `index_divergence` | 声明分歧（输入，不是断言） |
 | `resolve` | 候选选择与排序、每个被拒文件的**首条**失败规则 |
+| `tag` | PEP 425 标签生成：一组参数 → 有序标签表（`cpython` / `generic` /
+  `pure` / `compatible` / `mac` / `select` 六种模式） |
+| `tag_divergence` | 声明分歧（输入，不是断言） |
 | `pylock` | PEP 751 文档：裁决 + 投影（成员、文件记录、适用性） |
 | `pylock_divergence` | 声明分歧（输入，不是断言） |
 
@@ -112,6 +115,9 @@ tools/mutation_probe.py ─► 注入故意缺陷，断言上面的对照能报�
   抓出"库与规范不一致"，抓不出"两份实现同时读错同一段规范"。这一点写在每类记录
   的说明里，不当作等价于 0 不一致的强证据。
 - 语料是抽样的：PyPI 上的版本与约束远多于此处收录的量。
-- 平台标签只做**匹配与排序**，不做计算（标签表由调用方按 `sys_tags()` 顺序传入，
-  库不探测宿主平台）；依赖求解、下载与安装不做。
+- 平台标签的**计算**已实现（`tags.mbt`，PEP 425），但**宿主探测不做**：
+  `sys_tags()` 与 `platform_tags()` 要靠 `sys.version_info`、`sysconfig`、
+  `EXT_SUFFIX` 和运行中的 libc，这些仍然只由调用方提供；库计算的是"给定
+  解释器、ABI 与平台表"之后的展开与排序，`tag` 记录逐条对照 `packaging.tags`
+  （见 experiment-results.md 6.12）。依赖求解、下载与安装不做。
 - 计时（`examples/bench`）是单机单后端的墙钟数字，不是跨语言基准。

@@ -168,6 +168,12 @@ python -B tools/fetch_pypi_corpus.py
   `directory` / `archive` / `sdist` / `wheels`），以及
   `is_applicable` / `applicable_packages` / `accepts_environment` 这几条“在我的
   环境下装哪些包”的判断；
+- 平台标签计算（`tags.mbt`，PEP 425，对齐 `packaging.tags`）：`cpython_tags`、
+  `generic_tags`、`pure_python_tags`、`compatible_tags`、`mac_platforms` 按
+  "解释器 + ABI 表 + 平台表"生成**有序**标签表，`tag_rank` 给出一个文件在支持表里
+  的最佳名次（`create_compatible_tags_selector` 的规则，候选排序也用它）。宿主探测
+  （`sys_tags()` / `platform_tags()`）不做：那需要读运行时版本、`sysconfig`、
+  `EXT_SUFFIX` 与运行中的 libc，仍由调用方注入，空输入被显式拒绝；
 - 打包元数据辅助（`utils.mbt`，对齐 packaging 26.3）：
   `canonicalize_name`（PEP 503 名称规范化）、`canonicalize_version`
   （PEP 625 两种形式：索引键与显示形式）、`parse_wheel_filename`
@@ -185,7 +191,7 @@ python -B tools/fetch_pypi_corpus.py
 
 ## 与 packaging 的一致性
 
-不是自我声明，而是实测的：`examples/diff` 生成 **122 516 条**确定性记录
+不是自我声明，而是实测的：`examples/diff` 生成 **122 589 条**确定性记录
 （手工边界、按文法生成、单字符变异、97 个 PyPI 包的真实元数据：3000 个版本、
 500 条约束、600 条需求行、471 条真实标记、900 个分发文件名、239 份真实
 `METADATA`、97 份真实 PEP 691 索引响应、114 份手工锁文件、95 份由这些响应
@@ -210,8 +216,8 @@ PEP 751 要单独说明：**没有任何现成的 `pylock.toml` 读取实现可�
 行为变更（自动预发布准入、`<`/`>` 的区间实现、`~=` 上界、26.3 的文件名
 验收与标记语法收紧），`tools/oracle_matrix.py` 输出这张矩阵。
 
-另外 `tools/mutation_probe.py` 会向库里注入 36 处**故意缺陷**并断言对照能报错，
-36/36 全部检出 —— 即"0 不一致"不是因为对照失效。其中 5 处是为锁文件那几条被
+另外 `tools/mutation_probe.py` 会向库里注入 41 处**故意缺陷**并断言对照能报错，
+41/41 全部检出 —— 即"0 不一致"不是因为对照失效。其中 5 处是为锁文件那几条被
 收紧的规则新加的：谁把放宽注回去，谁就必须被检出。探针默认拒绝在改过的工作树
 上运行（被中断的运行会把注入的缺陷留在源码里），`--allow-dirty` 只能显式打开。
 
@@ -320,10 +326,11 @@ PEP 592 的 yank 策略是**示例自己实现的**：库不替调用方决定�
 不支持不可解析的任意 legacy 字符串候选。排序时 local 参与比较，但有序约束
 忽略候选 local；有序约束本身不接受 local 后缀。
 
-明确不做：pip、联网下载安装、完整依赖求解、冲突回溯、**平台标签的计算**、
+明确不做：pip、联网下载安装、完整依赖求解、冲突回溯、**宿主平台探测**、
 读运行时真实解释器环境（标记求值只接受调用方传入的环境表）、SemVer 兼容层。
 标签的**匹配与排序**从 M7 起已经做了，但顺序由调用方给出：`resolve_candidates`
-接受一份“最具体在前”的标签表（`packaging.tags.sys_tags()` 的顺序），库不探测宿主
+接受一份“最具体在前”的标签表（`packaging.tags.sys_tags()` 的顺序；库可以用
+`tags.mbt` 从注入的解释器、ABI 与平台表算出来），库不探测宿主
 的 glibc / 平台 / 解释器版本，所以同一份输入在任何机器上得到同一份排序。
 `SpecifierSet` 只做约束筛选，不生成候选集（候选来自 `IndexFile` 数组）。整数组件
 当前由 MoonBit `BigInt` 承接；非 ASCII 的本地版本段会被拒绝。

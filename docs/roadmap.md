@@ -109,11 +109,13 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 | `metadata.mbt` `[已有]` | `Metadata::parse/requirements/requires_python/extras/is_compatible/diagnostics/to_string` | 场景 1（端到端） | 1378 |
 | `index.mbt` `[已有]` | `SimpleIndex::parse/versions/files/wheels/sdists`、`LocalIndex::scan/files_for`、`resolve_candidates` / `select_best` / `explain_rejection`、`parse_json` | 场景 2 | 1256 |
 | `pylock.mbt` `[已有]` | `Pylock::parse/lock_version/created_by/packages_named/files_for/dependencies_of/is_applicable/applicable_packages/accepts_environment` | 场景 1、2 | 1280 |
+| `audit.mbt` `[已有]` | `audit_package`、`PackageAudit::render`、稳定问题码 | 场景 1、2 端到端 | 332 |
+| `tags.mbt` `[已有]` | `cpython_tags`、`generic_tags`、`pure_python_tags`、`compatible_tags`、`mac_platforms`、`tag_rank` | 场景 2 | 448 |
 
-截至 M11，根目录生产 MoonBit 合计 **9042 行**（不含测试与示例，含 `audit.mbt` 332 行），
-测试 **6675 行**（`*_test.mbt`，259 个测试块 × 四后端），示例 2550（`diff`）+ 372
-（`metadata-check`）+ 570（`resolve`）+ 36（`audit`）+ 180（`basic`/`bench`）行，
-工具链 5974 行 Python（含 `tools/source_metrics.py`）。
+截至 M12，根目录生产 MoonBit 合计 **9494 行**（不含测试与示例，含 `audit.mbt` 332 行
+与 `tags.mbt` 448 行），测试 **6976 行**（`*_test.mbt`，277 个测试块 × 四后端），
+示例 2556（`diff`）+ 372（`metadata-check`）+ 570（`resolve`）+ 36（`audit`）+
+180（`basic`/`bench`）行，工具链 6611 行 Python（11 个脚本）。
 
 **`utils.mbt` 设计要点** `[已完成，见下]`（已用 packaging 26.3 核实）：
 
@@ -180,7 +182,7 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
   两类记录，共 **11 104 条**，其中真实文件名的 `pypi/file` 记录 900 条；
 - 对照 `packaging 26.3` **0 不一致**；
 - `tools/mutation_probe.py` 对故意注入的缺陷全部检出（M1 阶段为 7 处，
-  现为 36 处），证明语料对这部分行为有覆盖。
+  现为 41 处），证明语料对这部分行为有覆盖。
 
 `utils_test.mbt` 在开发中抓到一处真实缺陷：标签排序用了 MoonBit 默认的
 `String` 比较（先比长度），与 `packaging` 的 `sorted()`（按码点）不一致 ——
@@ -285,23 +287,29 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 ### `[已完成]` 语料扩展与"有牙"验收
 
-- 语料从 87 916 条扩到 **122 516 条 / 122 517 行**：来源分布 curated 19 494、
+- 语料从 87 916 条扩到 **122 589 条 / 122 590 行**：来源分布 curated 19 567、
   curated_bad 98、generated 20 652、mutated 34 397、pypi 47 677、pypi_index 97、
   pypi_lock 95、uv_lock 6；四后端逐字节一致。
-- `tools/mutation_probe.py` 从 7 处扩到 **36 处**故意缺陷（覆盖 M0–M8），
-  36/36 全部被语料检出；探针失败即实验失败。
+- `tools/mutation_probe.py` 从 7 处扩到 **41 处**故意缺陷（覆盖 M0–M12），
+  41/41 全部被语料检出；探针失败即实验失败。
 - M8 之后的收尾：PEP 751 的 **7 条声明分歧收敛到 1 条**（6 条是库比规范松，
   逐条对着规范正文的 `Required?` 行收紧，并各补一条"除此之外完全合法"的普通
   样例钉住；保留的 1 条是库有意比规范严），语料补入 **6 份 `uv` 写出的真实
   `pylock.toml`**（不由本仓库生成的输入），变异探针同步从 31 处扩到 36 处，
   每条收紧各配一处。
+- M12：PEP 425 标签**计算**落地（`tags.mbt`，448 行）。`cpython_tags` /
+  `generic_tags` / `pure_python_tags` / `compatible_tags` / `mac_platforms`
+  与 `tag_rank`（选择器规则，`index.mbt` 的候选排序改用它）逐条对照
+  `packaging.tags`：**62 组参数 + 6 条声明分歧**，宿主探测仍然不做。
+  写这一类语料时又查出一处库缺陷（wheel 标签大小写未归一，见
+  `docs/experiment-results.md` §5），并补了 4 处变异探针。
 - 多 oracle 矩阵（24.2 / 25.0 / 26.0 / 26.3）按原因分类上游行为变更，
   固定版本 26.3 仍为 **0 差异**。
 
 ## 技术路线
 
 `[已有]` 版本解析用按 UTF-16 偏移移动的 ASCII 游标，不引入正则；整数组件经
-`BigInt`；比较按键序。四后端 CI。122 516 条语料差分对照 `packaging 26.3`，另有 36 处故意缺陷的变异探针证明对照有效。
+`BigInt`；比较按键序。四后端 CI。122 589 条语料差分对照 `packaging 26.3`，另有 41 处故意缺陷的变异探针证明对照有效。
 
 `[计划]` 新增模块沿用同一套技术路线与**同一套验收方法**，不新造轮子：
 
@@ -329,10 +337,10 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 ## 交付成果
 
-`[已有]` 源码 **9042 行**（不含测试）、测试 **6675 行**（259 个测试块 × 四后端
-全通过）、`examples/basic` `examples/diff`（2550 行确定性发射器）
-`examples/bench`、`examples/audit`（36 行，跨制品审计）、`tools/` 十个脚本
-（5974 行 Python，含 `source_metrics.py`）、`fixtures/` 真实语料
+`[已有]` 源码 **9494 行**（不含测试）、测试 **6976 行**（277 个测试块 × 四后端
+全通过）、`examples/basic` `examples/diff`（2556 行确定性发射器）
+`examples/bench`、`examples/audit`（36 行，跨制品审计）、`tools/` 十一个脚本
+（6611 行 Python，含 `source_metrics.py` 与 `fetch_tag_corpus.py`）、`fixtures/` 真实语料
 （97 个 PyPI 包 + 83 个 TOML 文档 + 285 份核心元数据 + 114 份手工锁文件 + 6 份真实 `uv` 锁文件）、四后端
 CI + 独立 differential 作业。
 
@@ -379,6 +387,9 @@ extras、环境标记三项在 M2/M3 做完**，**平台标签的匹配与排序
 - 不做完整依赖求解或冲突回溯（单个约束下的候选排序已有，跨包求解没有）；
 - 不计算平台兼容性标签：`parse_wheel_filename` 解析出 tag，
   `resolve_candidates` 用调用方给的标签表匹配与排序，库自己不去问宿主是什么平台；
+  M12 补上的是**展开**（`tags.mbt`：给定解释器、ABI 与平台表后生成有序标签表），
+  `sys.version_info` / `sysconfig` / `EXT_SUFFIX` / 运行中 libc 这四类输入仍由
+  调用方注入，三条"参考实现会去读宿主"的输入被登记为声明分歧；
 - 不提供 SemVer 兼容层；不为任意 legacy 版本字符串提供候选接口；
 - 不评估升级的安全性或 API 兼容性；
 - 不读运行时真实解释器环境：marker 求值只接受调用方传入的环境表。

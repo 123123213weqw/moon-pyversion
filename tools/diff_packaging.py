@@ -83,6 +83,7 @@ from fetch_index_corpus import (  # noqa: E402
 # otherwise be free to drift apart. That module imports the standard library and a
 # TOML reader only.
 from fetch_pylock_corpus import reference_pylock  # noqa: E402
+from fetch_tag_corpus import reference_tag  # noqa: E402
 
 from packaging.metadata import Metadata as ReferenceMetadata
 from packaging.requirements import InvalidRequirement, Requirement
@@ -124,6 +125,8 @@ ARITY = {
     "resolve": 9,
     "pylock": 6,
     "pylock_divergence": 4,
+    "tag": 6,
+    "tag_divergence": 4,
 }
 
 EXIT_OK = 0
@@ -707,6 +710,65 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
         pylock_divergence_expectations[name] = expectation == "accept"
         return None
 
+    if kind == "tag":
+        name, payload, status, detail = parts[2], parts[3], parts[4], parts[5]
+        try:
+            accepted, reason, expected = reference_tag(name, payload)
+        except Exception as error:  # noqa: BLE001 - the reference must answer, not raise
+            return (
+                f"tag case {name!r}: the reference could not answer "
+                f"({type(error).__name__}: {error})"
+            )
+        library_ok = status == "ok"
+        declared = tag_divergence_expectations.get(name)
+        if declared is not None:
+            # The divergence *is* the record: the two answers must differ, and the
+            # reference must answer the way the fixture declared. A library that
+            # started guessing the host would fail here.
+            if library_ok == accepted:
+                return (
+                    f"tag case {name!r}: declared a divergence, but both sides "
+                    f"{'accept' if library_ok else 'reject'} it"
+                )
+            if accepted != declared:
+                return (
+                    f"tag case {name!r}: the declared divergence says the reference "
+                    f"{'accepts' if declared else 'rejects'} it, but it "
+                    f"{'accepts' if accepted else 'rejects'} it ({reason})"
+                )
+            return None
+        if library_ok != accepted:
+            if accepted:
+                return (
+                    f"tag case {name!r}: moonbit rejects ({detail}), the reference "
+                    f"answers the same arguments"
+                )
+            return (
+                f"tag case {name!r}: moonbit accepts, the reference raises "
+                f"{reason} on the same arguments"
+            )
+        if not accepted:
+            # Both reject. The names are not compared: packaging raises ValueError
+            # subclasses, this library returns stable codes.
+            return None
+        if expected is None:
+            return f"tag case {name!r}: the reference accepted but projected nothing"
+        if detail != expected:
+            return (
+                f"tag case {name!r}: the tag list differs\n"
+                f"      expected {expected}\n      got      {detail}"
+            )
+        return None
+
+    if kind == "tag_divergence":
+        name, expectation = parts[2], parts[3]
+        if expectation not in ("accept", "reject"):
+            return f"tag_divergence {name!r} has an unknown expectation {expectation!r}"
+        if name in tag_divergence_expectations:
+            return f"tag_divergence {name!r} declared twice"
+        tag_divergence_expectations[name] = expectation == "accept"
+        return None
+
     if kind == "resolve":
         (
             requirement_text,
@@ -1242,6 +1304,10 @@ def classify_difference(oracle: "Oracle", parts: list[str]) -> str:
         return "pylock-rules"
     if kind == "pylock_divergence":
         return "pylock-divergence"
+    if kind == "tag":
+        return "tag-generation"
+    if kind == "tag_divergence":
+        return "tag-divergence"
     return {"parse": "version-grammar", "spec": "specifier-grammar"}.get(kind, "ordering")
 
 
@@ -1271,6 +1337,11 @@ index_divergence_expectations: dict[str, bool] = {}
 # the specification, in `tools/fetch_pylock_corpus.py`) accept it.
 pylock_divergence_expectations: dict[str, bool] = {}
 
+# And for PEP 425 tag generation: case name -> does the reference accept it. The
+# declared cases are the ones where the reference would read the running machine
+# (an empty Python version or interpreter name) and this library refuses to.
+tag_divergence_expectations: dict[str, bool] = {}
+
 ESCAPED_FIELDS = {
     "marker": (2, 4),
     "marker_eval": (3, 5),
@@ -1282,6 +1353,7 @@ ESCAPED_FIELDS = {
     "index_dir": (3, 5),
     "resolve": (3, 4, 5, 6, 7, 8),
     "pylock": (3, 5),
+    "tag": (3, 4, 5),
 }
 
 

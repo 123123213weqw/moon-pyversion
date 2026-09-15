@@ -428,7 +428,7 @@ fn filenames_of(files : Array[IndexFile]) -> Array[String] {
 
 ///|
 /// A plain `py3-none-any` tag list, the least specific wheel target.
-fn generic_tags() -> Array[String] {
+fn resolver_tag_list() -> Array[String] {
   ["py3-none-any"]
 }
 
@@ -1344,11 +1344,11 @@ test "scan: an sdist has no tags, and an unparseable wheel name has none" {
   // Such a file can never be a candidate, because its tag set is empty.
   let requirement = resolve_requirement_of("broken")
   assert_eq(
-    resolve_candidates([hand_built], requirement, generic_tags(), None).length(),
+    resolve_candidates([hand_built], requirement, resolver_tag_list(), None).length(),
     0,
   )
   assert_eq(
-    explain_rejection([hand_built], requirement, generic_tags(), None),
+    explain_rejection([hand_built], requirement, resolver_tag_list(), None),
     [("broken-1.0.whl", "tags")],
   )
 }
@@ -1368,7 +1368,7 @@ test "resolver: candidates are ordered by version first" {
   let candidates = resolve_candidates(
     files,
     resolve_requirement_of("demo"),
-    generic_tags(),
+    resolver_tag_list(),
     None,
   )
   assert_eq(filenames_of(candidates), [
@@ -1394,7 +1394,7 @@ test "resolver: a wheel outranks an sdist of the same version" {
       resolve_candidates(
         files,
         resolve_requirement_of("demo"),
-        generic_tags(),
+        resolver_tag_list(),
         None,
       ),
     ),
@@ -1460,7 +1460,7 @@ test "resolver: a higher build tag wins a version tie" {
       resolve_candidates(
         files,
         resolve_requirement_of("demo"),
-        generic_tags(),
+        resolver_tag_list(),
         None,
       ),
     ),
@@ -1505,7 +1505,7 @@ test "resolver: name, version and tag filters" {
       resolve_candidates(
         files,
         resolve_requirement_of("demo==1.0"),
-        generic_tags(),
+        resolver_tag_list(),
         None,
       ),
     ),
@@ -1515,7 +1515,7 @@ test "resolver: name, version and tag filters" {
     explain_rejection(
       files,
       resolve_requirement_of("demo==1.0"),
-      generic_tags(),
+      resolver_tag_list(),
       None,
     ),
     [
@@ -1529,7 +1529,7 @@ test "resolver: name, version and tag filters" {
       resolve_candidates(
         files,
         resolve_requirement_of("demo"),
-        generic_tags(),
+        resolver_tag_list(),
         None,
       ),
     ),
@@ -1539,7 +1539,7 @@ test "resolver: name, version and tag filters" {
     explain_rejection(
       files,
       resolve_requirement_of("demo"),
-      generic_tags(),
+      resolver_tag_list(),
       None,
     ),
     [
@@ -1560,14 +1560,14 @@ test "resolver: requires-python is honoured when both sides are known" {
   let py312 = resolve_candidates(
     files,
     requirement,
-    generic_tags(),
+    resolver_tag_list(),
     Some(resolve_version_of("3.12.4")),
   )
   assert_true(has_filename(py312, "demo-2.0-py3-none-any.whl"))
   let py39 = resolve_candidates(
     files,
     requirement,
-    generic_tags(),
+    resolver_tag_list(),
     Some(resolve_version_of("3.9.18")),
   )
   assert_false(has_filename(py39, "demo-2.0-py3-none-any.whl"))
@@ -1575,7 +1575,7 @@ test "resolver: requires-python is honoured when both sides are known" {
     explain_rejection(
       files,
       requirement,
-      generic_tags(),
+      resolver_tag_list(),
       Some(resolve_version_of("3.9.18")),
     ),
     [
@@ -1587,11 +1587,16 @@ test "resolver: requires-python is honoured when both sides are known" {
     ],
   )
   // No interpreter known: the constraint is not applied.
-  let unknown = resolve_candidates(files, requirement, generic_tags(), None)
+  let unknown = resolve_candidates(
+    files,
+    requirement,
+    resolver_tag_list(),
+    None,
+  )
   assert_true(has_filename(unknown, "demo-2.0-py3-none-any.whl"))
   assert_false(
     has_reason(
-      explain_rejection(files, requirement, generic_tags(), None),
+      explain_rejection(files, requirement, resolver_tag_list(), None),
       "demo-2.0-py3-none-any.whl",
     ),
   )
@@ -1613,7 +1618,7 @@ test "resolver: an invalid requires-python is ignored, like pip" {
       resolve_candidates(
         files,
         resolve_requirement_of("demo"),
-        generic_tags(),
+        resolver_tag_list(),
         Some(resolve_version_of("3.9")),
       ),
     ),
@@ -1625,7 +1630,7 @@ test "resolver: an invalid requires-python is ignored, like pip" {
     explain_rejection(
       files,
       resolve_requirement_of("demo"),
-      generic_tags(),
+      resolver_tag_list(),
       Some(resolve_version_of("3.9")),
     ),
     [],
@@ -1649,7 +1654,7 @@ test "resolver: the prerelease policy in all three modes" {
       resolve_candidates(
         mixed,
         resolve_requirement_of("demo"),
-        generic_tags(),
+        resolver_tag_list(),
         None,
       ),
     ),
@@ -1660,7 +1665,7 @@ test "resolver: the prerelease policy in all three modes" {
       resolve_candidates(
         mixed,
         resolve_requirement_of("demo"),
-        generic_tags(),
+        resolver_tag_list(),
         None,
         prereleases=Some(true),
       ),
@@ -1674,7 +1679,7 @@ test "resolver: the prerelease policy in all three modes" {
       resolve_candidates(
         mixed,
         resolve_requirement_of("demo"),
-        generic_tags(),
+        resolver_tag_list(),
         None,
         prereleases=Some(false),
       ),
@@ -1691,7 +1696,7 @@ test "resolver: the prerelease policy in all three modes" {
       resolve_candidates(
         only_pre,
         resolve_requirement_of("demo"),
-        generic_tags(),
+        resolver_tag_list(),
         None,
       ),
     ),
@@ -1707,7 +1712,7 @@ test "resolver: the prerelease policy in all three modes" {
       resolve_candidates(
         pinned,
         resolve_requirement_of("demo>=2.0rc1"),
-        generic_tags(),
+        resolver_tag_list(),
         None,
       ),
     ),
@@ -1719,7 +1724,7 @@ test "resolver: the prerelease policy in all three modes" {
     explain_rejection(
       mixed,
       resolve_requirement_of("demo"),
-      generic_tags(),
+      resolver_tag_list(),
       None,
     ),
     [
@@ -1731,7 +1736,7 @@ test "resolver: the prerelease policy in all three modes" {
     explain_rejection(
       mixed,
       resolve_requirement_of("demo"),
-      generic_tags(),
+      resolver_tag_list(),
       None,
       prereleases=Some(true),
     ),
@@ -1775,7 +1780,7 @@ test "resolver: select_best returns the head, or None" {
     select_best(
       pinned,
       resolve_requirement_of("demo==2.0rc1"),
-      generic_tags(),
+      resolver_tag_list(),
       None,
     ).unwrap().filename,
     "demo-2.0rc1-py3-none-any.whl",
@@ -1835,8 +1840,13 @@ test "resolver: explain_rejection agrees with resolve_candidates" {
   let files = reason_files()
   let requirement = resolve_requirement_of("demo>=2.0")
   let python = Some(resolve_version_of("3.12.4"))
-  let kept = resolve_candidates(files, requirement, generic_tags(), python)
-  let dropped = explain_rejection(files, requirement, generic_tags(), python)
+  let kept = resolve_candidates(files, requirement, resolver_tag_list(), python)
+  let dropped = explain_rejection(
+    files,
+    requirement,
+    resolver_tag_list(),
+    python,
+  )
   assert_eq(kept.length() + dropped.length(), files.length())
   for i = 0; i < kept.length(); i = i + 1 {
     assert_false(has_reason(dropped, kept[i].filename))

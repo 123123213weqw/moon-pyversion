@@ -90,7 +90,8 @@
 
 - 不做 pip、联网、下载、安装；
 - 不做完整依赖求解和冲突回溯（`resolve_candidates` 只在**一个**约束下排序候选）；
-- 不计算平台标签：标签表由调用方按 `sys_tags()` 顺序传入，库只做匹配与排序；
+- 不探测宿主平台：`tag` 记录逐条对照 `packaging.tags` 的展开与排序，但
+  `sys.version_info` / `sysconfig` / `EXT_SUFFIX` / 运行中 libc 由调用方注入；
 - 不读运行时解释器环境：标记求值只接受调用方传入的环境表；
 - 不提供 SemVer 兼容；
 - local 段仅允许 ASCII 字母数字；
@@ -125,10 +126,10 @@ Unicode 感知的正则。PEP 427 要求 wheel 文件名是转义后的 ASCII，
 
 `moon test` 覆盖官方规范化样例、非法输入、比较边例、各操作符、
 预发布规则、通配符、`~=` 以及固定合法版本集上的反自反/反对称/传递性，
-共 259 个测试块，在 wasm、wasm-gc、js、native 四目标验证。
+共 277 个测试块，在 wasm、wasm-gc、js、native 四目标验证。
 CI 在四个目标执行 `fmt/check/build/test/run`。
 
-另有独立差分实验：`examples/diff` 生成 122 516 条确定性记录（手工语料、
+另有独立差分实验：`examples/diff` 生成 122 589 条确定性记录（手工语料、
 按 PEP 440 文法生成、单字符变异、真实 PyPI 元数据四种来源，加上 TOML 文档、
 PEP 691 索引响应、核心元数据与 PEP 751 锁文件），逐条回放给 CPython
 `packaging 26.3`；TOML 另有参考实现 `tomli`，PEP 691 与 PEP 751 则对照按规范

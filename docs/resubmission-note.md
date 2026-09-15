@@ -9,8 +9,8 @@
 > 将需求、元数据、索引、锁文件和目标运行环境串成一次可审计决策。
 >
 > 为避免代码量统计口径不一致，仓库新增 `tools/source_metrics.py`。按排除测试、示例、
-> 生成 fixture 和 Python 工具的透明口径，当前根目录生产 MoonBit 为 9,042 行；另有
-> 6,675 行 MoonBit 测试、259 个测试块。该结果可在仓库根目录直接复核。
+> 生成 fixture 和 Python 工具的透明口径，当前根目录生产 MoonBit 为 9,494 行；另有
+> 6,976 行 MoonBit 测试、277 个测试块。该结果可在仓库根目录直接复核。
 >
 > 本次同时增加实际集成场景：`examples/audit` 使用真实 PyPI Flask 0.12.5 的 PEP 658
 > `METADATA`，结合 PEP 691 索引、PEP 751 锁文件和明确的 CPython 3.11/Linux 目标，
@@ -18,8 +18,8 @@
 > 候选，并校验名称、Python 版本、锁定版本、候选版本和 sha256 声明。验收输入、预期
 > 输出和明确边界见 `docs/audit-scenario.md`。
 >
-> 可靠性方面，259 个测试覆盖 wasm、wasm-gc、js、native；真实语料差分共 122,516 条，
-> 固定对照 `packaging==26.3`，并保留 mutation probe（36 处注入缺陷全部检出）证明测试能够发现故意注入的
+> 可靠性方面，277 个测试覆盖 wasm、wasm-gc、js、native；真实语料差分共 122,589 条，
+> 固定对照 `packaging==26.3`，并保留 mutation probe（41 处注入缺陷全部检出）证明测试能够发现故意注入的
 > 缺陷；PEP 751 锁文件语料另含 6 份由 `uv` 写出的真实 `pylock.toml`。
 > 申报书也已重新整理，明确区分已完成能力、验收边界和后续规划。
 >

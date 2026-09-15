@@ -1015,17 +1015,12 @@ fn requires_python_ok(file : IndexFile, python : Version?) -> Bool {
 /// `Wheel.find_most_preferred_tag` takes the *minimum* priority over the file's
 /// tags, and `CandidateEvaluator._sort_key` negates it, so the smallest index
 /// wins.
+///
+/// The rule itself lives in `tags.mbt` as `tag_rank`, because it is the same
+/// rule `packaging.tags.create_compatible_tags_selector` applies and the tag
+/// corpus checks both against it.
 fn tag_priority(file : IndexFile, supported : Array[String]) -> Int {
-  let file_tags = file.tags()
-  let mut best = supported.length()
-  for i = 0; i < file_tags.length(); i = i + 1 {
-    for j = 0; j < supported.length(); j = j + 1 {
-      if supported[j] == file_tags[i] && j < best {
-        best = j
-      }
-    }
-  }
-  best
+  tag_rank(file.tags(), supported)
 }
 
 ///|

@@ -1,5 +1,60 @@
 # Changelog
 
+## Unreleased — M12: PEP 425 tag generation, and a tag-case defect the corpus had missed
+
+### Added
+
+- `tags.mbt` (448 lines): the *generation* side of PEP 425, which the library had been
+  missing -- it could match and rank tags but not produce the ordered list. `cpython_tags`
+  (explicit ABIs, then the stable ABI, then `none`, then the `abi3`/`abi3t` tail down to
+  `cp32`), `generic_tags`, `pure_python_tags`, `compatible_tags`, `mac_platforms` (the
+  10.x walk, the 11+ spelling, and the x86_64-only 10.x replay) and `tag_rank` (the
+  selector rule, now shared with the resolver's candidate ordering). Every function takes
+  the interpreter, the ABI list and the platform list as arguments: the host is still
+  never read.
+- `tools/fetch_tag_corpus.py` (518 lines) and `fixtures/tag_corpus.mbt`: 62 argument
+  tuples plus 6 declared divergences, replayed against `packaging.tags` itself.
+  `tools/diff_packaging.py` imports `reference_tag` and asks the reference the same
+  question with the same arguments at replay time, so the fixture is an input list rather
+  than a transcript. This is the only record kind that is not a document comparison.
+- `tag` and `tag_divergence` record kinds, four mutations (41 total), and a
+  `--check` for the tag fixture in the local gate and in CI.
+
+### Fixed
+
+- Wheel tag components are lowercased. `packaging`'s `Tag` lowercases the interpreter,
+  the ABI and the platform in its constructor, so `CP312-CP312-Manylinux_2_17_X86_64`
+  and the lowercase spelling are one tag; `parse_tag_set` kept the caller's case. The
+  corpus had never noticed because every wheel filename in it -- curated and real -- spells
+  its tags in lower case, so the two sides never disagreed about the spelling. Five
+  curated filenames now spell them the other way, and `wheel-tag-case-not-normalized`
+  (which puts the case back) is detected on 105 records where it used to be green.
+- `tools/oracle_matrix.py` no longer reads a stale report. It removed nothing before
+  running an oracle, so a sub-run that died early (an oracle without the API a record
+  needs) left the previous run's JSON in place and the table below displayed it as this
+  run's result. That happened while adding the tag corpus; the report file is now unlinked
+  first.
+
+### Changed
+
+- Empty inputs that the reference answers from the running machine are refused rather
+  than guessed, and the six cases are declared divergences: an empty Python version
+  (`TAG_VERSION_REQUIRED`, twice), an empty interpreter name
+  (`TAG_INTERPRETER_REQUIRED`), and an empty **platform** list (`TAG_PLATFORMS_REQUIRED`,
+  three times). The last one is the subtle one: `platforms or platform_tags()` means an
+  empty list is the same `[]` a caller would pass for a target that has none, and the
+  reference answers it by probing the machine -- which also made the first version of the
+  fixture depend on the machine that generated it.
+- `create_compatible_tags_selector` (26.1) and `pure_python_tags` (26.3) are imported
+  lazily, so the drift matrix can still replay the corpus with 24.2 / 25.0 / 26.0: those
+  releases report `ReferenceUnavailable` for the `select` and `pure` cases instead of
+  taking the whole harness down. The older-oracle rows now carry `tag-generation x24`.
+- The corpus grew from 122 516 to **122 589** records, 0 mismatches against `packaging`
+  26.3, and the drift matrix is 24.2: 4492, 25.0: 2754, 26.0: 844, 26.3: 0.
+- Root production MoonBit is 9494 lines and tests 6976 lines (277 blocks, all four
+  backends); `index.mbt`'s `tag_priority` delegates to `tag_rank` so the ranking rule
+  lives in one place.
+
 ## Unreleased — M8 (continued): six PEP 751 divergences settled, real `uv` lock files
 
 ### Changed

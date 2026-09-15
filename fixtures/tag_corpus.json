@@ -1,0 +1,410 @@
+{
+  "case_count": 62,
+  "cases": [
+    {
+      "divergence": false,
+      "name": "cpython/py312_cp312_linux",
+      "payload": "3.12|cp312|linux_x86_64",
+      "tag_count": 13
+    },
+    {
+      "divergence": false,
+      "name": "cpython/py312_cp312_three_platforms",
+      "payload": "3.12|cp312|manylinux_2_17_x86_64,linux_x86_64,any",
+      "tag_count": 39
+    },
+    {
+      "divergence": false,
+      "name": "cpython/py312_two_abis",
+      "payload": "3.12|cp312,cp312d|any",
+      "tag_count": 14
+    },
+    {
+      "divergence": false,
+      "name": "cpython/py312_explicit_stable_abis",
+      "payload": "3.12|abi3,none|any",
+      "tag_count": 12
+    },
+    {
+      "divergence": false,
+      "name": "cpython/py312_no_abis",
+      "payload": "3.12||any",
+      "tag_count": 12
+    },
+    {
+      "divergence": false,
+      "name": "cpython/py313_threaded",
+      "payload": "3.13|cp313t|any",
+      "tag_count": 14
+    },
+    {
+      "divergence": false,
+      "name": "cpython/py313_threaded_second_abi",
+      "payload": "3.13|cp313,cp313t|any",
+      "tag_count": 15
+    },
+    {
+      "divergence": false,
+      "name": "cpython/py314_threaded_first",
+      "payload": "3.14|cp314t,cp314|any",
+      "tag_count": 16
+    },
+    {
+      "divergence": false,
+      "name": "cpython/py32_boundary",
+      "payload": "3.2|cp32|any",
+      "tag_count": 3
+    },
+    {
+      "divergence": false,
+      "name": "cpython/py31_before_abi3",
+      "payload": "3.1|cp31|any",
+      "tag_count": 2
+    },
+    {
+      "divergence": false,
+      "name": "cpython/py3_major_only",
+      "payload": "3|cp3|any",
+      "tag_count": 2
+    },
+    {
+      "divergence": false,
+      "name": "cpython/py27_legacy_abi",
+      "payload": "2.7|cp27mu|manylinux1_x86_64",
+      "tag_count": 2
+    },
+    {
+      "divergence": false,
+      "name": "cpython/py38_debug_abis",
+      "payload": "3.8|cp38d,cp38|any",
+      "tag_count": 10
+    },
+    {
+      "divergence": false,
+      "name": "cpython/py310_uppercase",
+      "payload": "3.10|CP310|LINUX_X86_64",
+      "tag_count": 11
+    },
+    {
+      "divergence": false,
+      "name": "cpython/py313_threaded_two_platforms",
+      "payload": "3.13|cp313t|linux_x86_64,any",
+      "tag_count": 28
+    },
+    {
+      "divergence": false,
+      "name": "cpython/py39_stable_only_platform",
+      "payload": "3.9|cp39|win_amd64",
+      "tag_count": 10
+    },
+    {
+      "divergence": false,
+      "name": "generic/pp310_pp73",
+      "payload": "pp310|pp73|linux_x86_64",
+      "tag_count": 2
+    },
+    {
+      "divergence": false,
+      "name": "generic/pp310_none_only",
+      "payload": "pp310|none|any",
+      "tag_count": 1
+    },
+    {
+      "divergence": false,
+      "name": "generic/pp310_uppercase_none",
+      "payload": "pp310|NONE|any",
+      "tag_count": 2
+    },
+    {
+      "divergence": false,
+      "name": "generic/graalpy_no_abis",
+      "payload": "graalpy_38_native||any",
+      "tag_count": 1
+    },
+    {
+      "divergence": false,
+      "name": "generic/cp312_two_abis",
+      "payload": "cp312|cp312,abi3|manylinux_2_17_x86_64",
+      "tag_count": 3
+    },
+    {
+      "divergence": false,
+      "name": "generic/jy27_multi_platform",
+      "payload": "jy27|jython27|win_amd64,any",
+      "tag_count": 4
+    },
+    {
+      "divergence": false,
+      "name": "generic/uppercase_interpreter",
+      "payload": "PP310|pp73|ANY",
+      "tag_count": 2
+    },
+    {
+      "divergence": false,
+      "name": "pure/py312",
+      "payload": "3.12",
+      "tag_count": 14
+    },
+    {
+      "divergence": false,
+      "name": "pure/py310",
+      "payload": "3.10",
+      "tag_count": 12
+    },
+    {
+      "divergence": false,
+      "name": "pure/py32",
+      "payload": "3.2",
+      "tag_count": 4
+    },
+    {
+      "divergence": false,
+      "name": "pure/py27",
+      "payload": "2.7",
+      "tag_count": 9
+    },
+    {
+      "divergence": false,
+      "name": "pure/py3_major_only",
+      "payload": "3",
+      "tag_count": 1
+    },
+    {
+      "divergence": false,
+      "name": "pure/py30",
+      "payload": "3.0",
+      "tag_count": 2
+    },
+    {
+      "divergence": false,
+      "name": "pure/py20",
+      "payload": "2.0",
+      "tag_count": 2
+    },
+    {
+      "divergence": false,
+      "name": "compatible/py311_cp311_linux",
+      "payload": "3.11|cp311|linux_x86_64",
+      "tag_count": 27
+    },
+    {
+      "divergence": false,
+      "name": "compatible/py311_no_interpreter",
+      "payload": "3.11|-|any",
+      "tag_count": 26
+    },
+    {
+      "divergence": false,
+      "name": "compatible/py311_empty_interpreter",
+      "payload": "3.11||any",
+      "tag_count": 26
+    },
+    {
+      "divergence": false,
+      "name": "compatible/py27_py2_win",
+      "payload": "2.7|py2|win_amd64",
+      "tag_count": 19
+    },
+    {
+      "divergence": false,
+      "name": "compatible/py3_major_only",
+      "payload": "3|cp3|any",
+      "tag_count": 3
+    },
+    {
+      "divergence": false,
+      "name": "mac/mojave_x86_64",
+      "payload": "10.9|x86_64",
+      "tag_count": 36
+    },
+    {
+      "divergence": false,
+      "name": "mac/big_sur_arm64",
+      "payload": "11.0|arm64",
+      "tag_count": 15
+    },
+    {
+      "divergence": false,
+      "name": "mac/monterey_x86_64",
+      "payload": "12.3|x86_64",
+      "tag_count": 90
+    },
+    {
+      "divergence": false,
+      "name": "mac/tahoe_arm64",
+      "payload": "15.0|arm64",
+      "tag_count": 23
+    },
+    {
+      "divergence": false,
+      "name": "mac/panther_x86_64",
+      "payload": "10.3|x86_64",
+      "tag_count": 0
+    },
+    {
+      "divergence": false,
+      "name": "mac/panther_i386",
+      "payload": "10.3|i386",
+      "tag_count": 0
+    },
+    {
+      "divergence": false,
+      "name": "mac/tiger_x86_64",
+      "payload": "10.4|x86_64",
+      "tag_count": 6
+    },
+    {
+      "divergence": false,
+      "name": "mac/snow_leopard_ppc64",
+      "payload": "10.6|ppc64",
+      "tag_count": 6
+    },
+    {
+      "divergence": false,
+      "name": "mac/leopard_ppc64",
+      "payload": "10.5|ppc64",
+      "tag_count": 6
+    },
+    {
+      "divergence": false,
+      "name": "mac/lion_ppc",
+      "payload": "10.7|ppc",
+      "tag_count": 28
+    },
+    {
+      "divergence": false,
+      "name": "mac/snow_leopard_ppc",
+      "payload": "10.6|ppc",
+      "tag_count": 28
+    },
+    {
+      "divergence": false,
+      "name": "mac/system9_x86_64",
+      "payload": "9.2|x86_64",
+      "tag_count": 0
+    },
+    {
+      "divergence": false,
+      "name": "mac/sonoma_i386",
+      "payload": "14.0|i386",
+      "tag_count": 33
+    },
+    {
+      "divergence": false,
+      "name": "mac/big_sur_x86_64",
+      "payload": "11.0|x86_64",
+      "tag_count": 84
+    },
+    {
+      "divergence": false,
+      "name": "mac/ten_sixteen_x86_64",
+      "payload": "10.16|x86_64",
+      "tag_count": 78
+    },
+    {
+      "divergence": false,
+      "name": "select/exact_before_generic",
+      "payload": "cp312-cp312-linux_x86_64,cp312-abi3-linux_x86_64,py3-none-any|cp312-cp312-linux_x86_64;py3-none-any;cp311-cp311-linux_x86_64",
+      "tag_count": 2
+    },
+    {
+      "divergence": false,
+      "name": "select/best_tag_wins",
+      "payload": "cp312-cp312-linux_x86_64,cp312-abi3-linux_x86_64,cp312-none-any,py3-none-any|py3-none-any,cp312-abi3-linux_x86_64;cp312-none-any,py3-none-any;py3-none-any",
+      "tag_count": 3
+    },
+    {
+      "divergence": false,
+      "name": "select/nothing_matches",
+      "payload": "cp312-cp312-linux_x86_64|py3-none-any;cp311-cp311-linux_x86_64",
+      "tag_count": 0
+    },
+    {
+      "divergence": false,
+      "name": "select/no_supported_tags",
+      "payload": "|py3-none-any",
+      "tag_count": 0
+    },
+    {
+      "divergence": false,
+      "name": "select/no_items",
+      "payload": "py3-none-any|",
+      "tag_count": 0
+    },
+    {
+      "divergence": false,
+      "name": "select/duplicate_tags_in_one_file",
+      "payload": "py3-none-any|py3-none-any,py3-none-any",
+      "tag_count": 1
+    },
+    {
+      "divergence": true,
+      "name": "cpython/host_python_version",
+      "payload": "|cp312|any",
+      "reference_accepts": true
+    },
+    {
+      "divergence": true,
+      "name": "compatible/host_python_version",
+      "payload": "|cp311|any",
+      "reference_accepts": true
+    },
+    {
+      "divergence": true,
+      "name": "generic/host_interpreter",
+      "payload": "|pp73|any",
+      "reference_accepts": true
+    },
+    {
+      "divergence": true,
+      "name": "cpython/host_platforms",
+      "payload": "3.12|cp312|",
+      "reference_accepts": true
+    },
+    {
+      "divergence": true,
+      "name": "generic/host_platforms",
+      "payload": "pp310|pp73|",
+      "reference_accepts": true
+    },
+    {
+      "divergence": true,
+      "name": "compatible/host_platforms",
+      "payload": "3.12|cp312|",
+      "reference_accepts": true
+    }
+  ],
+  "divergences": [
+    {
+      "name": "cpython/host_python_version",
+      "reason": "`cpython_tags` with an empty `python_version` reads `sys.version_info` in the reference; this library has no host to read and raises `TAG_VERSION_REQUIRED`, so the caller has to say which interpreter it is describing.",
+      "reference_accepts": true
+    },
+    {
+      "name": "compatible/host_python_version",
+      "reason": "`compatible_tags` with an empty `python_version` reads `sys.version_info` in the reference; this library raises `TAG_VERSION_REQUIRED` instead.",
+      "reference_accepts": true
+    },
+    {
+      "name": "generic/host_interpreter",
+      "reason": "`generic_tags` with an empty interpreter name asks the running interpreter what it is (`interpreter_name` / `interpreter_version`); this library raises `TAG_INTERPRETER_REQUIRED` instead.",
+      "reference_accepts": true
+    },
+    {
+      "name": "cpython/host_platforms",
+      "reason": "`cpython_tags` with an empty platform list reads `platform_tags()` -- and on Linux that inspects the running libc. This library takes the empty list literally and raises `TAG_PLATFORMS_REQUIRED` instead of answering a different question than the caller asked.",
+      "reference_accepts": true
+    },
+    {
+      "name": "generic/host_platforms",
+      "reason": "`generic_tags` with an empty platform list reads `platform_tags()` from the running machine; this library raises `TAG_PLATFORMS_REQUIRED` instead.",
+      "reference_accepts": true
+    },
+    {
+      "name": "compatible/host_platforms",
+      "reason": "`compatible_tags` with an empty platform list reads `platform_tags()` from the running machine; this library raises `TAG_PLATFORMS_REQUIRED` instead.",
+      "reference_accepts": true
+    }
+  ],
+  "reference": "packaging.tags"
+}

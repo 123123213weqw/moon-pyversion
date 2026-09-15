@@ -84,6 +84,11 @@ def main(argv: list[str] | None = None) -> int:
         for python in oracles:
             version = oracle_version(python)
             report_path = reports / f"oracle-{version}.json" if reports else Path(tmp) / f"{version}.json"
+            # Remove any report from an earlier run first. A sub-run that dies
+            # before writing one (an oracle without the API a record needs, say)
+            # would otherwise leave the previous run's numbers in place, and the
+            # table below would show them as this run's result. That happened.
+            report_path.unlink(missing_ok=True)
             completed = subprocess.run(
                 [
                     python,

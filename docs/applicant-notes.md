@@ -19,11 +19,12 @@
 
 ## 验证事实
 
-- 259 个 MoonBit 测试块；CI 覆盖 wasm、wasm-gc、js、native；
+- 277 个 MoonBit 测试块；CI 覆盖 wasm、wasm-gc、js、native；
 - `examples/metadata-check`、`examples/resolve`、`examples/audit` 为三个端到端场景；
 - audit 场景使用真实 PyPI Flask 0.12.5 `METADATA`，索引和锁为确定性验收输入；
-- 独立差分实验：122 516 条记录对照 CPython packaging 26.3，0 不一致；PEP 751 的
-  锁文件语料含 6 份 `uv` 写出的真实锁文件，声明分歧 1 条；变异探针 36 处全部检出；
+- 独立差分实验：122 589 条记录对照 CPython packaging 26.3，0 不一致；PEP 751 的
+  锁文件语料含 6 份 `uv` 写出的真实锁文件，PEP 425 标签语料 62 组参数；声明分歧
+  1 + 6 条；变异探针 41 处全部检出；
 - 差分语料、oracle 版本、声明分歧与 mutation probe 以最新 CI 输出为准；
 - 0.2.0 发布后必须从注册表独立下载安装验证，不能用 GitHub CI 代替。
 
