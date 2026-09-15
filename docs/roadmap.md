@@ -331,7 +331,8 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 `[已有]` 源码 **9042 行**（不含测试）、测试 **6675 行**（259 个测试块 × 四后端
 全通过）、`examples/basic` `examples/diff`（2550 行确定性发射器）
-`examples/bench`、`tools/` 十个脚本（5974 行 Python）、`fixtures/` 真实语料
+`examples/bench`、`examples/audit`（36 行，跨制品审计）、`tools/` 十个脚本
+（5974 行 Python，含 `source_metrics.py`）、`fixtures/` 真实语料
 （97 个 PyPI 包 + 83 个 TOML 文档 + 285 份核心元数据 + 114 份手工锁文件 + 6 份真实 `uv` 锁文件）、四后端
 CI + 独立 differential 作业。
 
@@ -341,6 +342,10 @@ CI + 独立 differential 作业。
   （`Pylock::parse`）+ 目标环境，输出越界项、不适用项与无法解析项清单，并报告
   锁文件里有多少条是为另一个目标锁定的——场景 1 的可运行证据，四后端输出一致，
   CI 已纳入；
+- `[已完成]` `examples/audit`（36 行）+ `audit.mbt`（332 行）：把需求、真实
+  `METADATA`、索引响应、锁文件与目标环境合并为一次 `audit_package` 决策，输出
+  `Ready` / `Blocked` / `NotRequired` 与稳定问题码；四后端输出逐字节一致
+  （md5 `9d3cadf92d80`），CI 已纳入。验收输入与边界见 `docs/audit-scenario.md`；
 - `[已完成]` `examples/resolve`（570 行）：一份 PEP 691 索引响应 + 目标标签表 +
   一个 wheelhouse 目录，输出 yank 策略、每个被拒文件的首条失败规则、候选排序与
   最终选择——场景 2 的可运行证据，四后端输出一致，CI 已纳入（含逐后端比对）；

@@ -229,11 +229,12 @@ M8 收尾时把核心元数据语料逐条回放，又查出**三处**库与 `pa
 | 检查 | 结果 |
 | --- | --- |
 | `moon fmt --check` | 通过 |
-| `moon check/build/test --deny-warn`（wasm / wasm-gc / js / native） | 全部通过，每个后端 **251 个测试块全部通过**（合计 1004） |
+| `moon check/build/test --deny-warn`（wasm / wasm-gc / js / native） | 全部通过，每个后端 **259 个测试块全部通过**（合计 1036） |
 | `moon run examples/basic`（四后端） | 通过 |
 | `moon run examples/diff`（四后端） | 122 517 行语料，四端字节一致 |
 | `moon run examples/metadata-check`（四后端） | 四端字节一致（md5 `2cedc437f5b3`） |
 | `moon run examples/resolve`（四后端） | 四端字节一致（md5 `e58c1ff44ab6`） |
+| `moon run examples/audit`（四后端） | 四端字节一致（md5 `9d3cadf92d80`） |
 
 ## 6.5 各阶段新增能力的覆盖
 
@@ -512,6 +513,32 @@ cattrs 写出的 `pylock.toml`：50 个包、真实索引 URL、真实 sha256 �
 必须说清楚它**不**等于多了一份 oracle：`uv` 只写不读，不会给出裁决，所以这 6 份
 补的是输入的独立性（PEP 751 之外的软件写出来的文档），而不是第二份读法。它们的
 裁决仍然只有本仓库这一份，见 6.9 的第一段。
+
+## 6.11 跨制品审计（`examples/audit`）的端到端输出
+
+前面两节各自把一条链路串到底（元数据、索引），`examples/audit` 把三条链**合并成一次
+决策**：一个需求、一份真实 `METADATA`、一份 PEP 691 索引响应、一份 PEP 751 锁文件、
+一个明确的目标环境，输出 `Ready` / `Blocked` / `NotRequired` 与稳定问题码。它的四份
+输入都是可复现的：`METADATA` 取自真实 PyPI wheel 的 PEP 658 边上文件，索引与锁按验收
+条件写成固定输入（见 `docs/audit-scenario.md`）。
+
+```
+project: flask
+requirement: Flask==0.12.5
+disposition: ready
+metadata: Flask 0.12.5
+index: Flask, files=2, ignored=0, yanked=1
+candidates: 1
+selected: Flask-0.12.5-py3-none-any.whl
+lock-versions: 0.12.5
+issues: none
+```
+
+输出里值得单独指出的两行：`yanked=1` 说明被 PEP 592 标为 yanked 的候选**被排除而不是
+被采用**（真实 Flask 0.12.5 之外的候选正是这种情况）；`issues: none` 是在名称、目标
+Python、环境、锁定版本、最佳候选版本与 sha256 声明六项全部一致时才出现的结论，任何一项
+不一致都会换成对应的稳定问题码，因此这十行不是"没有报错"，而是六条判定都过了。四后端
+输出逐字节一致（md5 `9d3cadf92d80`）。
 
 ## 7. 吞吐（`examples/bench`，本机墙钟，非跨语言基准）
 
