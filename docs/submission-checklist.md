@@ -20,6 +20,9 @@
   原创/移植/参考链接与许可证、生态差异、本人理解。参赛者需亲自审阅和验证。
 - 在 MoonCakes 确认包名、版本、下载/安装成功；GitHub 推送和 CI 通过不等于发布。
   本轮源码修复与提交不自动执行 moon publish。
+  - `[已做]` 0.1.0：注册表索引中唯一版本、未 yank，下载归档 sha256 与索引一致，临时模块
+    安装并运行通过。原始输出见 [release-verification.md](release-verification.md)。
+  - `[待做]` 0.2.0：尚未发布，发布后按同一份步骤重跑并更新申报书的发布状态。
 - 在[官方问卷](https://bxup9uklfcb.feishu.cn/share/base/form/shrcnWUMlgpbwHaXgzV7HmNhNhg)报名并加入赛事群。
   官网当前显示 9 月 24 日验收并截止报名；具体截止时刻及验收方式向赛事群确认。
 
