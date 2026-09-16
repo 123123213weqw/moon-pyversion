@@ -3,6 +3,10 @@
 本文说明"Moon PyVersion 与 PyPA `packaging` 行为一致"这句话是如何被检验的。
 所有步骤都在仓库里、用固定输入、可重复执行。
 
+本文说的是**设计**（为什么这样对照、输入从哪来）；跑出来的**数字**在
+[experiment-results.md](experiment-results.md)；整套测试的分层、覆盖矩阵与
+复现命令在 [test-report.md](test-report.md)。
+
 ## 为什么需要独立 oracle
 
 本库是 PEP 440 的一种实现，而 PEP 440 的自然语言规范留有余地（预发布默认

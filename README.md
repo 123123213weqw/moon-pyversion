@@ -235,7 +235,9 @@ differential 作业固定 `packaging==26.3` 与 `tomli==2.4.1`（TOML fixture �
 版本"只说 SHOULD warn，而本库没有警告通道，因此按同段的 MUST 那一侧拒绝。
 
 实验设计、数据和查出的真实缺陷见 [docs/experiment.md](docs/experiment.md) 与
-[docs/experiment-results.md](docs/experiment-results.md)。
+[docs/experiment-results.md](docs/experiment-results.md)；
+分层方式、覆盖矩阵、复现命令与"测试没证明什么"见
+[docs/test-report.md](docs/test-report.md)。
 
 ## 可运行示例：依赖清单检查
 
