@@ -557,17 +557,30 @@ def leftover_injections(root: Path) -> list[str]:
     """Mutations whose *injected* form is already in the source.
 
     An interrupted run cannot restore the file it was editing: the process died
-    between the write and the `finally`. The signature is precise -- the injected
-    text is present and the anchor it replaced is gone -- so it can be named as a
-    leftover instead of showing up later as a missing anchor. That difference
-    matters: a missing anchor fails the run, but a leftover sitting next to a
-    *different* mutation's anchor would quietly inflate the counts.
+    between the write and the `finally`. The signature is the injected text being
+    present while the anchor it replaced is gone, and it is only looked for in
+    files that `modified_sources` already reports as touched. Both restrictions
+    are needed:
+
+    - without the file restriction the test is not specific enough. Several
+      mutations inject an ordinary-looking snippet (one injects the empty string,
+      which is a substring of everything), so a *clean* file can match by
+      coincidence. A clean file cannot hold a leftover.
+    - without the anchor restriction the test is not sensitive enough: some
+      mutations replace a line with a shorter one, and the shorter spelling may
+      appear elsewhere in the same file.
     """
+    dirty = set(modified_sources(root))
     found: list[str] = []
     for mutation in MUTATIONS:
+        if mutation["file"] not in dirty:
+            continue
         text = (root / mutation["file"]).read_text(encoding="utf-8")
-        if mutation["new"] in text and mutation["old"] not in text:
-            found.append(mutation["name"])
+        if mutation["old"] in text:
+            continue
+        if mutation["new"] and mutation["new"] not in text:
+            continue
+        found.append(mutation["name"])
     return found
 
 
