@@ -85,16 +85,18 @@ jobs:
           moon run examples/diff --target js > corpus-b.tsv
           cmp corpus-a.tsv corpus-b.tsv
       - name: Every backend must print the same scenario report
-        # The two scenario examples are reports a user reads, so "the same
+        # The four scenario examples are reports a user reads, so "the same
         # answer everywhere" is part of the claim they demonstrate. The verify
-        # job above only proves that each backend runs them.
+        # job above only proves that each backend runs them, one backend per
+        # matrix entry, which is not the same statement.
         run: |
           for target in wasm wasm-gc js native; do
             moon run examples/metadata-check --target $target > dependency-check-$target.txt
             moon run examples/resolve --target $target > candidate-resolution-$target.txt
             moon run examples/audit --target $target > package-audit-$target.txt
+            moon run examples/upgrade-check --target $target > upgrade-shortlist-$target.txt
           done
-          for report in dependency-check candidate-resolution package-audit; do
+          for report in dependency-check candidate-resolution package-audit upgrade-shortlist; do
             cmp $report-wasm.txt $report-wasm-gc.txt
             cmp $report-wasm.txt $report-js.txt
             cmp $report-wasm.txt $report-native.txt

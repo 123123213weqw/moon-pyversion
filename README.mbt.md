@@ -44,16 +44,40 @@ The source repository contains this working example in `examples/basic`.
 - `canonicalize_version(String, strip_trailing_zero? : Bool = true) -> String`
 - `parse_wheel_filename(String) -> WheelFilename raise VersionError`
 - `parse_sdist_filename(String) -> SdistFilename raise VersionError`
-- `Metadata::parse`, `SimpleIndex::parse`, and `Pylock::parse`
-- `resolve_candidates` / `select_best` / `explain_rejection`
+- `Requirement::parse`, `Marker::parse`, `Marker::evaluate`
+- `canonicalize_license_expression` / `canonicalize_license_file`
+- `Toml::parse` and `Metadata::parse`
+- `SimpleIndex::parse`, `LocalIndex::scan`, `resolve_candidates`,
+  `select_best`, `explain_rejection`
+- `Pylock::parse`, `Pylock::is_applicable`, `Pylock::applicable_packages`
+- `cpython_tags`, `generic_tags`, `pure_python_tags`, `compatible_tags`,
+  `mac_platforms`, `tag_rank`
 - `audit_package(...) -> PackageAudit raise`
-- `PackageAudit::disposition()` and `PackageAudit::render()`
+- `upgrade_shortlist(...) -> UpgradePlan`, `UpgradePlan::versions`,
+  `UpgradePlan::rejection_summary`, `UpgradeCandidate::parse`
 
-`audit_package` is the high-level integration boundary. It joins one PEP 508
-requirement, one real core-metadata document, one PEP 691 index response and one
-PEP 751 lock for an explicitly supplied target. It reports cross-document name,
-Python, environment, version and sha256 inconsistencies without downloading or
-executing a file. See `examples/audit` and `docs/audit-scenario.md`.
+Two functions are the high-level integration boundaries, and both are built out
+of the pieces above rather than beside them.
+
+`audit_package` joins one PEP 508 requirement, one real core-metadata document,
+one PEP 691 index response and one PEP 751 lock for an explicitly supplied
+target. It reports cross-document name, Python, environment, version and sha256
+inconsistencies without downloading or executing a file, and returns `Ready`,
+`Blocked` or `NotRequired` with stable issue codes. See `examples/audit` and
+`docs/audit-scenario.md`.
+
+`upgrade_shortlist` answers the version part of "which of these candidates is
+worth a test run?": given the current version, a target range, a prerelease
+policy, a target interpreter and a candidate list, it returns the shortlist in
+ascending order (smallest step first) plus the rule that dropped every other
+candidate -- `unparsable`, `same`, `downgrade`, `out-of-range`, `prerelease` or
+`requires-python`, in that order, first match wins. The prerelease policy is
+`SpecifierSet::filter`'s, so it reaches the candidates through the range; a
+`requires-python` that does not parse is ignored rather than treated as a
+rejection, which is what pip does. The shortlist says nothing about API
+compatibility, dependency solvability or security, and the example prints that
+sentence in its own output rather than leaving it in a comment. See
+`examples/upgrade-check` and `docs/upgrade-scenario.md`.
 
 `Version` implements `Eq`, `Compare`, and `Show`. Its `raw` field retains the
 caller's original string. `to_string` returns a normalized public form:
@@ -120,15 +144,42 @@ implements PEP 625 for `.tar.gz` and `.zip`, splitting on the last dash.
 Both order strings with `String::lexical_compare`, because MoonBit's default
 `String` comparison orders by length first and would disagree with PEP 440.
 
+## Runnable scenarios
+
+Four programs in `examples/` join the pieces into end-to-end decisions, and each
+one is checked byte for byte across the four backends in CI:
+
+1. `examples/metadata-check` -- four real `METADATA` documents plus a
+   `pylock.toml` and one target environment: which requirements are out of range,
+   which do not apply here, which are not locked, which cannot be parsed. On the
+   real data one document is rejected for declaring a `Metadata-Version` the
+   specification never defined, and one requirement genuinely conflicts with the
+   lock.
+2. `examples/resolve` -- one PEP 691 index response, a target tag list and a
+   wheelhouse directory: the yank policy, the first failing rule for every
+   rejected file, and the chosen candidate.
+3. `examples/audit` -- requirement + real Flask 0.12.5 metadata + index + lock +
+   CPython 3.11/Linux target: `Ready`, with one yanked candidate excluded and a
+   sha256 declared.
+4. `examples/upgrade-check` -- the shortlist for eight sets of inputs, including
+   one that trips every rule at once.
+
+The library never reads a file, the network, the clock or the host: every
+interpreter version, ABI, platform and environment is supplied by the caller, so
+the same input produces the same answer on every backend and on every machine.
+
 ## Differential experiment
 
 Agreement with CPython `packaging` is measured rather than asserted.
-`examples/diff` emits a deterministic corpus of 99 020 records from four sources
-(a curated PEP 440 list, grammar-generated versions and specifiers,
-single-character mutations, and 3000 real version strings plus 500 real
-constraint strings from 97 PyPI packages in `fixtures/`). Corpus content is
-identical across wasm, wasm-gc, js and native after normalizing the host C
-runtime's CRLF convention; raw and normalized hashes are both reported.
+`examples/diff` emits a deterministic corpus of **122 640 records** in 26 kinds,
+from curated lists, grammar-generated input, single-character mutations and real
+data: 3000 version strings, 500 constraint strings, 600 real `Requires-Dist`
+lines and 900 real distribution filenames from 97 PyPI packages, 239 real
+`METADATA` documents, 97 real PEP 691 index responses, 215 lock-file records
+(including six `pylock.toml` files written by `uv`), 83 TOML documents, 62 tag
+argument tuples and 51 upgrade cases. Corpus content is identical across wasm,
+wasm-gc, js and native after normalizing the host C runtime's CRLF convention;
+raw and normalized hashes are both reported.
 
 * `python -B tools/diff_packaging.py --oracle-version 26.3` replays every record
   against `packaging` 26.3 and reports differences by source, kind, mode and cause.
@@ -136,13 +187,36 @@ runtime's CRLF convention; raw and normalized hashes are both reported.
 * `python -B tools/oracle_matrix.py --oracle python3` replays one captured corpus
   against several `packaging` releases.
 * `python -B tools/mutation_probe.py` breaks the library on purpose and asserts the
-  corpus notices; all 7 injected defects are detected.
+  corpus notices; all 43 injected defects are detected.
 
-Current results: 0 differences against the targeted `packaging` 26.3; 2109, 2109
-and 360 differences against 24.2, 25.0 and 26.0 respectively, all attributable to
-four upstream behaviour changes (automatic prerelease admission, the `<`/`>`
-range rewrite, the `~=` upper bound, and the 26.3 filename grammar). See `docs/experiment.md` and
-`docs/experiment-results.md`, including the three defects this corpus found.
+Current results: 0 differences against the targeted `packaging` 26.3; 4492, 2754
+and 844 differences against 24.2, 25.0 and 26.0 respectively, all attributable to
+upstream behaviour changes (automatic prerelease admission, the `<`/`>` range
+rewrite, the `~=` upper bound, the 26.3 filename and marker grammars, and the
+26.1/26.3 selector APIs). See `docs/experiment.md` and
+`docs/experiment-results.md`. "Zero differences" only means something when the
+comparison can fail, so the corpus keeps 43 deliberate defects beside it: the
+probe refuses to run on a modified tree, and every injection has to be noticed.
+
+Not every record kind has an external reference. `packaging` covers versions,
+specifiers, filenames, requirement lines, markers, licences and core metadata;
+TOML is checked against `tomli`. PEP 691 indexes and PEP 751 locks have no
+reference implementation, so those records are compared against a second reading
+of the specification text written in this repository -- which cannot catch two
+readings that are wrong in the same way. For locks, six real `uv` lock files add
+independence of *input*, not a second reading: `uv` writes them and does not read
+them. Declared divergences are registered per kind and asserted in both
+directions rather than tolerated.
+
+The experiment found seven real defects in the library (suffix separator
+grammar, textual local-segment ordering, specifier operand restrictions, `Name`
+and `Provides-Extra` trailing underscores, `Keywords` whitespace, and wheel tag
+case normalization), plus six PEP 751 relaxations that reading the
+specification's own `Required?` lines turned into fixes, and four defects in the
+test infrastructure. One of them is worth repeating: every wheel filename in the
+corpus spelled its tags in lower case, so the two sides never disagreed about
+the spelling and the tag-case defect was invisible until the corpus was given
+mixed-case filenames.
 
 License: Apache-2.0. See `docs/design.md`, `docs/provenance.md`, and the
 repository `README.md`.
