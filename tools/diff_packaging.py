@@ -84,6 +84,7 @@ from fetch_index_corpus import (  # noqa: E402
 # TOML reader only.
 from fetch_pylock_corpus import reference_pylock  # noqa: E402
 from fetch_tag_corpus import reference_tag  # noqa: E402
+from fetch_upgrade_corpus import project as upgrade_projection  # noqa: E402
 
 from packaging.metadata import Metadata as ReferenceMetadata
 from packaging.requirements import InvalidRequirement, Requirement
@@ -127,6 +128,7 @@ ARITY = {
     "pylock_divergence": 4,
     "tag": 6,
     "tag_divergence": 4,
+    "upgrade": 6,
 }
 
 EXIT_OK = 0
@@ -760,6 +762,26 @@ def check_record(oracle: Oracle, parts: list[str]) -> str | None:
             )
         return None
 
+    if kind == "upgrade":
+        name, payload, status, detail = parts[2], parts[3], parts[4], parts[5]
+        fields = payload.split("|")
+        if len(fields) != 5:
+            return f"upgrade case {name!r}: the payload needs five fields"
+        expected = upgrade_projection(*fields)
+        fatal = expected.startswith("!")
+        if fatal != (status == "bad"):
+            return (
+                f"upgrade case {name!r}: "
+                f"{'a fatal input' if fatal else 'a decidable input'} was reported as "
+                f"{'ok' if status == 'ok' else 'bad'} ({detail})"
+            )
+        if detail != expected:
+            return (
+                f"upgrade case {name!r}: the projection differs\n"
+                f"      expected {expected}\n      got      {detail}"
+            )
+        return None
+
     if kind == "tag_divergence":
         name, expectation = parts[2], parts[3]
         if expectation not in ("accept", "reject"):
@@ -1308,6 +1330,8 @@ def classify_difference(oracle: "Oracle", parts: list[str]) -> str:
         return "tag-generation"
     if kind == "tag_divergence":
         return "tag-divergence"
+    if kind == "upgrade":
+        return "upgrade-shortlist"
     return {"parse": "version-grammar", "spec": "specifier-grammar"}.get(kind, "ordering")
 
 
@@ -1354,6 +1378,7 @@ ESCAPED_FIELDS = {
     "resolve": (3, 4, 5, 6, 7, 8),
     "pylock": (3, 5),
     "tag": (3, 4, 5),
+    "upgrade": (3, 4, 5),
 }
 
 

@@ -1,0 +1,11 @@
+// moon.pkg for the upgrade-shortlist example.
+//
+// It needs the library and nothing else: like the candidate-resolution example it
+// does not read the differential fixtures, because its inputs are candidate lists
+// written into `main.mbt`. That keeps the scenario self-contained and makes the
+// output depend only on what a reader can see in the source.
+import {
+  "123123213weqw/moon_pyversion" @pyversion,
+}
+
+pkgtype(kind: "executable")

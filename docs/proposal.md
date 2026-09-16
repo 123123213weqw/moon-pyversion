@@ -1,102 +1,87 @@
-# Moon PyVersion 项目申报书（技术事实稿）
+# Moon PyVersion 项目申报书
 
 ## 一、项目与仓库
 
-- **项目名称：** Moon PyVersion — Python 打包元数据工具库
-- **GitHub：** https://github.com/123123213weqw/moon-pyversion
-- **MoonBit 模块：** `123123213weqw/moon_pyversion`
-- **方向：** 语言与开发工具 / 软件供应链基础库
-- **许可证：** Apache-2.0
+- 项目名称：Moon PyVersion（Python 打包元数据工具库）
+- 仓库地址：https://github.com/123123213weqw/moon-pyversion
+- MoonBit 模块：`123123213weqw/moon_pyversion`，仓库版本 0.2.0，许可证 Apache-2.0；
+  MoonCakes 上已发布 0.1.0，含本轮扩展的 0.2.0 尚未发布
+- 方向：开发工具基础库，软件供应链；运行依赖只有 `moonbitlang/core`
 
-## 二、问题与项目定位
+## 二、简介与定位
 
-MoonBit 生态已有 SemVer 与依赖求解工具，但 Python 包使用 PEP 440、PEP 508、core
-metadata、PEP 691 索引和 PEP 751 锁文件；epoch、pre/post/dev/local、环境标记、
-`Requires-Python` 和平台标签均不能直接按 SemVer 处理。本项目提供纯 MoonBit、零第三方依赖
-的解析与审计能力，让离线镜像、依赖检查和升级评估工具复用同一套确定规则。
+用纯 MoonBit 实现的 Python 打包元数据处理库。库把 PEP 440 版本与版本区间、PEP 508 需求与
+环境标记、PEP 427/625 分发文件名、PEP 425 平台标签、TOML 1.0、core metadata、PEP 691
+包索引和 PEP 751 锁文件解析为确定的数据结构，并在此之上提供候选筛选和一次性的包审计。
 
-## 三、已实现的核心能力
+Python 打包语义不能按 SemVer 处理：版本含 epoch、任意长度 release 段与 pre/post/dev/local
+段，区间含 `~=` 兼容释放与可配置的预发布准入，平台适用性由标签集合决定。库不联网、不读
+文件系统与时钟，解释器版本、ABI、平台和目标环境等宿主事实全部由调用方注入，因此同一份
+规则可用于服务端、CI 与 wasm / JavaScript 目标，行为也能用确定性输入复现。
 
-项目已实现 PEP 440 版本/约束、PEP 503 名称、PEP 427/625 文件名、PEP 508 需求与环境
-标记、PEP 639 许可证、TOML 1.0、core metadata、PEP 691 索引、PEP 751 锁文件、PEP 425
-标签计算及候选筛选。0.2.0 新增 `audit_package` 高层入口，把需求、真实元数据、索引、锁文件和明确的目标
-环境合并为一次可审计决策，检查名称、Python 版本、环境、锁定版本、候选版本和 sha256，
-返回 `Ready`、`Blocked` 或 `NotRequired` 及稳定问题码。
+## 三、使用场景
 
-按 `tools/source_metrics.py` 的透明口径，根目录生产 MoonBit 为 **9,494 行**，另有 6,976 行
-MoonBit 测试（277 个测试块，四个后端各自全通过）；该口径排除示例、生成 fixture 和 Python
-工具，不把生成语料计作核心源码。`python -B tools/source_metrics.py` 会在仓库根目录打印
-这张分组表，口径本身写在输出里而不是写在文档里。
+四个场景都是可运行程序，报告在 wasm、wasm-gc、js、native 四个后端逐字节相同。
 
-## 四、实际集成场景与验证
+| 场景 | 输入 | 输出与实测结果 |
+| --- | --- | --- |
+| 依赖清单审查<br>`examples/metadata-check` | 4 份真实 PyPI wheel 的 `METADATA`、一份 `pylock.toml`、固定目标环境 | `ok`、`OUT OF RANGE`、`not applicable`、`not locked`、`UNPARSABLE` 与汇总；flask 0.12.5 检出真实冲突（锁里 werkzeug 2.0.0，要求 `<1.0,>=0.7`），requests 2.24.0 因 `Metadata-Version: 2.0` 不是规范版本被拒；4 份文档共 2 个问题 |
+| 离线索引筛选<br>`resolve_candidates`、`examples/resolve` | 一份 PEP 691 索引响应、一组按优先级排列的目标标签、一个本地 wheelhouse 目录 | 按名称、区间、预发布策略、`Requires-Python`、yank 状态与标签过滤，输出顺序确定的候选表与每个被拒文件的首条失败规则；示例 11 个文件被拒 6 个 |
+| 跨制品审计<br>`audit_package`、`examples/audit` | PEP 508 需求、真实 PyPI `METADATA`、PEP 691 索引响应、PEP 751 锁文件、目标环境 | `Ready`、`Blocked` 或 `NotRequired` 与稳定问题码；`Flask==0.12.5` 在 CPython 3.11.9 / Linux 上为 `Ready`，排除一个 yanked 候选，选中 `Flask-0.12.5-py3-none-any.whl`，版本与 sha256 声明一致 |
+| 升级候选评估<br>`upgrade_shortlist`、`examples/upgrade-check` | 当前版本、目标区间、候选版本列表 | 待测短名单（升序，最小步长在前）与拒绝码 `unparsable`、`same`、`downgrade`、`out-of-range`、`prerelease`、`requires-python`；报告另列出它不检查的内容 |
 
-`examples/audit` 使用真实 PyPI wheel 的 Flask 0.12.5 PEP 658 `METADATA`，配合可审查的
-PEP 691 索引、PEP 751 锁文件和 CPython 3.11/Linux 目标环境，实际完成“需求 → 元数据 →
-锁定版本 → 可安装文件”的端到端审计。结果为 `Ready`，排除一项 yanked 候选，最终选择
-`Flask-0.12.5-py3-none-any.whl`，且版本与锁文件、元数据一致并声明 sha256。
+审计场景的验收条件见 `docs/audit-scenario.md`，升级场景的输入与裁决见
+`docs/upgrade-scenario.md`，各场景的端到端输出见 `docs/experiment-results.md`。
 
-仓库另有真实 PyPI 语料差分实验：**122 589 条**确定性记录逐条回放给 CPython
-`packaging==26.3`，对版本、约束、需求、元数据和文件名逐条比对，**0 不一致**；TOML 对照
-`tomli` 2.4.1。故意注入缺陷的 mutation probe（**41 处**，覆盖 M0–M12 的行为）用于证明语料
-能够失败——41/41 全部被检出，探针默认拒绝在改过的工作树上运行。"0 不一致"只有在对照能失败
-的前提下才有意义，这一层结论写在各层证据旁边，而不是单独当结论。
-所有 MoonBit 测试、三个集成示例及报告一致性均纳入 wasm、wasm-gc、js、native CI。
-场景输入、复现命令和验收条件见
-[docs/audit-scenario.md](https://github.com/123123213weqw/moon-pyversion/blob/main/docs/audit-scenario.md)。
+## 四、实现与交付
 
-PEP 751 这一层要单独说清楚：`packaging` 没有 `pylock.toml` 读取实现，因此锁文件语料的
-裁决与投影是本仓库按规范正文另写的一份读法，抓不出"两份读法同时读错同一段规范"。这一轮
-为此补了两件事：一是把**6 份由 `uv 0.11.32` 写出的真实 `pylock.toml`**（flask / requests /
-numpy / django / httpx / cattrs，50 个包，真实索引 URL 与 sha256，最长 77 KB）按输入纳入
-语料，这是锁文件语料里**唯一不由本仓库生成**的文档；二是把库对规范的**分歧从 7 条收敛到
-1 条**——原先 6 条是库比规范松（`created-by` 可缺可空、文件记录可无 `hashes`、`upload-time`
-不校验 UTC、源树旁的冗余 `version`、文件列表条目强制要求 `version`、未实现次版本的
-`lock-version` 直接拒绝），逐条对着规范的 `Required?` 行重读后全部收紧，每条都另配一条
-"除此之外完全合法"的普通样例把它钉住。`uv` 只写不读、不给出裁决，所以这 6 份补的是**输入的
-独立性**而不是第二份读法，这一点不写强；库在 6 条规则**收紧之后**仍然接受全部 6 份，是"收紧
-没有牺牲真实兼容性"的证据。收敛过程、被探针抓出的语料漏洞（一条同时带了 `version` 的互斥
-样例等于什么都没钉住）与那 1 条保留的分歧，写在
-[docs/experiment-results.md](https://github.com/123213213weqw/moon-pyversion/blob/main/docs/experiment-results.md)
-的 6.9 / 6.10 与 `pylock_cases/divergences.txt` 里。
+生产代码 9 778 行，分 13 个文件；另有测试 7 311 行（293 个块）、示例 4 288 行（7 个程序）
+和生成语料 4 082 行。口径见 `tools/source_metrics.py`，生成语料不计入核心源码。
 
-## 五、验收边界与生态差异
+解析使用手写 ASCII 游标而非正则引擎，错误是可穷举的稳定错误类型，版本比较使用规范化比较
+键。模块按规范划分：PEP 440 版本与区间，PEP 503 名称与 PEP 427/625 分发文件名，PEP 508
+需求与环境标记（含 extra 规范化），PEP 639，TOML 1.0，core metadata，PEP 691 索引与离线
+目录扫描，PEP 751 锁文件，PEP 425 标签，以及 `audit_package`、`upgrade_shortlist` 两个
+高层入口。
 
-`Ready` 要求需求适用、制品名称一致、目标 Python 与环境满足、恰有一个适用锁条目、最佳候选
-与元数据及锁定版本相同，并声明 sha256；任一条件不满足即给出稳定问题码。项目不联网、不下载、
-不安装、不执行包，不探测宿主平台标签（标签的展开与排序已实现，但解释器版本、ABI、
-`EXT_SUFFIX` 与运行中 libc 由调用方注入），不做完整依赖求解、冲突回溯或安全性判断。sha256 只检查
-索引声明，下载后的内容校验由上层完成。
+交付物为库源码、测试、7 个示例、四后端 CI、生成语料与 Python 验证工具、设计与来源文档。
 
-与 SemVer 库的差异是遵循 Python packaging 语义；与 `python123-ops/moondepsolve` 的差异是
-提供解析、元数据和候选审计材料而不搜索完整依赖解。行为参考 PyPA 规范及 `pypa/packaging`
-（Apache-2.0/BSD-2-Clause），未复制其源码，仅在测试中作固定版本黑盒对照。
+## 五、验证
 
-## 六、交付与后续规划
+| 手段 | 规模 | 结果 |
+| --- | --- | --- |
+| 单元与属性测试 | 293 个块 | 四后端全部通过 |
+| 差分实验 | 122 640 条记录 | 逐条对照 `packaging==26.3`，0 不一致 |
+| 多版本漂移 | 同上语料 × 4 版本 | 24.2 差 4 492、25.0 差 2 754、26.0 差 844、26.3 差 0 |
+| 变异探针 | 43 处故意缺陷 | 43/43 被检出 |
 
-交付物包括生产源码、测试、四后端 CI、真实语料、差分与 mutation 工具、基础/元数据/候选/
-跨制品审计示例、设计和来源文档。MoonCakes 0.1.0 已发布；包含完整扩展与审计入口的 0.2.0
-将在本轮验证后发布并做独立下载安装测试。
+语料含 97 个 PyPI 包的 3 000 个版本、500 条区间、600 条真实 `Requires-Dist` 行、900 个真实
+文件名，285 份元数据文档（239 份来自 PyPI）、118 份索引文档（97 份来自真实索引响应）、215 条
+锁文件记录（含 6 份 `uv` 写出）、83 份 TOML 文档、62 组标签参数和 51 条升级用例；TOML
+一侧对照 `tomli`。明细见 `docs/experiment-results.md`。
 
-后续规划与它现在的证据状态（**未完成的不写进已完成能力**）：
+## 六、不做范围
 
-1. `[已完成]` 用独立第三方工具生成真实 `pylock.toml` 语料：`uv 0.11.32` 的
-   `uv export --format pylock.toml` 生成的 6 份锁文件已按输入入库（`pylock_cases/uv/`），
-   来源与命令写在同目录的 `provenance.txt`，文件不再重新生成。**未完成的部分也要写**：
-   `uv` 只写不读，因此"两份读法同时读错同一段规范"这个短板仍然存在，只是语料里第一次
-   有了不是本仓库写的文档。
-2. `[已完成]` 逐条收敛已登记的 PEP 751 分歧：7 条收敛到 1 条（见上），分歧数量只减不增，
-   每减一条都由普通语料样例与一处变异探针钉住。保留的 1 条是库有意比规范**严**：规范对
-   "支持主版本但不支持次版本"只说 SHOULD warn，而本库没有警告通道。
-3. `[已完成]` 调用方可注入的平台标签生成器（`tags.mbt`，PEP 425）：
-   `cpython_tags` / `generic_tags` / `pure_python_tags` / `compatible_tags` /
-   `mac_platforms` / `tag_rank` 逐条对照 `packaging.tags`（62 组参数 + 6 条声明分歧），
-   宿主探测仍留在调用方。写这一类语料时查出一处库缺陷（wheel 标签大小写未归一）并修复，
-   补了 4 处变异探针。
-4. `[下一步]` 增加升级候选报告 `examples/upgrade-check`：读当前版本与候选版本列表，输出
-   落在目标区间内的待测试短名单，并把"满足版本约束 ≠ 可以安全升级"做成报告里的显式声明。
-5. `[待确认]` MoonCakes 0.2.0 发布与独立下载安装验证；发布状态以注册表实际记录为准，
-   GitHub CI 绿灯不能替代。
+不联网、不下载、不安装、不执行包；不探测宿主环境，解释器版本、ABI 与运行中 libc 由调用方
+注入；不做完整依赖求解、冲突回溯和安全判断；sha256 只检查索引声明；不实现 PEP 517/518
+构建前端与 PEP 660 可编辑安装。
 
-规划内容不作为当前已完成成果申报。
+## 七、来源与生态差异
 
-> 参赛者提交前须根据本人实际工作与理解核实本稿；赛事要求由本人撰写的部分不能由技术事实稿替代。
+原创实现，Apache-2.0，未复制 `pypa/packaging` 源码；`packaging`（Apache-2.0 / BSD-2-Clause
+双许可）只作为固定版本的测试期黑盒对照，行为依据 PyPA 规范正文与 TOML 1.0、RFC 8259、
+RFC 822 风格头部，来源见 `docs/provenance.md`。与 SemVer 类库的差异是遵循 Python 打包语义；
+与 `python123-ops/moondepsolve` 的差异是提供解析、元数据和候选审计材料，不搜索完整依赖解。
+已知短板是 `packaging` 没有 `pylock.toml` 读取实现，锁文件语料的裁决是本仓库按规范正文另写
+的一份读法；已登记的 7 条分歧收敛到 1 条，保留的 1 条是本库有意比规范严格。
+
+## 八、本人理解
+
+最关键的取舍是宿主事实全部由调用方注入：库一旦自己探测解释器或平台，行为就无法用固定输入
+复现，差分对照也无从进行。其次是宁可严格也不静默宽容，与规范不一致处逐条登记为声明分歧，
+数量只减不增。再者是通过测试本身不是结论：差分实验共查出 7 处真实缺陷，其中 wheel 标签
+大小写未归一一处出自语料本身，因为语料里每个文件名都写小写，两侧对另一种拼写都不产生
+输入，那条差异此前从未被触发。语料覆盖不到的地方必须另外说明。
+
+> 数据以仓库当前提交为准；提交前核对最新提交 SHA 与 CI 结论，并在 MoonCakes 确认 0.2.0
+> 已发布且未被 yank。

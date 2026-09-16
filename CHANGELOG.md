@@ -1,5 +1,36 @@
 # Changelog
 
+## Unreleased — M13: the upgrade shortlist (scenario 3)
+
+### Added
+
+- `upgrade.mbt` (284 lines) and `examples/upgrade-check` (268 lines). `upgrade_shortlist`
+  answers the version part of "which of these candidates is worth a test run?": given a
+  current version, a target range, a prerelease policy, a target interpreter and a list of
+  candidates, it returns the shortlist in ascending order plus the rule that dropped every
+  other candidate -- `unparsable`, `same`, `downgrade`, `out-of-range`, `prerelease` or
+  `requires-python`, in that order, first match wins. A `requires-python` that does not
+  parse is ignored rather than treated as a rejection, which is what pip does and what
+  `index.mbt`'s resolver already does.
+- `tools/fetch_upgrade_corpus.py` (388 lines), `fixtures/upgrade_corpus.mbt` and the
+  `upgrade` record kind: 51 cases plus 3 undecidable inputs, replayed against `packaging`
+  with the *same arguments* -- both the shortlist and the reason each candidate was dropped
+  have to agree, so dropping a candidate for the wrong reason fails even when the shortlist
+  matches. Two more mutations (43 total).
+- `docs/upgrade-scenario.md`: the acceptance inputs, the rule order and the boundary of the
+  answer.
+
+### Changed
+
+- The prerelease policy reaches the candidates **through the range**, so with no target
+  range `Some(false)` has nothing to filter and prereleases are kept. That is the same
+  choice `SpecifierSet::filter` makes for an empty specifier set; it is pinned by a unit
+  test, by the corpus and by one of the new mutations.
+- The corpus grew from 122 589 to **122 640** records (122 641 lines), 0 mismatches against
+  `packaging` 26.3; the drift matrix is 24.2: 4492, 25.0: 2754, 26.0: 844, 26.3: 0.
+- Root production MoonBit is 9778 lines and tests 7311 lines (293 blocks, all four
+  backends). Four scenario reports are compared byte for byte across the four backends.
+
 ## Unreleased — M12: PEP 425 tag generation, and a tag-case defect the corpus had missed
 
 ### Added

@@ -28,6 +28,7 @@
 /// - `<source>\tpylock_divergence\t<case name>\t<accept|reject>` (input, not a check)
 /// - `<source>\ttag\t<case name>\t<payload>\t<ok|bad>\t<tag list or error code>`
 /// - `<source>\ttag_divergence\t<case name>\t<accept|reject>` (input, not a check)
+/// - `<source>\tupgrade\t<case name>\t<payload>\t<ok|bad>\t<shortlist|rejections>`
 /// - `<source>\tresolve\t<requirement>\t<tags as a|b>\t<python or ->\t<mode>\t<kept as a|b>\t<rejected as f=reason|...>`
 ///
 /// `mode` is `auto` (the library default policy), `any` (prereleases forced
@@ -2420,6 +2421,122 @@ fn tag_join(tags : Array[String]) -> String {
 }
 
 ///|
+/// Emit the upgrade-shortlist cases (scenario 3). The payload is
+/// `<current>|<target spec>|<mode>|<python>|<candidate>;<candidate>`; both sides
+/// decode it themselves and project `<shortlist, ascending>|<rejected as v=reason;...>`,
+/// so the harness recomputes the shortlist with `packaging` rather than reading
+/// this side's answer back.
+fn emit_upgrade_cases(sb : StringBuilder) -> Unit {
+  for entry in @fixtures.upgrade_cases {
+    sb.write_string(
+      "curated\tupgrade\t\{escape_record(entry.0)}\t\{escape_record(entry.1)}\t",
+    )
+    let (accepted, detail) = upgrade_record(entry.1)
+    if accepted {
+      sb.write_string("ok\t\{escape_record(detail)}\n")
+    } else {
+      sb.write_string("bad\t\{escape_record(detail)}\n")
+    }
+  }
+}
+
+///|
+/// One upgrade case: `(accepted, projection)`. A fatal input -- a current version
+/// or a target range that does not parse -- is reported as a code the reference
+/// side uses too, so the two sides can still be compared.
+fn upgrade_record(payload : String) -> (Bool, String) {
+  let parts : Array[String] = []
+  for part in payload.split("|") {
+    parts.push(part.to_owned())
+  }
+  if parts.length() != 5 {
+    return (false, "!MALFORMED_PAYLOAD")
+  }
+  let current = match upgrade_version(parts[0]) {
+    Some(version) => version
+    None => return (false, "!UNPARSABLE_CURRENT")
+  }
+  let target = if parts[1].is_empty() {
+    None
+  } else {
+    match upgrade_specifier(parts[1]) {
+      Some(spec) => Some(spec)
+      None => return (false, "!BAD_TARGET")
+    }
+  }
+  let candidates : Array[@pyversion.UpgradeCandidate] = []
+  for piece in upgrade_candidates(parts[4]) {
+    candidates.push(@pyversion.UpgradeCandidate::parse(piece.0, piece.1))
+  }
+  let plan = @pyversion.upgrade_shortlist(
+    current,
+    target,
+    upgrade_policy(parts[2]),
+    upgrade_version_or_none(parts[3]),
+    candidates,
+  )
+  let kept : Array[String] = []
+  for candidate in plan.shortlist {
+    kept.push(candidate.raw)
+  }
+  (true, "\{kept.join(",")}|\{plan.rejection_summary()}")
+}
+
+///|
+/// `v1@rp;v2` -> `[("v1", Some("rp")), ("v2", None)]`.
+fn upgrade_candidates(text : String) -> Array[(String, String?)] {
+  let out : Array[(String, String?)] = []
+  if text.is_empty() {
+    return out
+  }
+  for piece in text.split(";") {
+    let parts = piece.split("@").collect()
+    if parts.length() == 2 {
+      out.push((parts[0].to_owned(), Some(parts[1].to_owned())))
+    } else {
+      out.push((piece.to_owned(), None))
+    }
+  }
+  out
+}
+
+///|
+fn upgrade_policy(code : String) -> Bool? {
+  if code == "any" {
+    Some(true)
+  } else if code == "none" {
+    Some(false)
+  } else {
+    None
+  }
+}
+
+///|
+fn upgrade_version(text : String) -> @pyversion.Version? {
+  if text.is_empty() {
+    return None
+  }
+  Some(@pyversion.Version::parse(text)) catch {
+    _ => None
+  }
+}
+
+///|
+fn upgrade_version_or_none(text : String) -> @pyversion.Version? {
+  upgrade_version(text)
+}
+
+///|
+fn upgrade_specifier(text : String) -> @pyversion.SpecifierSet? {
+  if text.is_empty() {
+    return None
+  }
+  Some(@pyversion.SpecifierSet::parse(text)) catch {
+    _ => None
+  }
+}
+
+///|
 fn main {
   let sb = StringBuilder()
   let rng = Rng::new(0x5EED202644000001UL)
@@ -2737,5 +2854,9 @@ fn main {
   //     same question with the same arguments, so this is the one kind whose
   //     oracle is a function call rather than a document reading.
   emit_tag_cases(sb)
+  // 16. Scenario 3: the upgrade shortlist. The reference recomputes it with
+  //     `packaging`, so this also checks the shortlist ordering and the reason
+  //     each dropped candidate was given.
+  emit_upgrade_cases(sb)
   println(sb.to_string())
 }

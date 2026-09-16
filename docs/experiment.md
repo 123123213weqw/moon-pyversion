@@ -34,7 +34,7 @@ oracle 只在测试期运行，不出现在 MoonBit 库的依赖里（`moon.mod`
 `fixtures/pypi_corpus.mbt`。抓取脚本同时写出 `fixtures/pypi_corpus.json`
 记录来源与每个包的抓取结果，便于核对。
 
-## 记录类型（23 种）
+## 记录类型（26 种）
 
 | 记录 | 语义 |
 | --- | --- |
@@ -62,8 +62,13 @@ oracle 只在测试期运行，不出现在 MoonBit 库的依赖里（`moon.mod`
 | `tag` | PEP 425 标签生成：一组参数 → 有序标签表（`cpython` / `generic` /
   `pure` / `compatible` / `mac` / `select` 六种模式） |
 | `tag_divergence` | 声明分歧（输入，不是断言） |
+| `upgrade` | 升级短名单：给定参数 → 待测版本表 + 每个被弃候选的规则 |
 | `pylock` | PEP 751 文档：裁决 + 投影（成员、文件记录、适用性） |
 | `pylock_divergence` | 声明分歧（输入，不是断言） |
+
+其中 **21 种是断言**（每条都有一条外部对照），另外 5 种是输入与声明分歧
+（`marker_env`、`meta_divergence`、`index_divergence`、`tag_divergence`、
+`pylock_divergence`），harness 只断言它们的方向，不断言"哪一侧对"。
 
 预发布模式 `auto`/`any`/`none` 分别对应 `packaging` 的 `None`/`True`/`False`，
 这是库对外暴露的 `prereleases? : Bool?` 参数。

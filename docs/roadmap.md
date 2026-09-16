@@ -112,10 +112,11 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 | `audit.mbt` `[已有]` | `audit_package`、`PackageAudit::render`、稳定问题码 | 场景 1、2 端到端 | 332 |
 | `tags.mbt` `[已有]` | `cpython_tags`、`generic_tags`、`pure_python_tags`、`compatible_tags`、`mac_platforms`、`tag_rank` | 场景 2 | 448 |
 
-截至 M12，根目录生产 MoonBit 合计 **9494 行**（不含测试与示例，含 `audit.mbt` 332 行
-与 `tags.mbt` 448 行），测试 **6976 行**（`*_test.mbt`，277 个测试块 × 四后端），
-示例 2556（`diff`）+ 372（`metadata-check`）+ 570（`resolve`）+ 36（`audit`）+
-180（`basic`/`bench`）行，工具链 6611 行 Python（11 个脚本）。
+截至 M13，根目录生产 MoonBit 合计 **9778 行**（不含测试与示例，含 `audit.mbt` 332 行、
+`tags.mbt` 448 行与 `upgrade.mbt` 284 行），测试 **7311 行**（`*_test.mbt`，293 个
+测试块 × 四后端），示例 2862（`diff`）+ 372（`metadata-check`）+ 570（`resolve`）+
+268（`upgrade-check`）+ 36（`audit`）+ 180（`basic`/`bench`）行，工具链 7103 行
+Python（12 个脚本）。
 
 **`utils.mbt` 设计要点** `[已完成，见下]`（已用 packaging 26.3 核实）：
 
@@ -182,7 +183,7 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
   两类记录，共 **11 104 条**，其中真实文件名的 `pypi/file` 记录 900 条；
 - 对照 `packaging 26.3` **0 不一致**；
 - `tools/mutation_probe.py` 对故意注入的缺陷全部检出（M1 阶段为 7 处，
-  现为 41 处），证明语料对这部分行为有覆盖。
+  现为 43 处），证明语料对这部分行为有覆盖。
 
 `utils_test.mbt` 在开发中抓到一处真实缺陷：标签排序用了 MoonBit 默认的
 `String` 比较（先比长度），与 `packaging` 的 `sorted()`（按码点）不一致 ——
@@ -287,11 +288,11 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 ### `[已完成]` 语料扩展与"有牙"验收
 
-- 语料从 87 916 条扩到 **122 589 条 / 122 590 行**：来源分布 curated 19 567、
+- 语料从 87 916 条扩到 **122 640 条 / 122 641 行**：来源分布 curated 19 567、
   curated_bad 98、generated 20 652、mutated 34 397、pypi 47 677、pypi_index 97、
   pypi_lock 95、uv_lock 6；四后端逐字节一致。
-- `tools/mutation_probe.py` 从 7 处扩到 **41 处**故意缺陷（覆盖 M0–M12），
-  41/41 全部被语料检出；探针失败即实验失败。
+- `tools/mutation_probe.py` 从 7 处扩到 **43 处**故意缺陷（覆盖 M0–M13），
+  43/43 全部被语料检出；探针失败即实验失败。
 - M8 之后的收尾：PEP 751 的 **7 条声明分歧收敛到 1 条**（6 条是库比规范松，
   逐条对着规范正文的 `Required?` 行收紧，并各补一条"除此之外完全合法"的普通
   样例钉住；保留的 1 条是库有意比规范严），语料补入 **6 份 `uv` 写出的真实
@@ -305,11 +306,17 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
   `docs/experiment-results.md` §5），并补了 4 处变异探针。
 - 多 oracle 矩阵（24.2 / 25.0 / 26.0 / 26.3）按原因分类上游行为变更，
   固定版本 26.3 仍为 **0 差异**。
+- M13：场景 3 的升级候选评估（`upgrade.mbt` 284 行 + `examples/upgrade-check`
+  268 行）。`upgrade_shortlist` 按固定顺序判 `unparsable` / `same` / `downgrade` /
+  `out-of-range` / `prerelease` / `requires-python`，输出升序短名单与每个被弃候选的
+  原因；预发布策略**经由区间**起作用，没有区间时策略不起作用。51 条用例 + 3 条
+  不可判定输入由 `tools/fetch_upgrade_corpus.py` 生成，两侧比短名单**和原因**；
+  另加 2 处变异探针。语料随之到 **122 640 条 / 122 641 行**，变异探针到 **43 处**。
 
 ## 技术路线
 
 `[已有]` 版本解析用按 UTF-16 偏移移动的 ASCII 游标，不引入正则；整数组件经
-`BigInt`；比较按键序。四后端 CI。122 589 条语料差分对照 `packaging 26.3`，另有 41 处故意缺陷的变异探针证明对照有效。
+`BigInt`；比较按键序。四后端 CI。122 640 条语料差分对照 `packaging 26.3`，另有 43 处故意缺陷的变异探针证明对照有效。
 
 `[计划]` 新增模块沿用同一套技术路线与**同一套验收方法**，不新造轮子：
 
@@ -337,10 +344,12 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 
 ## 交付成果
 
-`[已有]` 源码 **9494 行**（不含测试）、测试 **6976 行**（277 个测试块 × 四后端
-全通过）、`examples/basic` `examples/diff`（2556 行确定性发射器）
-`examples/bench`、`examples/audit`（36 行，跨制品审计）、`tools/` 十一个脚本
-（6611 行 Python，含 `source_metrics.py` 与 `fetch_tag_corpus.py`）、`fixtures/` 真实语料
+`[已有]` 源码 **9778 行**（不含测试）、测试 **7311 行**（293 个测试块 × 四后端
+全通过）、`examples/basic` `examples/diff`（2862 行确定性发射器）
+`examples/bench`、`examples/metadata-check`、`examples/resolve`、
+`examples/upgrade-check`（268 行，升级短名单）、`examples/audit`（36 行，跨制品审计）、
+`tools/` 十二个脚本（7103 行 Python，含 `source_metrics.py`、`fetch_tag_corpus.py`
+与 `fetch_upgrade_corpus.py`）、`fixtures/` 真实语料
 （97 个 PyPI 包 + 83 个 TOML 文档 + 285 份核心元数据 + 114 份手工锁文件 + 6 份真实 `uv` 锁文件）、四后端
 CI + 独立 differential 作业。
 

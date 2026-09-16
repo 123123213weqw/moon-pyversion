@@ -17,21 +17,21 @@
 M6 之后新增的几类记录不进上面这张表，因为它们与"版本/约束/文件名"的三条来源
 轴不是同一个切分方式，单独列出：
 
-| 来源 | meta_values | pylock | tag |
-| --- | ---: | ---: | ---: |
-| curated | 165 | 28 | 62 |
-| curated_bad | — | 86 | — |
-| pypi | 750 | — | — |
-| pypi_lock | — | 95 | — |
-| uv_lock | — | 6 | — |
-| **合计** | **915** | **215** | **62** |
+| 来源 | meta_values | pylock | tag | upgrade |
+| --- | ---: | ---: | ---: | ---: |
+| curated | 165 | 28 | 62 | 51 |
+| curated_bad | — | 86 | — | — |
+| pypi | 750 | — | — | — |
+| pypi_lock | — | 95 | — | — |
+| uv_lock | — | 6 | — | — |
+| **合计** | **915** | **215** | **62** | **51** |
 
 另有 5 条 `marker_env`（环境定义，不是断言）、7 条 `meta_divergence`、1 条
 `index_divergence`、1 条 `pylock_divergence` 与 6 条 `tag_divergence`（都是声明
-分歧，不是断言），合计 **122 589 条记录 / 122 590 行语料**，其中 **61 863** 条带显式预发布模式
+分歧，不是断言），合计 **122 640 条记录 / 122 641 行语料**，其中 **61 863** 条带显式预发布模式
 （`auto`/`any`/`none`）。
 
-- 来源分布：curated 19 567、curated_bad 98（其中 86 条是 pylock 的拒绝样例）、
+- 来源分布：curated 19 618、curated_bad 98（其中 86 条是 pylock 的拒绝样例）、
   generated 20 652、mutated 34 397、pypi 47 677、pypi_index 97、pypi_lock 95、
   uv_lock 6。
 - oracle 侧接受的**互不相同**的版本字符串 11 035 个、约束集合 1 595 个。
@@ -53,6 +53,9 @@ M6 之后新增的几类记录不进上面这张表，因为它们与"版本/约
   参考实现的裁决）。下载 593 份、入库 239 份，其余按"超过 12 000 字符"丢弃
   （体积计入语料，一份 200 kB 的描述会压过整个语料），丢弃数量写在 provenance
   里而不是静默省略。
+- 场景 3 的记录（`upgrade`）是**决策**而不是文档读取：51 组参数（当前版本、目标
+  区间、预发布策略、目标解释器、候选表），两侧各自算出"待测短名单 + 每个被弃候选
+  的规则"再逐字符比对，见 6.13。
 - 标签一类（`tag`）是唯一**没有输入文档**的记录：`packaging.tags` 是一组从
   "解释器 + ABI 表 + 平台表"到有序标签表的纯函数，因此语料是一列参数元组，
   两侧回答同一个问题（见 6.12）。62 个用例 + 6 条声明分歧。
@@ -68,10 +71,10 @@ M6 之后新增的几类记录不进上面这张表，因为它们与"版本/约
 ```
 oracle: packaging 26.3 (python 3.10.12), library targets packaging 26.3
 toml reference reader: tomli
-records: 122589 (61863 with a prerelease mode)
+records: 122640 (61863 with a prerelease mode)
 mismatches per source, kind and mode:
   none
-OK: 122589 records agree with packaging 26.3
+OK: 122640 records agree with packaging 26.3
 ```
 
 退出码 0。**0 不一致**。
@@ -81,14 +84,14 @@ OK: 122589 records agree with packaging 26.3
 ```
 reference: wasm
 target      records      bytes  seconds  digest
-wasm         122590   12425279     5.21  df7cd80290cfd38d
-wasm-gc      122590   12425279     3.84  df7cd80290cfd38d identical
-js           122590   12425279     4.03  df7cd80290cfd38d identical
-native       122590   12425279     4.69  df7cd80290cfd38d identical
+wasm         122641   12431239     5.39  c1d13895f753bc21
+wasm-gc      122641   12431239     4.18  c1d13895f753bc21 identical
+js           122641   12431239     3.40  c1d13895f753bc21 identical
+native       122641   12431239     5.11  c1d13895f753bc21 identical
 ```
 
 语料生成器在四个后端输出逐字节相同（sha256 前 16 位一致）。重复运行的
-js 输出与捕获文件 md5 一致（`b9d0df199cfe94cdd42fcb64b5787b8a`），即生成
+js 输出与捕获文件 md5 一致（`4fda72d43a4eae8c8c8545e32c8e028d`），即生成
 过程可重复。
 
 ## 4. 多 oracle 漂移矩阵
@@ -97,12 +100,12 @@ js 输出与捕获文件 md5 一致（`b9d0df199cfe94cdd42fcb64b5787b8a`），�
 
 | packaging | records | differences | fatal | causes |
 | --- | ---: | ---: | ---: | --- |
-| 24.2 | 122589 | 4492 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x142, index-scan x1, license-expression x153, marker-evaluation x1998, marker-grammar x184, metadata-rules x1, oracle-crash x28, tag-generation x24 |
-| 25.0 | 122589 | 2754 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x142, index-scan x1, license-expression x153, marker-evaluation x357, marker-grammar x87, metadata-rules x1, oracle-crash x28, tag-generation x24 |
-| 26.0 | 122589 | 844 | 0 | compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x142, index-scan x1, license-expression x66, marker-evaluation x285, marker-grammar x87, oracle-crash x27, tag-generation x24 |
-| **26.3（目标版本）** | 122589 | **0** | **0** | — |
+| 24.2 | 122640 | 4492 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x142, index-scan x1, license-expression x153, marker-evaluation x1998, marker-grammar x184, metadata-rules x1, oracle-crash x28, tag-generation x24 |
+| 25.0 | 122640 | 2754 | 0 | auto-prerelease-admission x1749, compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x142, index-scan x1, license-expression x153, marker-evaluation x357, marker-grammar x87, metadata-rules x1, oracle-crash x28, tag-generation x24 |
+| 26.0 | 122640 | 844 | 0 | compatible-release-range x3, exclusive-ordered-comparison x209, filename-grammar x142, index-scan x1, license-expression x66, marker-evaluation x285, marker-grammar x87, oracle-crash x27, tag-generation x24 |
+| **26.3（目标版本）** | 122640 | **0** | **0** | — |
 
-四个 oracle 都能回放全部 122 589 条记录，fatal 都是 0（旧版本按 `--tolerate-drift`
+四个 oracle 都能回放全部 122 640 条记录，fatal 都是 0（旧版本按 `--tolerate-drift`
 记为容忍漂移）。`index-scan` 那 1 条与 `filename-grammar` 是同一处上游变更：目录清单里有
 `-1.0-py3-none-any.whl`（项目名为空），26.3 起拒绝，旧版本接受，所以同一次扫描
 在旧 oracle 上少识别出一个文件。`oracle-crash` 是新增的
@@ -175,13 +178,15 @@ M8 收尾时把核心元数据语料逐条回放，又查出**三处**库与 `pa
 ## 5.5 语料是否有牙：变异探针
 
 0 不一致只有在"对照能失败"的前提下才有意义。`tools/mutation_probe.py` 向库
-里注入 41 处**故意缺陷**（涵盖 M0–M12 的行为），重跑语料并断言 harness 报错。下表是当前语料下的实测检出条数（探针自己打印的那一列）：
+里注入 43 处**故意缺陷**（涵盖 M0–M13 的行为），重跑语料并断言 harness 报错。下表是当前语料下的实测检出条数（探针自己打印的那一列）：
 
 | 注入的缺陷 | 检出条数 |
 | --- | ---: |
 | `canonicalize_name` 丢掉尾部/首部分隔符 | 111 |
 | 标签排序退回默认 `String` 比较（按长度） | 231 |
 | wheel 标签不转小写（PEP 425 的 `Tag` 构造时全小写） | 105 |
+| 升级短名单忽略预发布策略（自动策略失效） | 5 |
+| 升级短名单把同版本当成可升级（`1.5.0` 对 `1.5`） | 9 |
 | 自由线程 ABI 识别失效（`abi3t` 退回 `abi3`） | 3 |
 | 空平台表不再被拒绝（三条声明分歧失效） | 1 |
 | 生成的标签不转小写 | 3 |
@@ -221,7 +226,7 @@ M8 收尾时把核心元数据语料逐条回放，又查出**三处**库与 `pa
 | 解析器忽略预发布策略 | 12 |
 | 预发布策略恒为允许 | 2038 |
 
-41/41 全部检出。**检出条数低不等于覆盖弱，但也不等于覆盖强**：一条记录只验一次
+43/43 全部检出。**检出条数低不等于覆盖弱，但也不等于覆盖强**：一条记录只验一次
 的行为，检出数就是 1，而它同时也是"那条样例被改坏就再也验不出"的信号。因此这张表
 里检出数是 1 的每一行，都应当读成"目前只有一处样例钉住它"，而不是"这处行为不重要"：
 
@@ -260,17 +265,18 @@ M8 收尾时把核心元数据语料逐条回放，又查出**三处**库与 `pa
 | 检查 | 结果 |
 | --- | --- |
 | `moon fmt --check` | 通过 |
-| `moon check/build/test --deny-warn`（wasm / wasm-gc / js / native） | 全部通过，每个后端 **277 个测试块全部通过**（合计 1108） |
+| `moon check/build/test --deny-warn`（wasm / wasm-gc / js / native） | 全部通过，每个后端 **293 个测试块全部通过**（合计 1172） |
 | `moon run examples/basic`（四后端） | 通过 |
-| `moon run examples/diff`（四后端） | 122 517 行语料，四端字节一致 |
+| `moon run examples/diff`（四后端） | 122 641 行语料，四端字节一致 |
 | `moon run examples/metadata-check`（四后端） | 四端字节一致（md5 `2cedc437f5b3`） |
 | `moon run examples/resolve`（四后端） | 四端字节一致（md5 `e58c1ff44ab6`） |
 | `moon run examples/audit`（四后端） | 四端字节一致（md5 `9d3cadf92d80`） |
+| `moon run examples/upgrade-check`（四后端） | 四端字节一致（md5 `4339ad2e4afa`） |
 
 ## 6.5 各阶段新增能力的覆盖
 
 每一阶段都不是"新写一套验证"，而是**只增加记录类型**，被测代码换、验证方法
-不换。到 M12 为止的记录构成（全部对 `packaging` 26.3，**0 不一致**，合计 122 589，
+不换。到 M13 为止的记录构成（全部对 `packaging` 26.3，**0 不一致**，合计 122 640，
 下表逐类相加即得该数）：
 
 | 记录类型 | 条数 | 对照的 packaging API | 来源 |
@@ -291,6 +297,7 @@ M8 收尾时把核心元数据语料逐条回放，又查出**三处**库与 `pa
 | `meta` | 285 | `Metadata.from_email(data, validate=True)` | 46 条手工规则样例 + 239 份真实 PyPI `METADATA` |
 | `pylock` | 215 | PEP 751 的**第二份读法**（`tools/fetch_pylock_corpus.py` 里独立重算） | 27 条手工接受 + 51 条手工拒绝 + 35 条变异 + 1 条声明分歧 + 95 份由真实索引响应派生 + 6 份真实 `uv` 输出 |
 | `tag` | 62 | `packaging.tags` 的六个函数（参数逐项注入，不探测宿主） | 62 组参数：`cpython` 18 / `mac` 15 / `generic` 9 / `pure` 7 / `compatible` 7 / `select` 6 |
+| `upgrade` | 51 | 用 `packaging` 重写的升级短名单（`SpecifierSet.filter` 的策略） | 51 组参数（含 3 组无法判定的输入） |
 | `tag_divergence` | 6 | —（声明分歧，非断言） | curated |
 | `index` | 118 | 规范本身（写成一处投影，Python 侧独立重算） | 21 条手工文档 + 97 份真实 PEP 691 响应 |
 | `index_dir` | 5 | 规范本身（`parse_wheel_filename` / `parse_sdist_filename` + 排序规则） | 5 个目录清单 |
@@ -615,6 +622,40 @@ Python、环境、锁定版本、最佳候选版本与 sha256 声明六项全部
 是 `platform_tags()` 的职责，仍然由调用方注入（与 `docs/experiment.md` 的"局限"一节
 一致）。因此 `tag` 记录覆盖的是"给定平台表之后的展开与排序"，不包括"平台表怎么来"。
 
+## 6.13 场景 3：升级短名单的端到端输出
+
+`examples/upgrade-check`（268 行 + `upgrade.mbt` 284 行）是场景 3 的产物：读入当前版本、
+目标区间、预发布策略、目标解释器与候选列表，输出待测短名单（升序，最小步长在前）与每个
+被弃候选的原因。8 组输入里有一组把所有规则同时踩到：
+
+```text
+== everything at once
+   current 1.26.0; target >=1.26,<2.0; prereleases auto; CPython 3.11
+   8 candidate(s): 2 in the shortlist, 6 dropped
+   shortlist, smallest step first: 1.26.4 1.27.0
+   dropped 1.25.2: downgrade
+   dropped 1.26.0: same
+   dropped not-a-version: unparsable
+   dropped 1.27.0rc1: prerelease
+   dropped 2.0.0: out-of-range
+   dropped 1.28.0: requires-python
+```
+
+同一组候选在三种预发布策略下分别入选 2 / 6 / 2 条：`any` 放行全部预发布，`auto` 与
+`none` 在这组输入上结果相同。`auto` 的语义与 `SpecifierSet::filter` 一致——区间内的其他
+候选全都落选时才放行预发布。
+"没有目标区间"那一组里显式禁用预发布**不起作用**——策略经由区间起作用，没有区间就没有
+可过滤的对象，这与 `SpecifierSet::filter` 对一个空约束集的选择相同，两侧都由语料钉住。
+
+报告的最后一段是**库打印的**边界声明而不是注释：短名单只回答"比当前版本新、落在目标
+区间内、且通过预发布与 `Requires-Python` 两项检查"，不回答 API 兼容性、依赖可解性、
+安全公告与测试结果。四后端输出逐字节一致（md5 `4339ad2e4afabe2d11c23f76665dd192`）。
+
+51 条用例由 `tools/fetch_upgrade_corpus.py`（388 行）生成，harness 在回放时用同一组参数
+把问题问 `packaging` 一遍（`SpecifierSet.filter` 的策略），两侧不仅要比短名单，还要比
+**每个被弃候选的原因**：短名单相同而原因不同照样算不一致。另有 3 条不可判定输入
+（当前版本不可解析、目标区间不可解析、当前版本为空），两侧都只报稳定码。
+
 ## 7. 吞吐（`examples/bench`，本机墙钟，非跨语言基准）
 
 | 操作 | js | native |
@@ -630,7 +671,7 @@ Python、环境、锁定版本、最佳候选版本与 sha256 声明六项全部
 ## 8. 这次实验**没有**证明什么
 
 - 不证明与 PEP 440 规范本身完全一致：oracle 是另一份实现，不是规范。
-- 不证明覆盖全部现实输入：122 589 条是一次抽样，PyPI 的真实版本远多于 3000 个；
+- 不证明覆盖全部现实输入：122 640 条是一次抽样，PyPI 的真实版本远多于 3000 个；
   真实 `METADATA` 只覆盖 239 份（有 PEP 658 边上文件的那些），且丢弃了 12 000
   字符以上的文档。
 - 不覆盖**宿主探测**：标签的计算（PEP 425）已实现并逐条对照 `packaging.tags`，

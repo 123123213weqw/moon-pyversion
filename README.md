@@ -70,6 +70,25 @@ let candidates = [
 let accepted = @pyversion.SpecifierSet::filter(candidates, spec)
 ```
 
+升级候选短名单（场景 3）：
+
+```moonbit
+// 当前版本、目标区间、预发布策略、目标解释器、候选列表
+let plan = @pyversion.upgrade_shortlist(
+  try! @pyversion.Version::parse("1.26.0"),
+  Some(try! @pyversion.SpecifierSet::parse(">=1.26,<2.0")),
+  None,                                  // None = 自动策略；Some(false) 强制禁用
+  Some(try! @pyversion.Version::parse("3.11")),
+  [
+    @pyversion.UpgradeCandidate::parse("1.26.4", None),
+    @pyversion.UpgradeCandidate::parse("1.27.0", None),
+    @pyversion.UpgradeCandidate::parse("2.0.0", None),
+  ],
+)
+println(plan.versions())          // 升序，最小步长在前：1.26.4、1.27.0
+println(plan.rejection_summary()) // "2.0.0=out-of-range"
+```
+
 PEP 508 依赖行与环境标记：
 
 ```moonbit
@@ -127,6 +146,17 @@ for t in wasm wasm-gc js native; do
 done
 ```
 
+场景示例（四个后端各跑一遍，报告逐字节相同）：
+
+```sh
+for t in wasm wasm-gc js native; do
+  moon run examples/metadata-check --target $t
+  moon run examples/resolve        --target $t
+  moon run examples/audit          --target $t
+  moon run examples/upgrade-check  --target $t
+done
+```
+
 ### 差分实验（可复现，见 `docs/experiment.md`）
 
 ```sh
@@ -174,6 +204,12 @@ python -B tools/fetch_pypi_corpus.py
   的最佳名次（`create_compatible_tags_selector` 的规则，候选排序也用它）。宿主探测
   （`sys_tags()` / `platform_tags()`）不做：那需要读运行时版本、`sysconfig`、
   `EXT_SUFFIX` 与运行中的 libc，仍由调用方注入，空输入被显式拒绝；
+- 升级候选短名单（`upgrade.mbt`，场景 3）：`upgrade_shortlist` 按
+  `unparsable` → `same` → `downgrade` → `out-of-range` → `prerelease` →
+  `requires-python` 的顺序判定候选，输出升序短名单与每个被弃候选的原因码；预发布策略
+  **经由区间**起作用（没有目标区间时策略没有作用对象）。它只回答版本问题：
+  API 兼容性、依赖可解性与安全性不在其中，`examples/upgrade-check` 把这句话打印在
+  自己的输出里；
 - 打包元数据辅助（`utils.mbt`，对齐 packaging 26.3）：
   `canonicalize_name`（PEP 503 名称规范化）、`canonicalize_version`
   （PEP 625 两种形式：索引键与显示形式）、`parse_wheel_filename`
@@ -191,11 +227,11 @@ python -B tools/fetch_pypi_corpus.py
 
 ## 与 packaging 的一致性
 
-不是自我声明，而是实测的：`examples/diff` 生成 **122 589 条**确定性记录
+不是自我声明，而是实测的：`examples/diff` 生成 **122 640 条**确定性记录
 （手工边界、按文法生成、单字符变异、97 个 PyPI 包的真实元数据：3000 个版本、
 500 条约束、600 条需求行、471 条真实标记、900 个分发文件名、239 份真实
 `METADATA`、97 份真实 PEP 691 索引响应、114 份手工锁文件、95 份由这些响应
-派生的锁文件、6 份 `uv` 写出的真实锁文件），逐条
+派生的锁文件、6 份 `uv` 写出的真实锁文件、62 组标签参数、51 组升级短名单输入），逐条
 回放给 CPython `packaging 26.3`，**0 不一致**。TOML 记录另外对照参考实现
 `tomli`，核心元数据记录对照 `packaging.metadata`（裁决与重排往返之外，另按值
 逐条比对一遍），PEP 691 与 PEP 751 记录对照规范本身写成的投影，都是逐条比较
@@ -216,8 +252,8 @@ PEP 751 要单独说明：**没有任何现成的 `pylock.toml` 读取实现可�
 行为变更（自动预发布准入、`<`/`>` 的区间实现、`~=` 上界、26.3 的文件名
 验收与标记语法收紧），`tools/oracle_matrix.py` 输出这张矩阵。
 
-另外 `tools/mutation_probe.py` 会向库里注入 41 处**故意缺陷**并断言对照能报错，
-41/41 全部检出 —— 即"0 不一致"不是因为对照失效。其中 5 处是为锁文件那几条被
+另外 `tools/mutation_probe.py` 会向库里注入 43 处**故意缺陷**并断言对照能报错，
+43/43 全部检出 —— 即"0 不一致"不是因为对照失效。其中 5 处是为锁文件那几条被
 收紧的规则新加的：谁把放宽注回去，谁就必须被检出。探针默认拒绝在改过的工作树
 上运行（被中断的运行会把注入的缺陷留在源码里），`--allow-dirty` 只能显式打开。
 
@@ -315,6 +351,37 @@ PEP 592 的 yank 策略是**示例自己实现的**：库不替调用方决定�
 注入，core 没有文件系统包），那里没有 PEP 592 状态可读，于是同一个约束选出
 1.4.0。这个差异是真实的，报告里写明而不是掩盖。四后端输出逐字节一致，CI 每次
 运行并逐后端比较。
+
+## 可运行示例：升级候选评估
+
+`examples/upgrade-check`（268 行）是场景 3 的端到端证据，实现是 `upgrade.mbt`
+（284 行）里的 `upgrade_shortlist`：给出当前版本、目标区间、预发布策略、目标解释器和一份
+候选版本列表，输出**值得跑一次测试**的短名单，以及其余每个候选被哪条规则拦下。
+
+```sh
+moon run examples/upgrade-check --target js
+```
+```text
+== everything at once
+   current 1.26.0; target >=1.26,<2.0; prereleases auto; CPython 3.11
+   8 candidate(s): 2 in the shortlist, 6 dropped
+   shortlist, smallest step first: 1.26.4 1.27.0
+   dropped 1.25.2: downgrade
+   dropped 1.26.0: same
+   dropped not-a-version: unparsable
+   dropped 1.27.0rc1: prerelease
+   dropped 2.0.0: out-of-range
+   dropped 1.28.0: requires-python
+```
+
+规则按固定顺序执行，第一条命中的就是报告打印的原因；短名单升序（最小步长在前），被弃
+候选保持调用方给出的顺序。预发布策略**经由区间**起作用：`auto` 只在区间内的其他候选全都
+落选时才放行预发布，而目标区间为空时策略没有作用对象——这与 `SpecifierSet::filter` 的选择
+相同，两侧都由 `upgrade` 那 51 条记录钉住（含 3 条不可判定输入，两侧只报稳定码）。
+
+报告最后一段是库**打印在输出里**的边界声明，不是注释：短名单只回答"比当前版本新、落在
+目标区间内、且通过预发布与 `Requires-Python` 两项检查"，不回答 API 兼容性、依赖可解性、
+安全公告或测试结果。输入与裁决见 [docs/upgrade-scenario.md](docs/upgrade-scenario.md)。
 
 ## 边界
 

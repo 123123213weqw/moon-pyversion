@@ -2,7 +2,8 @@
 
 **被测对象**：`123123213weqw/moon_pyversion`（`moon.mod` 版本 0.2.0，Apache-2.0）
 **仓库**：https://github.com/123213213weqw/moon-pyversion
-**报告依据**：提交 `078baf6`（`main`，GitHub 与服务器镜像逐字节一致）
+**报告依据**：`main` 上的场景 3 提交（GitHub 与服务器镜像逐字节一致）；
+下表所有数字由同一次验证运行（四后端 + 差分 + 探针 + fixture 自检）产出
 **工具链**：`moon 0.1.20260904`（moonc v0.10.12）、CPython 3.10.12、
 oracle 侧 `packaging==26.3` / `tomli==2.4.1`
 **测试后端**：wasm / wasm-gc / js / native 四个目标各跑一遍
@@ -11,10 +12,10 @@ oracle 侧 `packaging==26.3` / `tomli==2.4.1`
 
 ## 0. 一句话结论
 
-核心路径有 **277 个测试块**，四个后端各自全通过（277 × 4 = **1 108 次**）；
-另有 **122 589 条**确定性差分记录逐条回放给独立实现 `packaging==26.3`，
-**0 不一致**；并且用 **41 处故意注入的缺陷**证明这份「0 不一致」不是因为对照失效
-（41/41 全部被检出）。测试过程中查出并修复了 **13 处库的真实缺陷**（其中 6 处是
+核心路径有 **293 个测试块**，四个后端各自全通过（293 × 4 = **1 172 次**）；
+另有 **122 640 条**确定性差分记录逐条回放给独立实现 `packaging==26.3`，
+**0 不一致**；并且用 **43 处故意注入的缺陷**证明这份「0 不一致」不是因为对照失效
+（43/43 全部被检出）。测试过程中查出并修复了 **13 处库的真实缺陷**（其中 6 处是
 PEP 751 里比规范松的放宽）、**4 处测试基础设施缺陷**与 **1 处语料漏洞**，
 每一处都补了回归测试、语料样例或变异探针。
 
@@ -39,15 +40,15 @@ PEP 751 里比规范松的放宽）、**4 处测试基础设施缺陷**与 **1 �
 
 | 层 | 内容 | 规模 | 参照物 |
 | --- | --- | ---: | --- |
-| 1 单元测试 | 每个模块的规则、边界、非法输入、稳定错误码 | 277 个测试块 | 规范正文 + 手工推导 |
-| 2 差分实验 | 确定性语料逐条回放 | 122 589 条记录 | CPython `packaging==26.3`（独立黑盒） |
-| 3 规范对照 | 无现成实现的几类，按规范另写第二份读法 | `toml` 83、`index` 118、`pylock` 215、`tag` 62 | `tomli 2.4.1`、规范正文、`packaging.tags` |
-| 4 变异探针 | 向库里注入缺陷，断言语料必须报错 | 41 处注入 | 语料本身 |
-| 5 多版本漂移 | 同一份语料在 4 个 `packaging` 版本上回放 | 4 × 122 589 | 24.2 / 25.0 / 26.0 / 26.3 |
-| 6 四后端一致性 | 同一输入的输出逐字节比对 | 语料 + 3 个场景报告 | 后端之间互比 |
-| 7 fixture 自检 | fixture 是否等于生成器当前的输出 | 4 份 fixture | 生成器自身 |
+| 1 单元测试 | 每个模块的规则、边界、非法输入、稳定错误码 | 293 个测试块 | 规范正文 + 手工推导 |
+| 2 差分实验 | 确定性语料逐条回放 | 122 640 条记录 | CPython `packaging==26.3`（独立黑盒） |
+| 3 规范对照 | 无现成实现的几类，按规范另写第二份读法 | `toml` 83、`index` 118、`pylock` 215、`tag` 62、`upgrade` 51 | `tomli 2.4.1`、规范正文、`packaging.tags`、`SpecifierSet.filter` |
+| 4 变异探针 | 向库里注入缺陷，断言语料必须报错 | 43 处注入 | 语料本身 |
+| 5 多版本漂移 | 同一份语料在 4 个 `packaging` 版本上回放 | 4 × 122 640 | 24.2 / 25.0 / 26.0 / 26.3 |
+| 6 四后端一致性 | 同一输入的输出逐字节比对 | 语料 + 4 个场景报告 | 后端之间互比 |
+| 7 fixture 自检 | fixture 是否等于生成器当前的输出 | 7 份 fixture | 生成器自身 |
 
-### 2.1 单元测试（277 个测试块）
+### 2.1 单元测试（293 个测试块）
 
 | 测试文件 | 测试块 | 覆盖的模块（源码行数） |
 | --- | ---: | --- |
@@ -63,6 +64,7 @@ PEP 751 里比规范松的放宽）、**4 处测试基础设施缺陷**与 **1 �
 | `pylock_test.mbt` | 32 | `pylock.mbt`（1280）：PEP 751 锁文件 |
 | `audit_test.mbt` | 8 | `audit.mbt`（332）：跨制品审计（需求 → 元数据 → 索引 → 锁 → 目标环境） |
 | `tags_test.mbt` | 17 | `tags.mbt`（448）：PEP 425 标签计算 |
+| `upgrade_test.mbt` | 16 | `upgrade.mbt`（284）：升级短名单的六条规则顺序，以及「预发布策略只能经由区间起作用」 |
 | `properties_test.mbt` | 4 | 跨模块性质：比较的反自反/反对称/传递性、规范化幂等、`filter` 的稳定性 |
 | `regression_test.mbt` | 4 | 由历史缺陷触发的回归（§5） |
 
@@ -70,10 +72,10 @@ PEP 751 里比规范松的放宽）、**4 处测试基础设施缺陷**与 **1 �
 （`VersionError::InvalidXxx(code, offset)`），测试直接断言 `code`，因此规则被改名或
 被绕过时测试会报出来，而不是只报「某处失败了」。
 
-### 2.2 差分实验（122 589 条记录）
+### 2.2 差分实验（122 640 条记录）
 
-`examples/diff`（2741 行）是确定性发射器：同一份输入在任何后端、任何时间输出
-逐字节相同的语料。`tools/diff_packaging.py`（1675 行）把每条记录交给 CPython 的
+`examples/diff`（2862 行）是确定性发射器：同一份输入在任何后端、任何时间输出
+逐字节相同的语料。`tools/diff_packaging.py`（1700 行）把每条记录交给 CPython 的
 `packaging` 独立重算并逐条比对。
 
 | 记录类型 | 条数 | 对照的 API |
@@ -95,9 +97,10 @@ PEP 751 里比规范松的放宽）、**4 处测试基础设施缺陷**与 **1 �
 | `index` | 118 | PEP 691 规范（投影两处独立重算） |
 | `toml` | 83 | `tomli 2.4.1` |
 | `tag` | 62 | `packaging.tags` 的六个函数 |
+| `upgrade` | 51 | 用 `packaging` 重写的升级短名单（同一组参数，含被弃原因） |
 | `resolve` | 18 | 用 `packaging` 重写的候选选择与排序 |
 | `meta_divergence` / `tag_divergence` / `index_dir` / `marker_env` / `order` / `index_divergence` / `pylock_divergence` | 7 / 6 / 5 / 5 / 3 / 1 / 1 | 声明分歧与输入记录（不是断言） |
-| **合计** | **122 589** | — |
+| **合计** | **122 640** | — |
 
 语料来源：`pypi` 47 677、`mutated` 34 397、`generated` 20 652、`curated` 19 567、
 `curated_bad` 98、`pypi_index` 97、`pypi_lock` 95、`uv_lock` 6。
@@ -118,16 +121,17 @@ PEP 751 里比规范松的放宽）、**4 处测试基础设施缺陷**与 **1 �
 - `tag`：`tools/fetch_tag_corpus.py`（518 行）——这一类特殊，`packaging.tags` 是
   纯函数，harness 在回放时用**同一组参数**调用参考实现，两侧比较有序标签表。
 
-### 2.4 变异探针（41 处注入，全部检出）
+### 2.4 变异探针（43 处注入，全部检出）
 
-`tools/mutation_probe.py`（726 行）向库源码注入 41 处**故意缺陷**（每次一处、
-单点修改），重跑语料并断言 harness 报错。注入点覆盖 M0–M12 的行为：名称规范化、
+`tools/mutation_probe.py`（749 行）向库源码注入 43 处**故意缺陷**（每次一处、
+单点修改），重跑语料并断言 harness 报错。注入点覆盖 M0–M13 的行为：名称规范化、
 标签排序与大小写、版本键、wheel/sdist 切分、local 段比较、标记规范化与词汇表、
 依赖行校验、SPDX 大小写、TOML 内联表/多行字符串/整数宽度、预发布策略、
-元数据名称与 `Keywords` 去空白、PEP 751 的六条规则、PEP 425 的四条规则。
+元数据名称与 `Keywords` 去空白、PEP 751 的六条规则、PEP 425 的四条规则、
+升级短名单的预发布策略与同版本判断。
 
 检出条数不是重点，重点是**每处注入都必须被检出**——任何一处「注入后语料仍然报 0
-不一致」都说明那部分行为没有被任何记录钉住。当前 41/41。
+不一致」都说明那部分行为没有被任何记录钉住。当前 43/43。
 
 探针还带两道防误用的闸门（见 §5.4）：工作树已被修改时拒绝运行；源码里已经存在
 某处注入的痕迹时也拒绝运行并点名。
@@ -138,10 +142,10 @@ PEP 751 里比规范松的放宽）、**4 处测试基础设施缺陷**与 **1 �
 
 | packaging | 记录数 | 差异 | fatal | 主要成因 |
 | --- | ---: | ---: | ---: | --- |
-| 24.2 | 122 589 | 4 492 | 0 | 自动预发布准入 1 749、标记求值 1 998、标记文法 184、许可证 153、文件名 142、独占比较 209、标签生成 24、oracle 自身崩溃 28 |
-| 25.0 | 122 589 | 2 754 | 0 | 同上，标记求值降到 357、标记文法 87 |
-| 26.0 | 122 589 | 844 | 0 | 独占比较 209、文件名 142、许可证 66、标记求值 285、标记文法 87、标签生成 24、oracle 崩溃 27 |
-| **26.3（目标）** | 122 589 | **0** | **0** | — |
+| 24.2 | 122 640 | 4 492 | 0 | 自动预发布准入 1 749、标记求值 1 998、标记文法 184、许可证 153、文件名 142、独占比较 209、标签生成 24、oracle 自身崩溃 28 |
+| 25.0 | 122 640 | 2 754 | 0 | 同上，标记求值降到 357、标记文法 87 |
+| 26.0 | 122 640 | 844 | 0 | 独占比较 209、文件名 142、许可证 66、标记求值 285、标记文法 87、标签生成 24、oracle 崩溃 27 |
+| **26.3（目标）** | 122 640 | **0** | **0** | — |
 
 差异全部对应上游**已发布的行为变更**（空约束的自动预发布准入、`<`/`>` 的区间
 实现、`~=` 上界、26.3 的文件名验收与标记语法收紧、26.1 起的选择器 API、
@@ -152,21 +156,22 @@ PEP 751 里比规范松的放宽）、**4 处测试基础设施缺陷**与 **1 �
 
 | 后端 | 记录数 | 字节数 | 摘要 |
 | --- | ---: | ---: | --- |
-| wasm | 122 590 | 12 425 279 | `df7cd80290cfd38d` |
-| wasm-gc | 122 590 | 12 425 279 | 同上（逐字节相同） |
-| js | 122 590 | 12 425 279 | 同上（逐字节相同） |
-| native | 122 590 | 12 425 279 | 同上（逐字节相同） |
+| wasm | 122 641 | 12 431 239 | `c1d13895f753bc21` |
+| wasm-gc | 122 641 | 12 431 239 | 同上（逐字节相同） |
+| js | 122 641 | 12 431 239 | 同上（逐字节相同） |
+| native | 122 641 | 12 431 239 | 同上（逐字节相同） |
 
-三个场景示例的报告同样要求四后端逐字节一致：
+四个场景示例的报告同样要求四后端逐字节一致：
 `examples/metadata-check` md5 `2cedc437f5b3c11ec45d25ca7586fcc7`、
 `examples/resolve` md5 `e58c1ff44ab61b0008d4bfa76f794680`、
-`examples/audit` md5 `9d3cadf92d802ba26d5bf0d2b90c392e`。
+`examples/audit` md5 `9d3cadf92d802ba26d5bf0d2b90c392e`、
+`examples/upgrade-check` md5 `4339ad2e4afabe2d11c23f76665dd192`。
 语料生成器重复运行也逐字节一致（js 两次输出与捕获文件 md5 均为
-`b9d0df199cfe94cdd42fcb64b5787b8a`）。
+`4fda72d43a4eae8c8c8545e32c8e028d`）。
 
 ### 2.7 场景端到端
 
-三个可运行示例把库的能力串成完整链路，各自有固定输入与固定输出：
+四个可运行示例把库的能力串成完整链路，各自有固定输入与固定输出：
 
 1. `examples/metadata-check`（372 行）：四份真实 `METADATA` + 一份真实 `pylock.toml`
    + 目标环境 → 逐条判定与汇总（含「这份锁文件有几条是为另一个平台锁定的」）。
@@ -175,14 +180,17 @@ PEP 751 里比规范松的放宽）、**4 处测试基础设施缺陷**与 **1 �
 3. `examples/audit`（36 行 + `audit.mbt` 332 行）：需求 + 真实 Flask 0.12.5 `METADATA`
    + 索引 + 锁文件 + CPython 3.11/Linux 目标 → `Ready` / `Blocked` / `NotRequired`
    与稳定问题码；输出中排除了一项 yanked 候选，并声明 sha256。
+4. `examples/upgrade-check`（268 行 + `upgrade.mbt` 284 行）：当前版本 + 目标区间
+   + 候选列表 + 目标解释器 → 升序短名单与每个被弃候选的原因码；报告末尾由库自己
+   打印这一层**没有**检查什么（API 兼容、依赖可解、安全公告、构建与测试结果）。
 
 ### 2.8 fixture 自检
 
-四份生成式 fixture（`pypi_corpus`、`toml_corpus`、`metadata_corpus`、`pylock_corpus`、
-`index_corpus`、`tag_corpus`）各自配一个生成器，生成器支持 `--check`：
+七份生成式 fixture（`pypi_corpus`、`toml_corpus`、`metadata_corpus`、`pylock_corpus`、
+`index_corpus`、`tag_corpus`、`upgrade_corpus`）各自配一个生成器，生成器支持 `--check`：
 重新生成到内存、按提交文件的格式过一遍 `moon fmt`、逐字节比对，且**无论成功失败都
-把提交的文件恢复原样**。CI 每次运行 `pylock` / `tag` 的完整 `--check` 与
-`metadata` 的 `--check-cases`（元数据 fixture 的真实文档缓存不入库，因此 CI 只校验
+把提交的文件恢复原样**。CI 每次运行 `pylock` / `tag` / `upgrade` 的完整 `--check`
+与 `metadata` 的 `--check-cases`（元数据 fixture 的真实文档缓存不入库，因此 CI 只校验
 可复现的那一半）。
 
 ---
@@ -192,11 +200,11 @@ PEP 751 里比规范松的放宽）、**4 处测试基础设施缺陷**与 **1 �
 ```sh
 # 1. 单元测试（四个后端）
 moon check --target wasm-gc --deny-warn
-moon test  --target wasm-gc --deny-warn      # → Total tests: 277, passed: 277, failed: 0.
+moon test  --target wasm-gc --deny-warn      # → Total tests: 293, passed: 293, failed: 0.
 
 # 2. 差分实验（需要 packaging==26.3 的 venv）
 python -B tools/diff_packaging.py --oracle-version 26.3
-# → OK: 122589 records agree with packaging 26.3
+# → OK: 122640 records agree with packaging 26.3
 
 # 3. 四后端一致性 + 语料确定性
 python -B tools/target_parity.py
@@ -207,16 +215,18 @@ python -B tools/oracle_matrix.py --oracle <venv24.2>/bin/python ...
 
 # 5. 变异探针（工作树必须干净）
 python -B tools/mutation_probe.py --oracle <venv26.3>/bin/python
-# → OK: all 41 mutations were detected by the corpus
+# → OK: all 43 mutations were detected by the corpus
 
 # 6. 场景示例
 for t in wasm wasm-gc js native; do moon run examples/metadata-check --target $t; done
 for t in wasm wasm-gc js native; do moon run examples/resolve        --target $t; done
 for t in wasm wasm-gc js native; do moon run examples/audit          --target $t; done
+for t in wasm wasm-gc js native; do moon run examples/upgrade-check  --target $t; done
 
 # 7. fixture 与生成器一致
 python -B tools/fetch_pylock_corpus.py --check
 python -B tools/fetch_tag_corpus.py    --check
+python -B tools/fetch_upgrade_corpus.py --check
 python -B tools/fetch_metadata_corpus.py --check-cases
 
 # 8. 源码口径（对外引用行数时用这个）
@@ -246,7 +256,8 @@ CI（GitHub Actions）在 `main` 的每个提交上跑两件事：四后端 veri
 | PEP 700 索引版本列表 | `index.mbt` | 同上 | 同上 |
 | PEP 592 yank 策略 | `index.mbt`（只提供状态，策略在调用方） | 同上 | `resolve` 18 条 + 场景 2 |
 | PEP 751 锁文件 | `pylock.mbt` | 32 块 | `pylock` 215 条（含 6 份真实 `uv` 输出） |
-| 跨制品审计 | `audit.mbt` | 8 块 | 场景 3 |
+| 跨制品审计 | `audit.mbt` | 8 块 | `resolve` 18 条 + 场景「跨制品审计」 |
+| 升级候选评估 | `upgrade.mbt` | 16 块 | `upgrade` 51 条 + 场景「升级候选评估」 |
 
 ---
 
@@ -330,7 +341,7 @@ CI（GitHub Actions）在 `main` 的每个提交上跑两件事：四后端 veri
 写清楚「没证明什么」和写清楚「证明了什么」同样重要：
 
 - **不证明与规范完全一致**：第 2 层的参照物是另一份实现（`packaging`）而不是规范。
-- **不覆盖全部现实输入**：122 589 条是一次抽样，PyPI 的真实版本远多于 3 000 个；
+- **不覆盖全部现实输入**：122 640 条是一次抽样，PyPI 的真实版本远多于 3 000 个；
   真实 `METADATA` 只覆盖 239 份（有 PEP 658 边上文件的那些），且丢弃了 12 000 字符
   以上的文档；真实索引响应超过 20 个文件或 40 个版本的部分被截断（fixture 里写明）。
 - **`pylock` 抓不出「两份读法同时读错同一段规范」**：`packaging` 没有
@@ -345,7 +356,12 @@ CI（GitHub Actions）在 `main` 的每个提交上跑两件事：四后端 veri
   本库拒绝这个回落（不读运行时环境），因此「缺键」这一类行为是设计差异而非等价性结论。
 - **旧版 `packaging` 的差异被归类为上游行为变更**，这依赖「库对齐 26.3」这一前提；
   换目标版本需要重新评估（`tools/oracle_matrix.py` 就是为此准备的）。
-- **不做依赖求解、下载与安装**，也不评估升级的安全性——超出本库范围。
+- **不做依赖求解、下载与安装**，也不评估升级的安全性——超出本库范围。升级短名单
+  同样只回答版本问题：`upgrade` 那 51 条记录证明的是两侧对「谁落在区间内、谁被哪条
+  规则拦下」给出同一答案，不证明短名单上的版本可以安全升级。
+- **`upgrade` 的这一层对照覆盖了策略与区间，但没有覆盖"策略该不该起作用"**：没有
+  目标区间时显式禁用预发布不起作用，这是与 `SpecifierSet::filter` 一致的选择，也
+  就是说是两个实现共同的选择，不是规范明文。
 
 ---
 
@@ -353,16 +369,16 @@ CI（GitHub Actions）在 `main` 的每个提交上跑两件事：四后端 veri
 
 | 检查项 | 结果 |
 | --- | --- |
-| 单元测试 | 277 个测试块 × 4 后端 = 1 108 次全通过 |
-| 差分实验（`packaging==26.3`） | 122 589 条记录，**0 不一致** |
-| 变异探针 | 41 处注入缺陷，**41/41 全部检出** |
-| 四后端一致性 | 语料与 3 个场景报告逐字节一致 |
+| 单元测试 | 293 个测试块 × 4 后端 = 1 172 次全通过 |
+| 差分实验（`packaging==26.3`） | 122 640 条记录，**0 不一致** |
+| 变异探针 | 43 处注入缺陷，**43/43 全部检出** |
+| 四后端一致性 | 语料与 4 个场景报告逐字节一致 |
 | 多版本漂移 | 24.2 → 4 492、25.0 → 2 754、26.0 → 844、26.3 → **0** |
 | fixture 自检 | 全部 fixture 与当前生成器输出一致 |
 | 查出的库缺陷 | 13 处，全部修复并有回归测试或探针守 |
 | CI | `main` 最近提交均为 success（四后端矩阵 + differential 作业） |
 
-这套测试的价值不在于那 277 个块或 122 589 条数字，而在于**它抓到过东西**：
+这套测试的价值不在于那 293 个块或 122 640 条数字，而在于**它抓到过东西**：
 13 处库的真实缺陷（3 处文法/比较、3 处逐值元数据、1 处标签大小写、6 处 PEP 751
 放宽）、4 处测试基础设施缺陷、1 处语料漏洞，以及 1 处「库错而语料漏」的覆盖盲区。
 每抓到一个，都会在同一次改动里补上**能再抓到它的**那一层——这也是为什么

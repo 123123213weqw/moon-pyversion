@@ -30,6 +30,7 @@ jobs:
       - run: moon run examples/metadata-check --target ${{ matrix.target }}
       - run: moon run examples/resolve --target ${{ matrix.target }}
       - run: moon run examples/audit --target ${{ matrix.target }}
+      - run: moon run examples/upgrade-check --target ${{ matrix.target }}
 
   differential:
     # The library is written against packaging 26.3, so that release is the
@@ -74,6 +75,7 @@ jobs:
         run: |
           python -B tools/fetch_pylock_corpus.py --check
           python -B tools/fetch_tag_corpus.py --check
+          python -B tools/fetch_upgrade_corpus.py --check
           python -B tools/fetch_metadata_corpus.py --check-cases
       - name: Differential comparison against packaging 26.3
         run: python -B tools/diff_packaging.py --oracle-version 26.3 --json report-26.3.json

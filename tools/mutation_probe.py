@@ -66,6 +66,29 @@ MUTATIONS = [
         "covers": "tag components are lowercased, the way the reference Tag is",
     },
     {
+        "name": "upgrade-ignores-the-prerelease-policy",
+        "file": "upgrade.mbt",
+        # The policy is the reason `auto` differs from `any`: forcing prereleases
+        # on makes every prerelease look acceptable.
+        "old": "      let kept = SpecifierSet::filter(newer_versions, spec, prereleases~)",
+        "new": "      let kept = SpecifierSet::filter(newer_versions, spec, prereleases=Some(true))",
+        "covers": "the prerelease policy is passed through to the range filter",
+    },
+    {
+        "name": "upgrade-keeps-equal-versions",
+        "file": "upgrade.mbt",
+        # An equal version is not an upgrade, even when the spelling differs.
+        # Dropping the rule sends those candidates on to the range stages, where
+        # they are kept.
+        "old": """        let order = Version::compare(version, current)
+        if order == 0 {
+          dropped.push((candidate, Same))
+        } else if order < 0 {""",
+        "new": """        let order = Version::compare(version, current)
+        if order < 0 {""",
+        "covers": "a version equal to the current one is not an upgrade",
+    },
+    {
         "name": "tag-threading-detection-ignored",
         "file": "tags.mbt",
         # A free-threaded ABI is spelled with a `t` (`cp313t`), and it swaps the
