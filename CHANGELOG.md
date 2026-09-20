@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — lock-aware audit and multi-project mirror scenario
+
+- `audit_package` now selects a compatible file from the locked version before
+  considering index order. The selected filename must be present in the lock,
+  and the lock/index sha256 declarations must agree (hex case-insensitively).
+- `audit_bundle` audits multiple explicit project inputs against one parsed
+  lock and target, identifies duplicate project inputs and optionally checks
+  coverage of applicable lock entries. It is not a transitive dependency solver.
+- `examples/bundle-audit` joins real PyPI Flask/Jinja2 metadata and indexes with
+  an explicit two-entry lock. The four-target CI runs and compares its report.
+- Current effective production MoonBit: 9,984 lines; tests: 7,460 lines and
+  300 blocks. Generated fixtures, examples and Python tools are reported
+  separately by `tools/source_metrics.py`.
+
 ## Unreleased — M13: the upgrade shortlist (scenario 3)
 
 ### Added

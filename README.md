@@ -2,9 +2,9 @@
 [![CI](https://github.com/123123213weqw/moon-pyversion/actions/workflows/ci.yml/badge.svg)](https://github.com/123123213weqw/moon-pyversion/actions/workflows/ci.yml)
 
 纯 MoonBit 实现的 **Python 打包元数据工具库**：解析、规范化、比较 PEP 440
-版本与约束，并在此之上覆盖 PEP 503 名称规范化、PEP 427/625 分发文件名、
-PEP 508 依赖行与环境标记、PEP 639 许可证表达式、TOML 1.0 与 core metadata
-头部。零第三方依赖，仅使用 `moonbitlang/core`。
+版本与约束，并覆盖 PEP 503 名称、PEP 427/625 分发文件名、PEP 508 需求与环境
+标记、PEP 425 平台标签、PEP 639 许可证、TOML、core metadata、PEP 691 索引与
+PEP 751 锁文件。零第三方依赖，仅使用 `moonbitlang/core`。
 
 它不是 SemVer 实现，也不替代 `mizchi/semver`；不联网、不下载、不安装，
 不做依赖求解——只做"把 Python 生态的元数据读懂"这一段。
@@ -124,7 +124,8 @@ println(meta.name)                       // demo
 
 `audit_package` 把一条 PEP 508 需求、真实 core metadata、PEP 691 索引响应、
 PEP 751 锁文件和调用方明确给出的 Python/平台环境合并为一个 `PackageAudit`。
-它统一检查名称、`Requires-Python`、环境标记、锁定版本、最终候选版本和 sha256，
+它统一检查名称、`Requires-Python`、环境标记、锁定版本、最终候选文件名及索引/锁文件
+两侧的 sha256 声明，
 返回 `Ready`、`Blocked` 或 `NotRequired`，并给出稳定问题码；不联网、不下载、不执行文件。
 
 ```sh
@@ -134,6 +135,17 @@ moon run examples/audit --target js
 该场景使用仓库中由真实 PyPI wheel 的 PEP 658 sidecar 保存的 Flask 0.12.5
 `METADATA`，配合可审查的索引和锁文件，完成从需求到可安装文件的一次端到端决策。
 输入来源、预期输出、验收边界见 [docs/audit-scenario.md](docs/audit-scenario.md)。
+
+`audit_bundle` 对调用方提供的多个项目复用同一份锁文件和目标环境；可选的锁条目覆盖检查
+能发现“宣称完整镜像，却遗漏某个适用锁条目”。它不会自行抓取缺少的项目或求解传递依赖。
+双包示例使用真实 PyPI 的 Flask/Jinja2 元数据及索引响应，验证锁定旧版本、文件名与摘要
+一致性：
+
+```sh
+moon run examples/bundle-audit --target js
+```
+
+场景输入与限制见 [docs/bundle-audit-scenario.md](docs/bundle-audit-scenario.md)。
 
 ## 验证命令
 
@@ -147,13 +159,14 @@ for t in wasm wasm-gc js native; do
 done
 ```
 
-场景示例（四个后端各跑一遍，报告逐字节相同）：
+场景示例（四个后端各跑一遍；CI 在同一 Linux runner 上比较报告）：
 
 ```sh
 for t in wasm wasm-gc js native; do
   moon run examples/metadata-check --target $t
   moon run examples/resolve        --target $t
   moon run examples/audit          --target $t
+  moon run examples/bundle-audit   --target $t
   moon run examples/upgrade-check  --target $t
 done
 ```

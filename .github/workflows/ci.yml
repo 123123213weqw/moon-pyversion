@@ -30,6 +30,7 @@ jobs:
       - run: moon run examples/metadata-check --target ${{ matrix.target }}
       - run: moon run examples/resolve --target ${{ matrix.target }}
       - run: moon run examples/audit --target ${{ matrix.target }}
+      - run: moon run examples/bundle-audit --target ${{ matrix.target }}
       - run: moon run examples/upgrade-check --target ${{ matrix.target }}
 
   differential:
@@ -94,9 +95,10 @@ jobs:
             moon run examples/metadata-check --target $target > dependency-check-$target.txt
             moon run examples/resolve --target $target > candidate-resolution-$target.txt
             moon run examples/audit --target $target > package-audit-$target.txt
+            moon run examples/bundle-audit --target $target > bundle-audit-$target.txt
             moon run examples/upgrade-check --target $target > upgrade-shortlist-$target.txt
           done
-          for report in dependency-check candidate-resolution package-audit upgrade-shortlist; do
+          for report in dependency-check candidate-resolution package-audit bundle-audit upgrade-shortlist; do
             cmp $report-wasm.txt $report-wasm-gc.txt
             cmp $report-wasm.txt $report-js.txt
             cmp $report-wasm.txt $report-native.txt

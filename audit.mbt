@@ -162,8 +162,8 @@ fn same_version(a : Version, b : Version) -> Bool {
 /// Parsing errors are raised by the existing typed parsers. Successfully parsed
 /// but mutually inconsistent artifacts return stable `AuditIssue` entries.
 /// Yanked files are excluded unless `allow_yanked` is true. The selected file
-/// must advertise a sha256 digest, agree with the one applicable lock entry and
-/// agree with the supplied metadata version for `Ready`.
+/// must advertise a sha256 digest, match a file and digest in the one applicable
+/// lock entry, and agree with the supplied metadata version for `Ready`.
 pub fn audit_package(
   requirement_text : String,
   metadata_text : String,
@@ -174,10 +174,27 @@ pub fn audit_package(
   tags : Array[String],
   allow_yanked? : Bool = false,
 ) -> PackageAudit raise {
+  let lock = Pylock::parse(pylock_toml)
+  audit_package_with_lock(
+    requirement_text, metadata_text, index_json, lock, environment, python_text,
+    tags, allow_yanked,
+  )
+}
+
+///|
+fn audit_package_with_lock(
+  requirement_text : String,
+  metadata_text : String,
+  index_json : String,
+  lock : Pylock,
+  environment : MarkerEnvironment,
+  python_text : String,
+  tags : Array[String],
+  allow_yanked : Bool,
+) -> PackageAudit raise {
   let requirement = Requirement::parse(requirement_text)
   let metadata = Metadata::parse(metadata_text)
   let index = SimpleIndex::parse(index_json)
-  let lock = Pylock::parse(pylock_toml)
   let python = Version::parse(python_text)
   let project = canonicalize_name(requirement.name)
   let issues : Array[AuditIssue] = []
@@ -229,10 +246,34 @@ pub fn audit_package(
   for candidate in candidates {
     candidate_names.push(candidate.filename)
   }
-  let selected = if candidates.length() == 0 {
-    None
-  } else {
-    Some(candidates[0])
+  let applicable_locked : Array[PylockPackage] = []
+  for entry in lock.packages_named(project) {
+    if entry.is_applicable(environment) &&
+      lock_package_supports_python(entry, python) {
+      applicable_locked.push(entry)
+    }
+  }
+  // A lock is a selection, not permission to silently upgrade to the highest
+  // version in the index. Keep the resolver's order within the locked version.
+  let mut selected : IndexFile? = None
+  if candidates.length() > 0 {
+    if applicable_locked.length() == 1 {
+      match applicable_locked[0].version {
+        Some(locked_version) =>
+          for candidate in candidates {
+            if selected is None &&
+              same_version(candidate.version, locked_version) {
+              selected = Some(candidate)
+            }
+          }
+        None => ()
+      }
+    }
+    // Retain the best available candidate for diagnostics when the lock has
+    // no matching version; it still cannot make the audit Ready.
+    if selected is None {
+      selected = Some(candidates[0])
+    }
   }
   if applicable && selected is None {
     audit_issue(issues, "CANDIDATE_MISSING", project)
@@ -269,13 +310,6 @@ pub fn audit_package(
     None => ()
   }
 
-  let applicable_locked : Array[PylockPackage] = []
-  for entry in lock.packages_named(project) {
-    if entry.is_applicable(environment) &&
-      lock_package_supports_python(entry, python) {
-      applicable_locked.push(entry)
-    }
-  }
   let lock_versions : Array[String] = []
   for entry in applicable_locked {
     match entry.version {
@@ -298,8 +332,9 @@ pub fn audit_package(
     audit_issue(issues, "LOCK_ENTRY_AMBIGUOUS", project)
   }
   match selected {
-    Some(file) if applicable_locked.length() == 1 =>
-      match applicable_locked[0].version {
+    Some(file) if applicable_locked.length() == 1 => {
+      let locked = applicable_locked[0]
+      match locked.version {
         Some(version) =>
           if !same_version(file.version, version) {
             audit_issue(
@@ -310,12 +345,43 @@ pub fn audit_package(
           }
         None => ()
       }
+      let mut index_digest : String? = None
+      for source in retained_sources {
+        if source.filename == file.filename {
+          index_digest = source.hash_for("sha256")
+        }
+      }
+      let mut matched_file = false
+      for locked_file in locked.all_files() {
+        if locked_file.filename() == Some(file.filename) {
+          matched_file = true
+          match (index_digest, locked_file.hash_for("sha256")) {
+            (Some(index_hash), Some(lock_hash)) =>
+              if index_hash.to_lower() != lock_hash.to_lower() {
+                audit_issue(issues, "LOCK_SHA256_MISMATCH", file.filename)
+              }
+            (Some(_), None) =>
+              audit_issue(issues, "LOCK_SHA256_MISSING", file.filename)
+            _ => ()
+          }
+        }
+      }
+      if !matched_file {
+        audit_issue(issues, "LOCK_FILE_MISSING", file.filename)
+      }
+    }
     _ => ()
   }
 
   {
     project,
-    requirement: requirement.to_string(),
+    // A direct URL may contain credentials. The report must not echo it even
+    // when the input is rejected as outside the index/lock audit model.
+    requirement: if requirement.url is Some(_) {
+      project + " @ [redacted]"
+    } else {
+      requirement.to_string()
+    },
     applicable,
     metadata_name: metadata.name,
     metadata_version: metadata.version.to_string(),
@@ -329,4 +395,144 @@ pub fn audit_package(
     lock_versions,
     issues,
   }
+}
+
+///|
+/// One explicit project request and its two externally supplied artifacts.
+/// The shared PEP 751 lock and target environment are passed to `audit_bundle`.
+pub(all) struct AuditInput {
+  requirement_text : String
+  metadata_text : String
+  index_json : String
+} derive(Eq, @debug.Debug)
+
+///|
+/// An ordered set of package audits against one lock and one target. This is
+/// intentionally not a dependency resolver: it audits exactly the inputs the
+/// caller supplies and does not infer or fetch missing transitive projects.
+pub(all) struct AuditBundle {
+  reports : Array[PackageAudit]
+  issues : Array[AuditIssue]
+} derive(Eq, @debug.Debug)
+
+///|
+pub fn AuditBundle::disposition(self : AuditBundle) -> AuditDisposition {
+  if self.issues.length() > 0 {
+    return Blocked
+  }
+  let mut has_ready = false
+  for report in self.reports {
+    match report.disposition() {
+      Blocked => return Blocked
+      Ready => has_ready = true
+      NotRequired => ()
+    }
+  }
+  if has_ready {
+    Ready
+  } else {
+    NotRequired
+  }
+}
+
+///|
+pub fn AuditBundle::counts(self : AuditBundle) -> (Int, Int, Int) {
+  let mut ready = 0
+  let mut blocked = 0
+  let mut not_required = 0
+  for report in self.reports {
+    match report.disposition() {
+      Ready => ready = ready + 1
+      Blocked => blocked = blocked + 1
+      NotRequired => not_required = not_required + 1
+    }
+  }
+  (ready, blocked, not_required)
+}
+
+///|
+pub fn AuditBundle::render(self : AuditBundle) -> String {
+  let (ready, blocked, not_required) = self.counts()
+  let out = StringBuilder()
+  out.write_string(
+    "bundle: " +
+    self.reports.length().to_string() +
+    " package(s), ready=" +
+    ready.to_string() +
+    ", blocked=" +
+    blocked.to_string() +
+    ", not-required=" +
+    not_required.to_string() +
+    "\n",
+  )
+  for issue in self.issues {
+    out.write_string(
+      "bundle-issue: " + issue.code + ": " + issue.subject + "\n",
+    )
+  }
+  for report in self.reports {
+    out.write_string("\n" + report.render())
+  }
+  out.to_string()
+}
+
+///|
+/// Audit a caller-supplied bundle against one lock and one explicit target.
+/// The lock is parsed once, then each input receives an independent package
+/// report in caller order. Duplicate project inputs are reported at bundle
+/// level, because two independently supplied index/metadata pairs for one
+/// canonical project make the overall decision ambiguous.
+///
+/// With `require_lock_coverage=true`, every applicable, Python-compatible lock
+/// entry must have an input. This is useful when the caller claims to provide a
+/// complete offline mirror; leave it false for partial audits. No network I/O,
+/// recursive dependency solving or content hashing occurs here.
+pub fn audit_bundle(
+  inputs : Array[AuditInput],
+  pylock_toml : String,
+  environment : MarkerEnvironment,
+  python_text : String,
+  tags : Array[String],
+  allow_yanked? : Bool = false,
+  require_lock_coverage? : Bool = false,
+) -> AuditBundle raise {
+  let lock = Pylock::parse(pylock_toml)
+  let python = Version::parse(python_text)
+  let reports : Array[PackageAudit] = []
+  let issues : Array[AuditIssue] = []
+  for input in inputs {
+    let report = audit_package_with_lock(
+      input.requirement_text,
+      input.metadata_text,
+      input.index_json,
+      lock,
+      environment,
+      python_text,
+      tags,
+      allow_yanked,
+    )
+    for previous in reports {
+      if previous.project == report.project {
+        audit_issue(issues, "DUPLICATE_PROJECT_INPUT", report.project)
+      }
+    }
+    reports.push(report)
+  }
+  if require_lock_coverage {
+    for entry in lock.applicable_packages(environment) {
+      if lock_package_supports_python(entry, python) {
+        let name = canonicalize_name(entry.name)
+        let mut found = false
+        for report in reports {
+          if report.project == name && report.applicable {
+            found = true
+          }
+        }
+        if !found {
+          audit_issue(issues, "LOCK_ENTRY_UNAUDITED", name)
+        }
+      }
+    }
+  }
+  { reports, issues, }
 }

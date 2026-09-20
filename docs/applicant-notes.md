@@ -15,15 +15,19 @@
 - PEP 440、503、508、639、691、751，PEP 427/625，TOML 1.0 与 core metadata；
 - `resolve_candidates` 完成候选过滤与确定排序；`upgrade_shortlist` 给出升级候选
   短名单与逐条拒绝原因；
-- `audit_package` 统一检查需求、元数据、索引、锁文件和目标环境；
+- `audit_package` 统一检查需求、元数据、索引、锁文件和目标环境，并对齐锁定文件名与
+  双方 sha256 声明；`audit_bundle` 支持多项目共用锁文件审计；
 - 明确不联网、不下载、不安装、不做完整依赖求解或安全性判断。
 
 ## 验证事实
 
-- 293 个 MoonBit 测试块；CI 覆盖 wasm、wasm-gc、js、native；
+- 300 个 MoonBit 测试块；CI 覆盖 wasm、wasm-gc、js、native；生产代码 9,984 行，
+  测试 7,460 行，不把示例或生成 fixture 计作核心源码；
 - `examples/metadata-check`、`examples/resolve`、`examples/audit`、
-  `examples/upgrade-check` 为四个端到端场景；
+  `examples/bundle-audit`、`examples/upgrade-check` 为五个端到端场景；
 - audit 场景使用真实 PyPI Flask 0.12.5 `METADATA`，索引和锁为确定性验收输入；
+- bundle-audit 场景使用 Flask/Jinja2 的真实 PyPI 元数据与索引，锁文件是明确标注
+  的场景输入，不声称完成传递依赖求解或下载后文件校验；
 - 独立差分实验：122 640 条记录对照 CPython packaging 26.3，0 不一致；PEP 751 的
   锁文件语料含 6 份 `uv` 写出的真实锁文件，PEP 425 标签语料 62 组参数；声明分歧
   1 + 6 条；变异探针 43 处全部检出；

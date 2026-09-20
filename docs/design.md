@@ -126,7 +126,7 @@ Unicode 感知的正则。PEP 427 要求 wheel 文件名是转义后的 ASCII，
 
 `moon test` 覆盖官方规范化样例、非法输入、比较边例、各操作符、
 预发布规则、通配符、`~=` 以及固定合法版本集上的反自反/反对称/传递性，
-共 293 个测试块，在 wasm、wasm-gc、js、native 四目标验证。
+共 300 个测试块，在 wasm、wasm-gc、js、native 四目标验证。
 CI 在四个目标执行 `fmt/check/build/test/run`。
 
 另有独立差分实验：`examples/diff` 生成 122 640 条确定性记录（手工语料、
@@ -143,8 +143,8 @@ PEP 691 索引响应、核心元数据与 PEP 751 锁文件），逐条回放给
 行为变更。
 差分实验证明的是"与 packaging 26.3 一致"，不是全规范合规证明。
 
-四个场景各有可运行示例：`examples/metadata-check`（元数据与锁检查）、
-`examples/resolve`（索引到候选文件）、`examples/audit`（需求、真实元数据、索引、
-锁文件和目标环境的统一审计）与 `examples/upgrade-check`（升级候选短名单，
+五个场景各有可运行示例：`examples/metadata-check`（元数据与锁检查）、
+`examples/resolve`（索引到候选文件）、`examples/audit`（单包跨制品审计）、
+`examples/bundle-audit`（真实 PyPI 双包索引与锁文件审计）、`examples/upgrade-check`（升级候选短名单，
 `upgrade.mbt`）。CI 在同一 runner 上要求四后端逐字节一致；跨 Windows
 与 Unix 复现时，验证工具仅规范化 CRLF/LF，并同时保留原始与规范化摘要。

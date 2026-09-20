@@ -5,14 +5,18 @@
 
 验证环境：`moon 0.1.20260904`（moonc  v0.10.12），Linux x86_64，2026-09-16。
 
+2026-09-20 复核：旧稿的 API 命令、部分示例输出及仓库字段误写为
+`123213213weqw`（少一个 `1`），该地址实际返回 404。下文已更正为注册表实际账号
+`123123213weqw`；正确 API 当前返回 0.1.0、未 yank，checksum 与原记录相同。
+
 ## 1. 已发布版本清单
 
 公开注册表 API（任何联网机器都能查，不需要凭据）：
 
 ```text
-$ curl -sS https://mooncakes.io/api/v0/modules/123213213weqw/moon_pyversion
-{"module": "123213213weqw/moon_pyversion", "version": "0.1.0", "yanked": false,
- "yanked_reason": null, "metadata": {"name": "123213213weqw/moon_pyversion",
+$ curl -sS https://mooncakes.io/api/v0/modules/123123213weqw/moon_pyversion
+{"module": "123123213weqw/moon_pyversion", "version": "0.1.0", "yanked": false,
+ "yanked_reason": null, "metadata": {"name": "123123213weqw/moon_pyversion",
  "version": "0.1.0", "readme": "README.mbt.md", "license": "Apache-2.0",
  "checksum": "16379fadb3bfc7084d9e7a70b16a232dc0219d541a81ef5dfe0dc2451b6358fd",
  "created_at": "2026-09-10T14:51:57.925603+00:00", ...}}
@@ -27,7 +31,7 @@ $ wc -l ~/.moon/registry/index/user/123123213weqw/moon_pyversion.index
 1
 $ cat ~/.moon/registry/index/user/123123213weqw/moon_pyversion.index
 {"name": "123123213weqw/moon_pyversion", "version": "0.1.0", "readme": "README.mbt.md",
- "repository": "https://github.com/123213213weqw/moon-pyversion", "license": "Apache-2.0",
+ "repository": "https://github.com/123123213weqw/moon-pyversion", "license": "Apache-2.0",
  "keywords": [...], "description": "...",
  "checksum": "16379fadb3bfc7084d9e7a70b16a232dc0219d541a81ef5dfe0dc2451b6358fd",
  "created_at": "2026-09-10T14:51:57.925603+00:00", "yanked": false, "yanked_reason": null}
@@ -55,7 +59,7 @@ Downloading 123123213weqw/moon_pyversion@0.1.0
 
 ```text
 $ moon add 123123213weqw/moon_pyversion@0.2.0
-Error: Failed to resolve registry dependency `123213213weqw/moon_pyversion` for module
+Error: Failed to resolve registry dependency `123123213weqw/moon_pyversion` for module
 `probe/mcprobe`: module was not found in the registry
 ```
 

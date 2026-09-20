@@ -53,18 +53,28 @@ The source repository contains this working example in `examples/basic`.
 - `cpython_tags`, `generic_tags`, `pure_python_tags`, `compatible_tags`,
   `mac_platforms`, `tag_rank`
 - `audit_package(...) -> PackageAudit raise`
+- `audit_bundle(...) -> AuditBundle raise`, `AuditBundle::counts` and
+  `AuditBundle::disposition`
 - `upgrade_shortlist(...) -> UpgradePlan`, `UpgradePlan::versions`,
   `UpgradePlan::rejection_summary`, `UpgradeCandidate::parse`
 
-Two functions are the high-level integration boundaries, and both are built out
-of the pieces above rather than beside them.
+The high-level integration boundaries are built out of the parsers and
+selection rules above rather than beside them.
 
 `audit_package` joins one PEP 508 requirement, one real core-metadata document,
 one PEP 691 index response and one PEP 751 lock for an explicitly supplied
 target. It reports cross-document name, Python, environment, version and sha256
-inconsistencies without downloading or executing a file, and returns `Ready`,
+inconsistencies without downloading or executing a file. It selects the locked
+version rather than the newest index candidate, then checks the selected
+filename and sha256 declaration against the lock. It returns `Ready`,
 `Blocked` or `NotRequired` with stable issue codes. See `examples/audit` and
 `docs/audit-scenario.md`.
+
+`audit_bundle` applies that decision to several explicitly supplied projects
+against one parsed lock and target, reports duplicate project inputs, and can
+optionally require every applicable lock entry to have an input. It does not
+resolve or fetch transitive dependencies. See `examples/bundle-audit` and
+`docs/bundle-audit-scenario.md`.
 
 `upgrade_shortlist` answers the version part of "which of these candidates is
 worth a test run?": given the current version, a target range, a prerelease

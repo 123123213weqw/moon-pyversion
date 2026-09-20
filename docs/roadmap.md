@@ -117,14 +117,12 @@ METADATA 头部解析。仍然零第三方依赖，仍然不做下载与求解�
 | `metadata.mbt` `[已有]` | `Metadata::parse/requirements/requires_python/extras/is_compatible/diagnostics/to_string` | 场景 1（端到端） | 1378 |
 | `index.mbt` `[已有]` | `SimpleIndex::parse/versions/files/wheels/sdists`、`LocalIndex::scan/files_for`、`resolve_candidates` / `select_best` / `explain_rejection`、`parse_json` | 场景 2 | 1256 |
 | `pylock.mbt` `[已有]` | `Pylock::parse/lock_version/created_by/packages_named/files_for/dependencies_of/is_applicable/applicable_packages/accepts_environment` | 场景 1、2 | 1280 |
-| `audit.mbt` `[已有]` | `audit_package`、`PackageAudit::render`、稳定问题码 | 场景 1、2 端到端 | 332 |
+| `audit.mbt` `[已有]` | `audit_package`、`audit_bundle`、锁定文件名/摘要一致性、稳定问题码 | 场景 1、2 与双包审计 | 538 |
 | `tags.mbt` `[已有]` | `cpython_tags`、`generic_tags`、`pure_python_tags`、`compatible_tags`、`mac_platforms`、`tag_rank` | 场景 2 | 448 |
 
-截至 M13，根目录生产 MoonBit 合计 **9778 行**（不含测试与示例，含 `audit.mbt` 332 行、
-`tags.mbt` 448 行与 `upgrade.mbt` 284 行），测试 **7311 行**（`*_test.mbt`，293 个
-测试块 × 四后端），示例 2862（`diff`）+ 372（`metadata-check`）+ 570（`resolve`）+
-268（`upgrade-check`）+ 36（`audit`）+ 180（`basic`/`bench`）行，工具链 7103 行
-Python（12 个脚本）。
+当前根目录生产 MoonBit 合计 **9,984 行**（不含测试与示例，含 `audit.mbt` 538 行、
+`tags.mbt` 448 行与 `upgrade.mbt` 284 行），测试 **7,460 行**（300 个测试块 × 四后端），
+示例 **4,356 行**（含新 `bundle-audit`），工具链 7,103 行 Python（12 个脚本）。
 
 **`utils.mbt` 设计要点** `[已完成，见下]`（已用 packaging 26.3 核实）：
 
