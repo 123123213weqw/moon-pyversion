@@ -10,5 +10,5 @@
   升级待测短名单；不联网、不安装、不做完整依赖求解或安全判断。
 - 实际场景：`examples/metadata-check`、`resolve`、`audit`、`bundle-audit`、
   `upgrade-check`；真实输入与人工场景输入要明确区分。
-- MoonCakes：0.1.0 已发布并独立安装；仓库 0.2.0 待发布，不能冒称已发布。
+- MoonCakes：0.2.0 已发布并独立下载安装、调用审计接口；校验和与注册表一致。
 - 提交前确认：最新提交与 CI、作者归属、实际贡献、申报书 Markdown 和官方表格。

@@ -3,11 +3,14 @@
 本文件记录**从注册表独立下载并运行**已发布版本的实测过程与结果，用于替代「CI 绿灯」
 这类间接证据。每一节都给出可重跑的命令和当时的原始输出。
 
-验证环境：`moon 0.1.20260904`（moonc  v0.10.12），Linux x86_64，2026-09-16。
+以下第 1–5 节是 **2026-09-16 的 0.1.0 历史记录**，当时“0.2.0 尚未发布”的描述
+只对该日期有效。**当前 0.2.0 的发布与独立安装验证在第 6 节。**
+
+历史验证环境：`moon 0.1.20260904`（moonc v0.10.12），Linux x86_64，2026-09-16。
 
 2026-09-20 复核：旧稿的 API 命令、部分示例输出及仓库字段误写为
 `123213213weqw`（少一个 `1`），该地址实际返回 404。下文已更正为注册表实际账号
-`123123213weqw`；正确 API 当前返回 0.1.0、未 yank，checksum 与原记录相同。
+`123123213weqw`；当时正确 API 返回 0.1.0、未 yank，checksum 与原记录相同。
 
 ## 1. 已发布版本清单
 
@@ -131,3 +134,59 @@ $ moon run .
 - 注册表索引在首次 `moon add` 时可能尚未包含最新条目：本次就先遇到
   `Could not find the latest published version`，`moon update` 之后同一条命令成功。
   也就是说，**验证发布状态前必须先 `moon update`**，否则会得到假阴性。
+
+## 6. 当前版本 0.2.0：发布及独立安装（2026-09-20）
+
+账号 `123123213weqw`，从仓库 `ba8a383` 执行 `moon publish --frozen`：
+
+```text
+Running moon check ...
+Check passed
+validating packaged zip: ...123123213weqw-moon_pyversion-0.2.0.zip
+running moon check on extracted package
+Check passed
+Server status: 200 OK
+```
+
+公开注册表 API `https://mooncakes.io/api/v0/modules/123123213weqw/moon_pyversion`
+返回 `version: 0.2.0`、`latest_version: 0.2.0`、`yanked: false`，仓库字段为本项目地址，
+`metadata.checksum` 为：
+
+```text
+212b53be9f908391c5f0044f338ca1ea32f8535f5050933d68ac856f2b682828
+```
+
+独立于项目仓库，在 D 盘新建临时模块 `probe/mcprobe`，运行：
+
+```text
+$ moon update
+Registry index updated successfully
+$ moon add 123123213weqw/moon_pyversion@0.2.0
+Downloading 123123213weqw/moon_pyversion@0.2.0
+$ sha256sum <registry-cache>/123123213weqw/moon_pyversion/0.2.0.zip
+212b53be9f908391c5f0044f338ca1ea32f8535f5050933d68ac856f2b682828
+```
+
+下载包 1,171,933 字节；其 SHA-256 与公开注册表一致。消费者在 `moon.pkg` 中导入
+`"123123213weqw/moon_pyversion" @pyversion`，运行以下两类调用：
+
+- `Version::parse("v01.002-rc3+ABC_007")`；
+- 新增的 `audit_package`，输入确定的 `demo-pkg==1.2` 元数据、索引、锁文件和
+  CPython 3.11 / Linux / `py3-none-any` 环境，并调用 `PackageAudit::render()`。
+
+`moon run cmd/main --target js` 的核心输出：
+
+```text
+1.2rc3+abc.7
+project: demo-pkg
+requirement: demo-pkg==1.2
+disposition: ready
+selected: demo_pkg-1.2-py3-none-any.whl
+lock-versions: 1.2
+issues: none
+```
+
+因此 0.2.0 不只是注册表条目存在：**下载、依赖解析、编译以及新版审计调用均已通过**。
+此独立消费者使用确定的最小输入，不代替仓库中真实 PyPI 双包场景与四后端 CI；
+也不证明实际 wheel 内容的摘要或完整传递依赖可安装。对应 GitHub CI：
+`ba8a383` 的 [全部任务成功记录](https://github.com/123123213weqw/moon-pyversion/actions/runs/35520747149)。

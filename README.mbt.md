@@ -6,8 +6,9 @@ package dependencies; it uses only `moonbitlang/core`.
 
 ## Consumer example
 
-Once publication is confirmed, add `123123213weqw/moon_pyversion@0.2.0`,
-then import it in your `moon.pkg`. For source-based use see the repository README.
+Published and independently installed from MoonCakes as
+`123123213weqw/moon_pyversion@0.2.0`. Add it to your module, then import it
+in `moon.pkg`. For source-based use see the repository README.
 
 ```text
 import {

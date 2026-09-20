@@ -32,15 +32,13 @@
   锁文件语料含 6 份 `uv` 写出的真实锁文件，PEP 425 标签语料 62 组参数；声明分歧
   1 + 6 条；变异探针 43 处全部检出；
 - 差分语料、oracle 版本、声明分歧与 mutation probe 以最新 CI 输出为准；
-- 0.1.0 已从注册表独立下载、安装并运行验证：注册表索引里唯一的版本，未 yank，归档
-  sha256 与索引 `checksum` 一致，临时模块 `moon run` 输出 `1.2rc3+abc.7`；命令与原始
-  输出见 `docs/release-verification.md`；
-- 0.2.0 尚未发布（索引里没有该版本，`moon add ...@0.2.0` 解析失败），发布后必须按同一份
-  步骤重跑，不能用 GitHub CI 代替。
+- 0.2.0 已从注册表独立下载、安装并运行验证：未 yank，归档 sha256 与索引 `checksum`
+  一致；临时模块 `moon run` 输出 `1.2rc3+abc.7` 与审计结果 `ready`，原始过程见
+  `docs/release-verification.md`。0.1.0 的先前验证记录作为历史保留。
 
 ## 提交前仍需本人确认
 
 - 申报书是否准确反映本人实际贡献与理解；
 - 最新提交 SHA、提交总数、作者归属和 CI 链接；
-- MoonCakes 0.2.0 是否已发布且未 yanked；
+- MoonCakes 0.2.0 是否仍可获取且未 yanked；
 - 赛事表格是否附上最新 Markdown，而非旧版本。
