@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.0 — 2026-09-29
+
+Collects everything since 0.2.0: the lock-aware audit and multi-project
+mirror scenario, the M13 upgrade shortlist, M12 tag generation, and the
+M8 PEP 751 divergences — all previously sitting under Unreleased
+headings, now released together with today's toolchain and
+infrastructure work.
+
+Today's additions:
+
+- moonc 0.10.14 migration: explicit pub extend declarations for every
+  derived or implemented trait (Eq, Show, Compare, Debug), and black-box
+  tests qualify package references as the new compiler requires.
+- The 662-line moon info API snapshot (`pkg.generated.mbti`) is checked
+  in and gated in CI, so public-surface changes are reviewable.
+- `examples/bench`: deterministic 2000-version PEP 440 corpus reporting
+  parse and specifier-filter throughput plus a round-trip checksum, run
+  on every CI backend with no numeric thresholds.
+- CI toolchain pin moves from 0.10.12 to 0.10.14.
+
+Previously unreleased sections follow verbatim.
+
 ## Unreleased — lock-aware audit and multi-project mirror scenario
 
 - `audit_package` now selects a compatible file from the locked version before
