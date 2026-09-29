@@ -24,9 +24,11 @@ jobs:
         with:
           # Keep CI reproducible across compiler releases; the 2026-09-18
           # toolchain introduced implicit_impl_as_method as a new warning.
-          version: '0.10.12+1634b282e'
+          version: '0.10.14+7d59c7ec9'
       - run: moon version --all
       - run: moon fmt --check
+      - run: moon info
+      - run: git diff --exit-code -- pkg.generated.mbti
       - run: moon check --target ${{ matrix.target }} --deny-warn
       - run: moon build --target ${{ matrix.target }} --deny-warn
       - run: moon test --target ${{ matrix.target }} --deny-warn
