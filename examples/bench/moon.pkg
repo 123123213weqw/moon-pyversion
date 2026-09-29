@@ -1,7 +1,6 @@
 import {
   "123123213weqw/moon_pyversion" @pyversion,
-  "123123213weqw/moon_pyversion/fixtures",
-  "moonbitlang/core/env",
+  "moonbitlang/core/bench" @mbench,
 }
 
 pkgtype(kind: "executable")

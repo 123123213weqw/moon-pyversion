@@ -1,141 +1,72 @@
 ///|
-/// Throughput harness for the version and specifier hot paths.
-///
-/// It reuses the real-world corpus in the `fixtures` package so the
-/// inputs are the same strings the differential oracle validates. Timing uses
-/// `@env.now()`, which is millisecond resolution on every backend; each loop
-/// runs long enough (hundreds of milliseconds) for that to be meaningful.
-/// The numbers are wall clock figures for the machine and backend that run
-/// them, not a cross-language benchmark.
-///
-/// Run with `moon run examples/bench --target js`.
-fn report(
-  label : String,
-  iterations : Int,
-  started : UInt64,
-  checksum : Int,
-) -> Unit {
-  let elapsed_ms = @env.now() - started
-  let nanos_per_op = if iterations > 0 {
-    elapsed_ms * 1_000_000UL / iterations.to_uint64()
-  } else {
-    0UL
+fn main raise {
+  // Deterministic corpus: 2000 PEP 440 version strings cycling through
+  // release, pre/post/dev, epoch and local shapes.
+  let versions : Array[String] = []
+  for i = 0; i < 2000; i = i + 1 {
+    let shape = i % 5
+    let base = (i / 5).to_string() +
+      "." +
+      (i % 9).to_string() +
+      "." +
+      (i % 7).to_string()
+    let v = match shape {
+      0 => base
+      1 => base + "rc" + (i % 9).to_string()
+      2 => base + ".post" + (i % 5).to_string()
+      3 => "1!" + base + "+local" + (i % 11).to_string()
+      _ => base + "a1.dev" + (i % 3).to_string()
+    }
+    versions.push(v)
   }
-  let ops_per_second = if elapsed_ms > 0 {
-    iterations.to_uint64() * 1000UL / elapsed_ms
-  } else {
-    0UL
+  // Warm up before timing.
+  ignore(parse_probe(versions))
+  let start = @mbench.monotonic_clock_start()
+  let (ok, fail) = parse_probe(versions)
+  let micros = @mbench.monotonic_clock_end(start)
+  println("versions=" + versions.length().to_string())
+  println("parse-ok=" + ok.to_string())
+  println("parse-fail=" + fail.to_string())
+  println("parse-micros=" + micros.to_string())
+  if micros > 0.0 {
+    println("parse-us-per-version=" + (micros / 2000.0).to_string())
   }
-  println(
-    "\{label}: \{iterations} ops in \{elapsed_ms} ms, \{nanos_per_op} ns/op, \{ops_per_second} ops/s (checksum \{checksum})",
-  )
-}
-
-///|
-fn parse_opt(raw : String) -> @pyversion.Version? {
-  Some(@pyversion.Version::parse(raw)) catch {
-    _ => None
-  }
-}
-
-///|
-fn spec_opt(raw : String) -> @pyversion.SpecifierSet? {
-  Some(@pyversion.SpecifierSet::parse(raw)) catch {
-    _ => None
-  }
-}
-
-///|
-fn corpus() -> Array[String] {
-  let out : Array[String] = []
-  for raw in @fixtures.pypi_versions {
-    out.push(raw)
-  }
-  for raw in @fixtures.pypi_specifiers {
-    out.push(raw)
-  }
-  out
-}
-
-///|
-fn main {
-  let inputs = corpus()
-  let total = inputs.length()
-  if total == 0 {
-    println("empty corpus")
-    return
-  }
+  // Specifier filtering: parse once, then 2000 containment checks.
+  let spec = @pyversion.SpecifierSet::parse(">=1.0, !=2.3.*, <100.0")
   let parsed : Array[@pyversion.Version] = []
-  for raw in @fixtures.pypi_versions {
-    match parse_opt(raw) {
-      Some(v) => parsed.push(v)
-      None => ()
-    }
+  for v in versions {
+    parsed.push(@pyversion.Version::parse(v))
   }
-  let specifiers : Array[@pyversion.SpecifierSet] = []
-  for raw in @fixtures.pypi_specifiers {
-    match spec_opt(raw) {
-      Some(s) => specifiers.push(s)
-      None => ()
-    }
+  let filter_start = @mbench.monotonic_clock_start()
+  let accepted = @pyversion.SpecifierSet::filter(parsed, spec).length()
+  let filter_micros = @mbench.monotonic_clock_end(filter_start)
+  println("filter-accepted=" + accepted.to_string())
+  println("filter-micros=" + filter_micros.to_string())
+  if filter_micros > 0.0 {
+    println("filter-us-per-version=" + (filter_micros / 2000.0).to_string())
   }
-  println(
-    "corpus: \{total} strings, \{parsed.length()} versions, \{specifiers.length()} specifier sets",
-  )
-
-  // Parsing and normalizing.
-  let parse_iterations = 200_000
+  // Round-trip checksum: parse then serialize, counting output chars.
   let mut checksum = 0
-  let parse_started = @env.now()
-  for i = 0; i < parse_iterations; i = i + 1 {
-    let raw = inputs[i % total]
-    match parse_opt(raw) {
-      Some(v) => checksum += v.release.length()
-      None => checksum += 1
-    }
+  for v in versions {
+    checksum += @pyversion.Version::to_string(@pyversion.Version::parse(v)).length()
   }
-  report("parse", parse_iterations, parse_started, checksum)
+  println("roundtrip-char-checksum=" + checksum.to_string())
+}
 
-  // Ordering.
-  let compare_iterations = 500_000
-  checksum = 0
-  let compare_started = @env.now()
-  for i = 0; i < compare_iterations; i = i + 1 {
-    if parsed.length() > 1 {
-      let left = parsed[i % parsed.length()]
-      let right = parsed[(i * 7 + 3) % parsed.length()]
-      checksum += @pyversion.Version::compare(left, right)
+///|
+fn parse_probe(versions : Array[String]) -> (Int, Int) {
+  let mut ok = 0
+  let mut fail = 0
+  for v in versions {
+    match
+      (try @pyversion.Version::parse(v) catch {
+        _ => false
+      } noraise {
+        _ => true
+      }) {
+      true => ok += 1
+      false => fail += 1
     }
   }
-  report("compare", compare_iterations, compare_started, checksum)
-
-  // Membership and filtering.
-  let contains_iterations = 200_000
-  checksum = 0
-  let contains_started = @env.now()
-  for i = 0; i < contains_iterations; i = i + 1 {
-    if specifiers.length() > 0 && parsed.length() > 0 {
-      let spec = specifiers[i % specifiers.length()]
-      let version = parsed[(i * 11 + 5) % parsed.length()]
-      if spec.contains(version, prereleases=Some(true)) {
-        checksum += 1
-      }
-    }
-  }
-  report("contains", contains_iterations, contains_started, checksum)
-
-  let filter_iterations = 2_000
-  checksum = 0
-  let filter_started = @env.now()
-  for i = 0; i < filter_iterations; i = i + 1 {
-    if specifiers.length() > 0 && parsed.length() > 0 {
-      let spec = specifiers[i % specifiers.length()]
-      checksum += @pyversion.SpecifierSet::filter(
-        parsed,
-        spec,
-        prereleases=Some(true),
-      ).length()
-    }
-  }
-  report("filter", filter_iterations, filter_started, checksum)
+  (ok, fail)
 }

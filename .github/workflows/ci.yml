@@ -38,6 +38,7 @@ jobs:
       - run: moon run examples/audit --target ${{ matrix.target }}
       - run: moon run examples/bundle-audit --target ${{ matrix.target }}
       - run: moon run examples/upgrade-check --target ${{ matrix.target }}
+      - run: moon run examples/bench --target ${{ matrix.target }}
 
   differential:
     # The library is written against packaging 26.3, so that release is the
