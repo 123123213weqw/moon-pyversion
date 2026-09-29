@@ -165,6 +165,12 @@ pub(all) enum PylockFileKind {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend PylockFileKind with Eq::{equal, not_equal}
+
+///|
+pub extend PylockFileKind with @debug.Debug::{to_repr}
+
+///|
 /// The TOML key a file record was read from: `"files"`, `"wheels"`, `"sdist"` or
 /// `"archive"`.
 pub fn PylockFileKind::key(self : PylockFileKind) -> String {
@@ -206,6 +212,12 @@ pub(all) struct PylockFile {
   /// The member this record was read from.
   kind : PylockFileKind
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend PylockFile with Eq::{equal, not_equal}
+
+///|
+pub extend PylockFile with @debug.Debug::{to_repr}
 
 ///|
 /// The digest advertised for `algorithm` (for example `"sha256"`), or `None`.
@@ -294,6 +306,12 @@ pub(all) struct PylockVcs {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend PylockVcs with Eq::{equal, not_equal}
+
+///|
+pub extend PylockVcs with @debug.Debug::{to_repr}
+
+///|
 /// `[packages.directory]`: a source tree on the local filesystem. `editable`
 /// records what the lock time was, and the specification lets an installer
 /// ignore it.
@@ -305,6 +323,12 @@ pub(all) struct PylockDirectory {
   /// `packages.directory.subdirectory`.
   subdirectory : String?
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend PylockDirectory with Eq::{equal, not_equal}
+
+///|
+pub extend PylockDirectory with @debug.Debug::{to_repr}
 
 ///|
 /// One entry of `[[packages.dependencies]]`.
@@ -326,6 +350,12 @@ pub(all) struct PylockDependency {
   /// `extras`, as written and in document order.
   extras : Array[String]
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend PylockDependency with Eq::{equal, not_equal}
+
+///|
+pub extend PylockDependency with @debug.Debug::{to_repr}
 
 ///|
 /// One entry of `[[packages]]`: a distribution that *may* be installed, possibly
@@ -361,6 +391,12 @@ pub(all) struct PylockPackage {
   /// `packages.path`, the draft local path source form.
   path : String?
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend PylockPackage with Eq::{equal, not_equal}
+
+///|
+pub extend PylockPackage with @debug.Debug::{to_repr}
 
 ///|
 /// Every file record of the entry, in a fixed order: `files`, then `sdist`, then
@@ -442,6 +478,12 @@ pub struct Pylock {
   created_by : String
   packages : Array[PylockPackage]
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend Pylock with Eq::{equal, not_equal}
+
+///|
+pub extend Pylock with @debug.Debug::{to_repr}
 
 ///|
 /// `lock-version`, always `"1.0"`: this reader implements no other version.

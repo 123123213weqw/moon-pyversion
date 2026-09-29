@@ -7,8 +7,8 @@
 /// caller reads.
 
 ///|
-fn toml_of(document : String) -> Toml {
-  Toml::parse(document) catch {
+fn toml_of(document : String) -> @moon_pyversion.Toml {
+  @moon_pyversion.Toml::parse(document) catch {
     _ => abort("expected the document to parse: \{document}")
   }
 }
@@ -16,7 +16,7 @@ fn toml_of(document : String) -> Toml {
 ///|
 fn toml_rejected(document : String) -> Bool {
   try {
-    ignore(Toml::parse(document))
+    ignore(@moon_pyversion.Toml::parse(document))
     false
   } catch {
     _ => true
@@ -27,10 +27,10 @@ fn toml_rejected(document : String) -> Bool {
 /// The error code of a rejected document, so a test can assert *why*.
 fn toml_error_code(document : String) -> String {
   try {
-    ignore(Toml::parse(document))
+    ignore(@moon_pyversion.Toml::parse(document))
     "<accepted>"
   } catch {
-    VersionError::InvalidToml(code, _) => code
+    @moon_pyversion.VersionError::InvalidToml(code, _) => code
     other => "unexpected:\{other.diagnostic()}"
   }
 }
@@ -42,7 +42,7 @@ test "toml: scalars" {
   assert_eq(table.get_int("i"), Some(42))
   assert_eq(table.get_bool("b"), Some(true))
   assert_eq(table.get_bool("c"), Some(false))
-  assert_true(table.get("f") is Some(TFloat(_)))
+  assert_true(table.get("f") is Some(@moon_pyversion.TFloat(_)))
 }
 
 ///|

@@ -11,6 +11,12 @@ pub(all) enum SpecifierOp {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend SpecifierOp with Eq::{equal, not_equal}
+
+///|
+pub extend SpecifierOp with @debug.Debug::{to_repr}
+
+///|
 pub(all) struct Specifier {
   op : SpecifierOp
   raw_version : String
@@ -19,10 +25,19 @@ pub(all) struct Specifier {
 } derive(@debug.Debug)
 
 ///|
+pub extend Specifier with @debug.Debug::{to_repr}
+
+///|
 pub(all) struct SpecifierSet {
   specs : Array[Specifier]
   original : String
 } derive(@debug.Debug)
+
+///|
+pub extend SpecifierSet with @debug.Debug::{to_repr}
+
+///|
+pub extend SpecifierSet with Show::{output}
 
 ///|
 fn split_specifier_list(input : String) -> Array[String] {

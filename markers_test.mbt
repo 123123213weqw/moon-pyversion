@@ -4,8 +4,8 @@
 /// (`marker`, `marker_env` and `marker_eval` records).
 
 ///|
-fn marker_of(raw : String) -> Marker {
-  Marker::parse(raw) catch {
+fn marker_of(raw : String) -> @moon_pyversion.Marker {
+  @moon_pyversion.Marker::parse(raw) catch {
     _ => abort("expected \{raw} to parse")
   }
 }
@@ -13,7 +13,7 @@ fn marker_of(raw : String) -> Marker {
 ///|
 fn marker_rejected(raw : String) -> Bool {
   try {
-    ignore(Marker::parse(raw))
+    ignore(@moon_pyversion.Marker::parse(raw))
     false
   } catch {
     _ => true
@@ -30,8 +30,8 @@ fn rendered(raw : String) -> String {
 ///|
 /// The environment the evaluation tests use, matching the `posix38` corpus
 /// environment.
-fn posix38() -> MarkerEnvironment {
-  let environment = MarkerEnvironment::new()
+fn posix38() -> @moon_pyversion.MarkerEnvironment {
+  let environment = @moon_pyversion.MarkerEnvironment::new()
   environment.set("python_version", "3.8")
   environment.set("python_full_version", "3.8.18")
   environment.set("os_name", "posix")
@@ -48,21 +48,29 @@ fn posix38() -> MarkerEnvironment {
 }
 
 ///|
-fn evaluate_with(marker : String, environment : MarkerEnvironment) -> Bool {
+fn evaluate_with(
+  marker : String,
+  environment : @moon_pyversion.MarkerEnvironment,
+) -> Bool {
   marker_of(marker).evaluate(environment) catch {
     error => abort("unexpected evaluation error \{error}")
   }
 }
 
 ///|
-fn evaluate_error(marker : String, environment : MarkerEnvironment) -> String {
+fn evaluate_error(
+  marker : String,
+  environment : @moon_pyversion.MarkerEnvironment,
+) -> String {
   try {
     ignore(marker_of(marker).evaluate(environment))
     "<no error>"
   } catch {
-    MarkerError::UndefinedEnvironmentName(name) => "undefined:\{name}"
-    MarkerError::UndefinedComparison(_) => "comparison"
-    MarkerError::SetValuedOnLeft(key, op) => "set-valued:\{key}:\{op}"
+    @moon_pyversion.MarkerError::UndefinedEnvironmentName(name) =>
+      "undefined:\{name}"
+    @moon_pyversion.MarkerError::UndefinedComparison(_) => "comparison"
+    @moon_pyversion.MarkerError::SetValuedOnLeft(key, op) =>
+      "set-valued:\{key}:\{op}"
   }
 }
 
@@ -278,7 +286,7 @@ test "marker: the value may be on the left" {
 
 ///|
 test "marker: a missing environment key is reported" {
-  let environment = MarkerEnvironment::new()
+  let environment = @moon_pyversion.MarkerEnvironment::new()
   environment.set("os_name", "posix")
   assert_eq(
     evaluate_error("python_version == '3.8'", environment),
@@ -339,7 +347,7 @@ test "marker: requirements hand their marker to this module" {
     accepted in [
       "python_version == '3.8'", "extra == 'test'", "(os_name == 'posix')", "python_version in '3.8 3.9'",
     ] {
-    validate_marker_text(accepted)
+    @moon_pyversion.validate_marker_text(accepted)
     assert_true(!requirement_rejected("foo; \{accepted}"))
   }
   for rejected in ["ex0tra == 'x'", "python_version ==", "()"] {

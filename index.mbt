@@ -31,6 +31,12 @@ pub(all) enum JsonValue {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend JsonValue with Eq::{equal, not_equal}
+
+///|
+pub extend JsonValue with @debug.Debug::{to_repr}
+
+///|
 /// The member named `key` of a `JsonObject`, or `None`. The answer is
 /// unambiguous because `parse_json` rejects duplicate names.
 pub fn JsonValue::field(self : JsonValue, key : String) -> JsonValue? {
@@ -442,6 +448,12 @@ pub(all) enum SimpleYanked {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend SimpleYanked with Eq::{equal, not_equal}
+
+///|
+pub extend SimpleYanked with @debug.Debug::{to_repr}
+
+///|
 /// One `files[]` entry of a PEP 691 response. `hashes` keeps document order and
 /// may be empty (the member is required, its contents are not); `url` is
 /// carried through verbatim, resolving it against the index root is the
@@ -457,6 +469,12 @@ pub(all) struct SimpleIndexFile {
   size : Int?
   upload_time : String?
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend SimpleIndexFile with Eq::{equal, not_equal}
+
+///|
+pub extend SimpleIndexFile with @debug.Debug::{to_repr}
 
 ///|
 /// The digest advertised for `algorithm` (for example `"sha256"`), or `None`.
@@ -484,6 +502,9 @@ pub struct SimpleIndex {
   files : Array[SimpleIndexFile]
   versions : Array[String]
 } derive(@debug.Debug)
+
+///|
+pub extend SimpleIndex with @debug.Debug::{to_repr}
 
 ///|
 /// The `name` member, verbatim. PEP 691 lets the index choose the spelling, so
@@ -722,6 +743,12 @@ pub(all) enum IndexFileKind {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend IndexFileKind with Eq::{equal, not_equal}
+
+///|
+pub extend IndexFileKind with @debug.Debug::{to_repr}
+
+///|
 /// One distribution file the resolver may consider.
 ///
 /// `name` is already PEP 503 normalized, so it compares directly against
@@ -739,6 +766,12 @@ pub(all) struct IndexFile {
   version : Version
   requires_python : String?
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend IndexFile with Eq::{equal, not_equal}
+
+///|
+pub extend IndexFile with @debug.Debug::{to_repr}
 
 ///|
 /// The expanded PEP 425 tag set of a wheel, and the empty array for an sdist.
@@ -861,6 +894,9 @@ pub(all) struct LocalIndex {
   /// by file name, so a scan is reproducible across filesystems and platforms.
   files : Array[IndexFile]
 } derive(@debug.Debug)
+
+///|
+pub extend LocalIndex with @debug.Debug::{to_repr}
 
 ///|
 /// List `directory` and index every file in it.

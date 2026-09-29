@@ -1,7 +1,7 @@
 ///|
 fn specifier_accepted(input : String) -> Bool {
   try {
-    ignore(SpecifierSet::parse(input))
+    ignore(@moon_pyversion.SpecifierSet::parse(input))
     true
   } catch {
     _ => false
@@ -11,7 +11,7 @@ fn specifier_accepted(input : String) -> Bool {
 ///|
 fn specifier_rejected(input : String) -> Bool {
   try {
-    ignore(SpecifierSet::parse(input))
+    ignore(@moon_pyversion.SpecifierSet::parse(input))
     false
   } catch {
     _ => true
@@ -20,102 +20,115 @@ fn specifier_rejected(input : String) -> Bool {
 
 ///|
 test "specifier set applies every clause" {
-  let spec = SpecifierSet::parse(">=1.0, !=1.4.*, <2.0")
-  assert_true(spec.contains(Version::parse("1.0")))
-  assert_true(spec.contains(Version::parse("1.5")))
-  assert_true(spec.contains(Version::parse("1.9.7")))
-  assert_false(spec.contains(Version::parse("0.9")))
-  assert_false(spec.contains(Version::parse("1.4")))
-  assert_false(spec.contains(Version::parse("1.4.1")))
-  assert_false(spec.contains(Version::parse("2.0")))
+  let spec = @moon_pyversion.SpecifierSet::parse(">=1.0, !=1.4.*, <2.0")
+  assert_true(spec.contains(@moon_pyversion.Version::parse("1.0")))
+  assert_true(spec.contains(@moon_pyversion.Version::parse("1.5")))
+  assert_true(spec.contains(@moon_pyversion.Version::parse("1.9.7")))
+  assert_false(spec.contains(@moon_pyversion.Version::parse("0.9")))
+  assert_false(spec.contains(@moon_pyversion.Version::parse("1.4")))
+  assert_false(spec.contains(@moon_pyversion.Version::parse("1.4.1")))
+  assert_false(spec.contains(@moon_pyversion.Version::parse("2.0")))
 }
 
 ///|
 test "wildcard equality and exclusion match release prefixes" {
-  let eq = SpecifierSet::parse("==1.1.*")
-  assert_true(eq.contains(Version::parse("1.1")))
-  assert_true(eq.contains(Version::parse("1.1.5")))
-  assert_true(eq.contains(Version::parse("1.1a1")))
-  assert_true(eq.contains(Version::parse("1.1a1"), prereleases=Some(true)))
-  assert_false(eq.contains(Version::parse("1.2")))
+  let eq = @moon_pyversion.SpecifierSet::parse("==1.1.*")
+  assert_true(eq.contains(@moon_pyversion.Version::parse("1.1")))
+  assert_true(eq.contains(@moon_pyversion.Version::parse("1.1.5")))
+  assert_true(eq.contains(@moon_pyversion.Version::parse("1.1a1")))
+  assert_true(
+    eq.contains(@moon_pyversion.Version::parse("1.1a1"), prereleases=Some(true)),
+  )
+  assert_false(eq.contains(@moon_pyversion.Version::parse("1.2")))
 
-  let ne = SpecifierSet::parse("!=1.1.*")
-  assert_false(ne.contains(Version::parse("1.1")))
-  assert_false(ne.contains(Version::parse("1.1.5")))
-  assert_true(ne.contains(Version::parse("1.2")))
+  let ne = @moon_pyversion.SpecifierSet::parse("!=1.1.*")
+  assert_false(ne.contains(@moon_pyversion.Version::parse("1.1")))
+  assert_false(ne.contains(@moon_pyversion.Version::parse("1.1.5")))
+  assert_true(ne.contains(@moon_pyversion.Version::parse("1.2")))
 }
 
 ///|
 test "compatible release has inclusive lower and exclusive upper bound" {
-  let spec = SpecifierSet::parse("~=1.4.5")
-  assert_true(spec.contains(Version::parse("1.4.5")))
-  assert_true(spec.contains(Version::parse("1.4.9")))
-  assert_false(spec.contains(Version::parse("1.4")))
-  assert_false(spec.contains(Version::parse("1.5")))
+  let spec = @moon_pyversion.SpecifierSet::parse("~=1.4.5")
+  assert_true(spec.contains(@moon_pyversion.Version::parse("1.4.5")))
+  assert_true(spec.contains(@moon_pyversion.Version::parse("1.4.9")))
+  assert_false(spec.contains(@moon_pyversion.Version::parse("1.4")))
+  assert_false(spec.contains(@moon_pyversion.Version::parse("1.5")))
 
-  let two = SpecifierSet::parse("~=1.4")
-  assert_true(two.contains(Version::parse("1.4")))
-  assert_true(two.contains(Version::parse("1.5")))
-  assert_false(two.contains(Version::parse("2.0")))
+  let two = @moon_pyversion.SpecifierSet::parse("~=1.4")
+  assert_true(two.contains(@moon_pyversion.Version::parse("1.4")))
+  assert_true(two.contains(@moon_pyversion.Version::parse("1.5")))
+  assert_false(two.contains(@moon_pyversion.Version::parse("2.0")))
 }
 
 ///|
 test "arbitrary equality compares normalized version spelling case insensitively" {
-  let exact = SpecifierSet::parse("===1.0")
-  assert_true(exact.contains(Version::parse("1.0")))
-  assert_false(exact.contains(Version::parse("1.0.0")))
-  let legacy = SpecifierSet::parse("===foobar")
-  assert_false(legacy.contains(Version::parse("1.0")))
+  let exact = @moon_pyversion.SpecifierSet::parse("===1.0")
+  assert_true(exact.contains(@moon_pyversion.Version::parse("1.0")))
+  assert_false(exact.contains(@moon_pyversion.Version::parse("1.0.0")))
+  let legacy = @moon_pyversion.SpecifierSet::parse("===foobar")
+  assert_false(legacy.contains(@moon_pyversion.Version::parse("1.0")))
 }
 
 ///|
 test "pre-release boundary behavior for ordered and equality specifiers" {
-  let ge = SpecifierSet::parse(">=1.0")
-  assert_false(ge.contains(Version::parse("1.0a1")))
-  assert_true(ge.contains(Version::parse("1.1a1")))
-  assert_true(ge.contains(Version::parse("1.1a1"), prereleases=Some(true)))
+  let ge = @moon_pyversion.SpecifierSet::parse(">=1.0")
+  assert_false(ge.contains(@moon_pyversion.Version::parse("1.0a1")))
+  assert_true(ge.contains(@moon_pyversion.Version::parse("1.1a1")))
+  assert_true(
+    ge.contains(@moon_pyversion.Version::parse("1.1a1"), prereleases=Some(true)),
+  )
 
-  let eq = SpecifierSet::parse("==1.0")
-  assert_false(eq.contains(Version::parse("1.0a1")))
+  let eq = @moon_pyversion.SpecifierSet::parse("==1.0")
+  assert_false(eq.contains(@moon_pyversion.Version::parse("1.0a1")))
 
-  let explicit = SpecifierSet::parse(">=1.0a1")
-  assert_true(explicit.contains(Version::parse("1.0a1")))
+  let explicit = @moon_pyversion.SpecifierSet::parse(">=1.0a1")
+  assert_true(explicit.contains(@moon_pyversion.Version::parse("1.0a1")))
 
-  let ne = SpecifierSet::parse("!=1.0")
-  assert_true(ne.contains(Version::parse("1.0a1")))
+  let ne = @moon_pyversion.SpecifierSet::parse("!=1.0")
+  assert_true(ne.contains(@moon_pyversion.Version::parse("1.0a1")))
 }
 
 ///|
 test "strict upper bound excludes the boundary prerelease" {
-  let lt = SpecifierSet::parse("<2.0")
-  assert_false(lt.contains(Version::parse("2.0a1")))
-  assert_true(lt.contains(Version::parse("1.9a1"), prereleases=Some(true)))
-  let le = SpecifierSet::parse("<=2.0")
-  assert_true(le.contains(Version::parse("2.0a1"), prereleases=Some(true)))
+  let lt = @moon_pyversion.SpecifierSet::parse("<2.0")
+  assert_false(lt.contains(@moon_pyversion.Version::parse("2.0a1")))
+  assert_true(
+    lt.contains(@moon_pyversion.Version::parse("1.9a1"), prereleases=Some(true)),
+  )
+  let le = @moon_pyversion.SpecifierSet::parse("<=2.0")
+  assert_true(
+    le.contains(@moon_pyversion.Version::parse("2.0a1"), prereleases=Some(true)),
+  )
 }
 
 ///|
 test "filter returns only versions accepted by the set" {
   let versions = [
-    Version::parse("1.0"),
-    Version::parse("1.4"),
-    Version::parse("1.4.9"),
-    Version::parse("1.5"),
-    Version::parse("2.0"),
+    @moon_pyversion.Version::parse("1.0"),
+    @moon_pyversion.Version::parse("1.4"),
+    @moon_pyversion.Version::parse("1.4.9"),
+    @moon_pyversion.Version::parse("1.5"),
+    @moon_pyversion.Version::parse("2.0"),
   ]
-  let spec = SpecifierSet::parse(">=1.0, !=1.4.*, <2.0")
-  let filtered = SpecifierSet::filter(versions, spec)
+  let spec = @moon_pyversion.SpecifierSet::parse(">=1.0, !=1.4.*, <2.0")
+  let filtered = @moon_pyversion.SpecifierSet::filter(versions, spec)
   assert_eq(filtered.length(), 2)
-  assert_eq(Version::to_string(filtered[0]), "1.0")
-  assert_eq(Version::to_string(filtered[1]), "1.5")
+  assert_eq(@moon_pyversion.Version::to_string(filtered[0]), "1.0")
+  assert_eq(@moon_pyversion.Version::to_string(filtered[1]), "1.5")
 }
 
 ///|
 test "empty specifier contains uses single-candidate prerelease fallback" {
-  let spec = SpecifierSet::parse("")
-  assert_true(spec.contains(Version::parse("0")))
-  assert_true(spec.contains(Version::parse("1.0a1")))
-  assert_false(spec.contains(Version::parse("1.0a1"), prereleases=Some(false)))
+  let spec = @moon_pyversion.SpecifierSet::parse("")
+  assert_true(spec.contains(@moon_pyversion.Version::parse("0")))
+  assert_true(spec.contains(@moon_pyversion.Version::parse("1.0a1")))
+  assert_false(
+    spec.contains(
+      @moon_pyversion.Version::parse("1.0a1"),
+      prereleases=Some(false),
+    ),
+  )
 }
 
 ///|

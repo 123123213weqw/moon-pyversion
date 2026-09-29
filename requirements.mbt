@@ -40,6 +40,12 @@ pub(all) struct Requirement {
 } derive(@debug.Debug)
 
 ///|
+pub extend Requirement with @debug.Debug::{to_repr}
+
+///|
+pub extend Requirement with Show::{output}
+
+///|
 fn is_name_alnum(c : Char) -> Bool {
   c.is_ascii_alphabetic() || c.is_ascii_digit()
 }

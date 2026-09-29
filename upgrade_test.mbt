@@ -4,35 +4,35 @@
 /// are black-box tests -- they see the public API only, which is the point: a
 /// rule that is not reachable from outside the package is not a rule a caller
 /// can rely on.
-fn up_version(text : String) -> Version {
-  Version::parse(text) catch {
+fn up_version(text : String) -> @moon_pyversion.Version {
+  @moon_pyversion.Version::parse(text) catch {
     _ => abort("test input is not a version: \{text}")
   }
 }
 
 ///|
-fn up_spec(text : String) -> SpecifierSet {
-  SpecifierSet::parse(text) catch {
+fn up_spec(text : String) -> @moon_pyversion.SpecifierSet {
+  @moon_pyversion.SpecifierSet::parse(text) catch {
     _ => abort("test input is not a specifier set: \{text}")
   }
 }
 
 ///|
-fn up_candidate(raw : String) -> UpgradeCandidate {
-  UpgradeCandidate::parse(raw, None)
+fn up_candidate(raw : String) -> @moon_pyversion.UpgradeCandidate {
+  @moon_pyversion.UpgradeCandidate::parse(raw, None)
 }
 
 ///|
 fn up_candidate_with(
   raw : String,
   requires_python : String,
-) -> UpgradeCandidate {
-  UpgradeCandidate::parse(raw, Some(requires_python))
+) -> @moon_pyversion.UpgradeCandidate {
+  @moon_pyversion.UpgradeCandidate::parse(raw, Some(requires_python))
 }
 
 ///|
 /// The shortlist as raw spellings, which is what a report prints.
-fn up_kept(plan : UpgradePlan) -> Array[String] {
+fn up_kept(plan : @moon_pyversion.UpgradePlan) -> Array[String] {
   let out : Array[String] = []
   for candidate in plan.shortlist {
     out.push(candidate.raw)
@@ -42,7 +42,7 @@ fn up_kept(plan : UpgradePlan) -> Array[String] {
 
 ///|
 /// The dropped candidates as `raw=reason`, which is what the corpus projects.
-fn up_dropped(plan : UpgradePlan) -> Array[String] {
+fn up_dropped(plan : @moon_pyversion.UpgradePlan) -> Array[String] {
   let out : Array[String] = []
   for entry in plan.dropped {
     out.push("\{entry.0.raw}=\{entry.1.code()}")
@@ -52,7 +52,7 @@ fn up_dropped(plan : UpgradePlan) -> Array[String] {
 
 ///|
 test "upgrade: a newer candidate inside the range is kept, ascending" {
-  let plan = upgrade_shortlist(
+  let plan = @moon_pyversion.upgrade_shortlist(
     up_version("1.0"),
     Some(up_spec(">=1.0")),
     None,
@@ -66,11 +66,13 @@ test "upgrade: a newer candidate inside the range is kept, ascending" {
 
 ///|
 test "upgrade: the current version is the boundary of newer" {
-  let plan = upgrade_shortlist(up_version("1.5"), None, None, None, [
-    up_candidate("1.4"),
-    up_candidate("1.5"),
-    up_candidate("1.6"),
-  ])
+  let plan = @moon_pyversion.upgrade_shortlist(
+    up_version("1.5"),
+    None,
+    None,
+    None,
+    [up_candidate("1.4"), up_candidate("1.5"), up_candidate("1.6")],
+  )
   assert_eq(up_kept(plan), ["1.6"])
   assert_eq(up_dropped(plan), ["1.4=downgrade", "1.5=same"])
 }
@@ -78,12 +80,14 @@ test "upgrade: the current version is the boundary of newer" {
 ///|
 test "upgrade: equal versions are equal whatever their spelling" {
   // `1.5` and `1.5.0` are one version, so neither is an upgrade of the other;
-  // `Version::compare` decides that, not the spelling.
-  let plan = upgrade_shortlist(up_version("1.5.0"), None, None, None, [
-    up_candidate("1.5"),
-    up_candidate("1.5.0"),
-    up_candidate("1.5.0.0"),
-  ])
+  // `@moon_pyversion.Version::compare` decides that, not the spelling.
+  let plan = @moon_pyversion.upgrade_shortlist(
+    up_version("1.5.0"),
+    None,
+    None,
+    None,
+    [up_candidate("1.5"), up_candidate("1.5.0"), up_candidate("1.5.0.0")],
+  )
   assert_true(plan.is_empty())
   assert_eq(up_dropped(plan), ["1.5=same", "1.5.0=same", "1.5.0.0=same"])
 }
@@ -93,11 +97,13 @@ test "upgrade: two spellings of one newer version are both kept" {
   // The shortlist is a list of candidates, not of version keys: a caller that
   // listed the same version twice gets it twice, in spelling order, so the report
   // still accounts for every input.
-  let plan = upgrade_shortlist(up_version("1.0"), None, None, None, [
-    up_candidate("1.1.0"),
-    up_candidate("1.1"),
-    up_candidate("1.1.0.0"),
-  ])
+  let plan = @moon_pyversion.upgrade_shortlist(
+    up_version("1.0"),
+    None,
+    None,
+    None,
+    [up_candidate("1.1.0"), up_candidate("1.1"), up_candidate("1.1.0.0")],
+  )
   assert_eq(up_kept(plan), ["1.1", "1.1.0", "1.1.0.0"])
 }
 
@@ -105,7 +111,7 @@ test "upgrade: two spellings of one newer version are both kept" {
 test "upgrade: outside the range is a different answer from held back" {
   // `2.0` is outside the range at all; `1.9rc1` is inside it and dropped by the
   // policy. A report that called both "rejected" would lose that distinction.
-  let plan = upgrade_shortlist(
+  let plan = @moon_pyversion.upgrade_shortlist(
     up_version("1.0"),
     Some(up_spec("<2.0")),
     None,
@@ -121,7 +127,7 @@ test "upgrade: the automatic policy admits prereleases only when nothing else su
   // The interesting rule. With a final candidate present the prerelease is held
   // back; with only prereleases, the automatic policy falls back to them, since
   // refusing would report "nothing to test" when there is something.
-  let with_final = upgrade_shortlist(
+  let with_final = @moon_pyversion.upgrade_shortlist(
     up_version("1.0"),
     Some(up_spec(">=1.0")),
     None,
@@ -130,7 +136,7 @@ test "upgrade: the automatic policy admits prereleases only when nothing else su
   )
   assert_eq(up_kept(with_final), ["1.1"])
   assert_eq(up_dropped(with_final), ["1.1b1=prerelease"])
-  let only_pre = upgrade_shortlist(
+  let only_pre = @moon_pyversion.upgrade_shortlist(
     up_version("1.0"),
     Some(up_spec(">=1.0")),
     None,
@@ -148,7 +154,7 @@ test "upgrade: the forced policies are the two ends of that" {
     up_candidate("1.1"),
     up_candidate("1.2.dev1"),
   ]
-  let forced_on = upgrade_shortlist(
+  let forced_on = @moon_pyversion.upgrade_shortlist(
     up_version("1.0"),
     Some(up_spec(">=1.0")),
     Some(true),
@@ -156,7 +162,7 @@ test "upgrade: the forced policies are the two ends of that" {
     candidates,
   )
   assert_eq(up_kept(forced_on), ["1.1b1", "1.1", "1.2.dev1"])
-  let forced_off = upgrade_shortlist(
+  let forced_off = @moon_pyversion.upgrade_shortlist(
     up_version("1.0"),
     Some(up_spec(">=1.0")),
     Some(false),
@@ -174,7 +180,7 @@ test "upgrade: a dev release is a prerelease and a post release is not" {
   // The policy reaches the candidates through the range, so a range is required
   // for it to have any effect at all -- see the next block for the case where it
   // is not consulted.
-  let dev = upgrade_shortlist(
+  let dev = @moon_pyversion.upgrade_shortlist(
     up_version("1.0"),
     Some(up_spec(">=1.0")),
     Some(false),
@@ -182,7 +188,7 @@ test "upgrade: a dev release is a prerelease and a post release is not" {
     [up_candidate("1.1.dev1")],
   )
   assert_eq(up_dropped(dev), ["1.1.dev1=prerelease"])
-  let post = upgrade_shortlist(
+  let post = @moon_pyversion.upgrade_shortlist(
     up_version("1.0"),
     Some(up_spec(">=1.0")),
     Some(false),
@@ -195,20 +201,23 @@ test "upgrade: a dev release is a prerelease and a post release is not" {
 ///|
 test "upgrade: without a target range the prerelease policy is not consulted" {
   // There is nothing to filter, so `Some(false)` has nothing to do: the policy
-  // is `SpecifierSet::filter`'s, and `filter` only ever sees the range. A caller
+  // is `@moon_pyversion.SpecifierSet::filter`'s, and `filter` only ever sees the range. A caller
   // that wants prereleases gone with no range in mind has to say so by passing
   // the range, not by passing the policy.
-  let plan = upgrade_shortlist(up_version("1.0"), None, Some(false), None, [
-    up_candidate("1.1b1"),
-    up_candidate("1.1"),
-  ])
+  let plan = @moon_pyversion.upgrade_shortlist(
+    up_version("1.0"),
+    None,
+    Some(false),
+    None,
+    [up_candidate("1.1b1"), up_candidate("1.1")],
+  )
   assert_eq(up_kept(plan), ["1.1b1", "1.1"])
   assert_true(plan.dropped.is_empty())
 }
 
 ///|
 test "upgrade: requires-python excludes a candidate, an unreadable one does not" {
-  let plan = upgrade_shortlist(
+  let plan = @moon_pyversion.upgrade_shortlist(
     up_version("1.0"),
     None,
     None,
@@ -229,18 +238,25 @@ test "upgrade: requires-python excludes a candidate, an unreadable one does not"
 
 ///|
 test "upgrade: requires-python is skipped when no interpreter is given" {
-  let plan = upgrade_shortlist(up_version("1.0"), None, None, None, [
-    up_candidate_with("1.1", ">=3.12"),
-  ])
+  let plan = @moon_pyversion.upgrade_shortlist(
+    up_version("1.0"),
+    None,
+    None,
+    None,
+    [up_candidate_with("1.1", ">=3.12")],
+  )
   assert_eq(up_kept(plan), ["1.1"])
 }
 
 ///|
 test "upgrade: a candidate whose version does not parse is reported, not dropped" {
-  let plan = upgrade_shortlist(up_version("1.0"), None, None, None, [
-    up_candidate("not-a-version"),
-    up_candidate("1.1"),
-  ])
+  let plan = @moon_pyversion.upgrade_shortlist(
+    up_version("1.0"),
+    None,
+    None,
+    None,
+    [up_candidate("not-a-version"), up_candidate("1.1")],
+  )
   // The ordering rule cannot run without a version, so `Unparsable` is decided
   // first -- and the candidate still appears in the report.
   assert_eq(up_kept(plan), ["1.1"])
@@ -248,7 +264,9 @@ test "upgrade: a candidate whose version does not parse is reported, not dropped
   // An empty spelling is unparsable too, rather than being read as "0".
   assert_eq(
     up_dropped(
-      upgrade_shortlist(up_version("1.0"), None, None, None, [up_candidate("")]),
+      @moon_pyversion.upgrade_shortlist(up_version("1.0"), None, None, None, [
+        up_candidate(""),
+      ]),
     ),
     ["=unparsable"],
   )
@@ -260,7 +278,7 @@ test "upgrade: the first rule that fires is the reason" {
   // it is reported as a downgrade, because that is the rule that ran first. The
   // corpus pins this order on both sides, so the two implementations cannot
   // disagree about which reason a caller is told.
-  let plan = upgrade_shortlist(
+  let plan = @moon_pyversion.upgrade_shortlist(
     up_version("1.5"),
     Some(up_spec(">=1.5,<2.0")),
     None,
@@ -283,18 +301,20 @@ test "upgrade: the first rule that fires is the reason" {
 
 ///|
 test "upgrade: no target range means the range rule is skipped" {
-  let plan = upgrade_shortlist(up_version("1.0"), None, None, None, [
-    up_candidate("0.9"),
-    up_candidate("1.0"),
-    up_candidate("2.0"),
-  ])
+  let plan = @moon_pyversion.upgrade_shortlist(
+    up_version("1.0"),
+    None,
+    None,
+    None,
+    [up_candidate("0.9"), up_candidate("1.0"), up_candidate("2.0")],
+  )
   assert_eq(up_kept(plan), ["2.0"])
   assert_eq(up_dropped(plan), ["0.9=downgrade", "1.0=same"])
 }
 
 ///|
 test "upgrade: an empty candidate list is not an error" {
-  let plan = upgrade_shortlist(
+  let plan = @moon_pyversion.upgrade_shortlist(
     up_version("1.0"),
     Some(up_spec(">=1.0")),
     None,
@@ -308,7 +328,7 @@ test "upgrade: an empty candidate list is not an error" {
 
 ///|
 test "upgrade: the summary is the vocabulary the corpus projects" {
-  let plan = upgrade_shortlist(
+  let plan = @moon_pyversion.upgrade_shortlist(
     up_version("1.5"),
     Some(up_spec(">=1.5,<2.0")),
     None,
@@ -331,5 +351,5 @@ test "upgrade: the summary is the vocabulary the corpus projects" {
     "nope=unparsable;1.4=downgrade;1.5=same;2.5=out-of-range",
   )
   assert_eq(plan.versions().length(), 1)
-  assert_eq(Version::to_string(plan.versions()[0]), "1.6")
+  assert_eq(@moon_pyversion.Version::to_string(plan.versions()[0]), "1.6")
 }

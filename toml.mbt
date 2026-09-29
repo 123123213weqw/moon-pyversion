@@ -16,6 +16,12 @@ pub(all) enum TomlValue {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend TomlValue with Eq::{equal, not_equal}
+
+///|
+pub extend TomlValue with @debug.Debug::{to_repr}
+
+///|
 /// An ordered TOML table.
 ///
 /// Entries are kept as an association list in document order. Nothing is ever
@@ -25,6 +31,12 @@ pub(all) enum TomlValue {
 pub(all) struct Toml {
   entries : Array[(String, TomlValue)]
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend Toml with Eq::{equal, not_equal}
+
+///|
+pub extend Toml with @debug.Debug::{to_repr}
 
 ///|
 /// Mutable table used while parsing. `Array` is a shared reference, so the

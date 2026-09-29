@@ -41,12 +41,27 @@ pub impl Show for VersionError with fn to_string(self) {
 }
 
 ///|
+pub extend VersionError with Eq::{not_equal, equal}
+
+///|
+pub extend VersionError with @debug.Debug::{to_repr}
+
+///|
+pub extend VersionError with Show::{to_string, output}
+
+///|
 /// One normalized local-version segment. Numeric segments are compared as
 /// integers; textual segments are compared case-insensitively.
 pub(all) struct LocalPart {
   text : String
   numeric : Bool
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend LocalPart with Eq::{equal, not_equal}
+
+///|
+pub extend LocalPart with @debug.Debug::{to_repr}
 
 ///|
 /// A parsed PEP 440 version. `raw` keeps the caller's original string, while
@@ -64,6 +79,18 @@ pub(all) struct Version {
   dev_num : @bigint.BigInt
   local_segments : Array[LocalPart]
 } derive(@debug.Debug)
+
+///|
+pub extend Version with Compare::{op_lt, op_le, op_ge, op_gt}
+
+///|
+pub extend Version with Eq::{not_equal, equal}
+
+///|
+pub extend Version with Show::{output}
+
+///|
+pub extend Version with @debug.Debug::{to_repr}
 
 ///|
 priv struct Cursor {

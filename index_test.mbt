@@ -28,8 +28,8 @@
 ///   because pip's `max()` is otherwise free to depend on server order, and a
 ///   resolver that writes lock files must not be.
 ///
-/// There is no I/O anywhere in this file: `LocalIndex::scan` takes an injected
-/// `DirectoryLister`, so every scan block is a list of names in and a
+/// There is no I/O anywhere in this file: `@moon_pyversion.LocalIndex::scan` takes an injected
+/// `@moon_pyversion.DirectoryLister`, so every scan block is a list of names in and a
 /// `LocalIndex` out. The directory of real files (`fixtures_index/`) exists for
 /// the packaging cross-check described above, not for these tests to read.
 
@@ -39,10 +39,10 @@
 /// The `(code, offset)` a JSON text is rejected with, or `("<accepted>", -1)`.
 fn json_error_at(text : String) -> (String, Int) {
   try {
-    ignore(parse_json(text))
+    ignore(@moon_pyversion.parse_json(text))
     ("<accepted>", -1)
   } catch {
-    VersionError::InvalidIndex(code, offset) => (code, offset)
+    @moon_pyversion.VersionError::InvalidIndex(code, offset) => (code, offset)
     other => ("unexpected:\{other.diagnostic()}", -1)
   }
 }
@@ -57,7 +57,7 @@ fn json_error(text : String) -> String {
 /// True when a JSON text parses.
 fn json_accepts(text : String) -> Bool {
   try {
-    ignore(parse_json(text))
+    ignore(@moon_pyversion.parse_json(text))
     true
   } catch {
     _ => false
@@ -83,8 +83,8 @@ fn assert_json_error(text : String, code : String) -> Unit {
 
 ///|
 /// `text` parsed as a JSON value that must parse.
-fn json_of(text : String) -> JsonValue {
-  parse_json(text) catch {
+fn json_of(text : String) -> @moon_pyversion.JsonValue {
+  @moon_pyversion.parse_json(text) catch {
     _ => abort("expected the JSON to parse: \{text}")
   }
 }
@@ -93,7 +93,7 @@ fn json_of(text : String) -> JsonValue {
 /// The payload of a JSON string that must parse.
 fn json_string_of(text : String) -> String {
   match json_of(text) {
-    JsonString(decoded) => decoded
+    @moon_pyversion.JsonString(decoded) => decoded
     other => abort("expected a string, got \{@debug.to_string(other)}")
   }
 }
@@ -102,7 +102,7 @@ fn json_string_of(text : String) -> String {
 /// The source text of a JSON number that must parse.
 fn json_number_of(text : String) -> String {
   match json_of(text) {
-    JsonNumber(source) => source
+    @moon_pyversion.JsonNumber(source) => source
     other => abort("expected a number, got \{@debug.to_string(other)}")
   }
 }
@@ -139,10 +139,10 @@ fn nested_json(open : String, close : String, depth : Int) -> String {
 /// `("<accepted>", -1)`.
 fn index_error_at(json : String) -> (String, Int) {
   try {
-    ignore(SimpleIndex::parse(json))
+    ignore(@moon_pyversion.SimpleIndex::parse(json))
     ("<accepted>", -1)
   } catch {
-    VersionError::InvalidIndex(code, ordinal) => (code, ordinal)
+    @moon_pyversion.VersionError::InvalidIndex(code, ordinal) => (code, ordinal)
     other => ("unexpected:\{other.diagnostic()}", -1)
   }
 }
@@ -167,7 +167,7 @@ fn assert_index_error(json : String, code : String) -> Unit {
 /// Assert that a simple-index document parses.
 fn index_accepts_or_abort(json : String) -> Unit {
   ignore(
-    SimpleIndex::parse(json) catch {
+    @moon_pyversion.SimpleIndex::parse(json) catch {
       _ => abort("expected the document to parse: \{json}")
     },
   )
@@ -209,8 +209,8 @@ fn document_json(files : String) -> String {
 
 ///|
 /// Parse the first `files[]` entry of a document that must parse.
-fn first_file_of(json : String) -> SimpleIndexFile {
-  let index = SimpleIndex::parse(json) catch {
+fn first_file_of(json : String) -> @moon_pyversion.SimpleIndexFile {
+  let index = @moon_pyversion.SimpleIndex::parse(json) catch {
     _ => abort("expected the document to parse: \{json}")
   }
   index.files()[0]
@@ -218,7 +218,7 @@ fn first_file_of(json : String) -> SimpleIndexFile {
 
 ///|
 /// Parse a `files[]` entry that must be valid, varying only an optional member.
-fn simple_file_of(extra : String) -> SimpleIndexFile {
+fn simple_file_of(extra : String) -> @moon_pyversion.SimpleIndexFile {
   first_file_of(document_json(file_json(extra)))
 }
 
@@ -238,8 +238,10 @@ fn assert_simple_file_error(extra : String, code : String) -> Unit {
 }
 
 ///|
-/// The filenames of a `SimpleIndexFile` array, in order.
-fn index_filenames_of(files : Array[SimpleIndexFile]) -> Array[String] {
+/// The filenames of a `@moon_pyversion.SimpleIndexFile` array, in order.
+fn index_filenames_of(
+  files : Array[@moon_pyversion.SimpleIndexFile],
+) -> Array[String] {
   let out : Array[String] = []
   for i = 0; i < files.length(); i = i + 1 {
     out.push(files[i].filename)
@@ -248,12 +250,12 @@ fn index_filenames_of(files : Array[SimpleIndexFile]) -> Array[String] {
 }
 
 ///|
-/// The `(code, ordinal)` of a `wheels()`/`sdists()` classification failure, or
+/// The `(code, ordinal)` of a `@moon_pyversion.wheels()`/`@moon_pyversion.sdists()` classification failure, or
 /// `("<accepted>", -1)`. The document itself must parse, so a failure here is
 /// unambiguously a classification failure.
 fn classify_error(json : String, wheels : Bool) -> (String, Int) {
   try {
-    let index = SimpleIndex::parse(json)
+    let index = @moon_pyversion.SimpleIndex::parse(json)
     if wheels {
       ignore(index.wheels())
     } else {
@@ -261,43 +263,46 @@ fn classify_error(json : String, wheels : Bool) -> (String, Int) {
     }
     ("<accepted>", -1)
   } catch {
-    VersionError::InvalidIndex(code, ordinal) => (code, ordinal)
+    @moon_pyversion.VersionError::InvalidIndex(code, ordinal) => (code, ordinal)
     other => ("unexpected:\{other.diagnostic()}", -1)
   }
 }
 
 ///|
-/// The error code of `SimpleIndexFile::to_index_file`, or `<accepted>`.
-fn to_index_file_error(file : SimpleIndexFile) -> String {
+/// The error code of `@moon_pyversion.SimpleIndexFile::to_index_file`, or `<accepted>`.
+fn to_index_file_error(file : @moon_pyversion.SimpleIndexFile) -> String {
   try {
     ignore(file.to_index_file())
     "<accepted>"
   } catch {
-    VersionError::InvalidIndex(code, _) => code
+    @moon_pyversion.VersionError::InvalidIndex(code, _) => code
     other => "unexpected:\{other.diagnostic()}"
   }
 }
 
 ///|
 /// Parse a requirement that must be valid.
-fn resolve_requirement_of(text : String) -> Requirement {
-  Requirement::parse(text) catch {
+fn resolve_requirement_of(text : String) -> @moon_pyversion.Requirement {
+  @moon_pyversion.Requirement::parse(text) catch {
     _ => abort("expected the requirement to parse: \{text}")
   }
 }
 
 ///|
 /// Parse a version that must be valid.
-fn resolve_version_of(text : String) -> Version {
-  Version::parse(text) catch {
+fn resolve_version_of(text : String) -> @moon_pyversion.Version {
+  @moon_pyversion.Version::parse(text) catch {
     _ => abort("expected \{text} to be a version")
   }
 }
 
 ///|
-/// An `IndexFile` for a wheel filename that must be a valid PEP 427 name.
-fn wheel_file(filename : String, requires_python : String?) -> IndexFile {
-  let wheel = parse_wheel_filename(filename) catch {
+/// An `@moon_pyversion.IndexFile` for a wheel filename that must be a valid PEP 427 name.
+fn wheel_file(
+  filename : String,
+  requires_python : String?,
+) -> @moon_pyversion.IndexFile {
+  let wheel = @moon_pyversion.parse_wheel_filename(filename) catch {
     _ => abort("expected a wheel filename: \{filename}")
   }
   {
@@ -311,9 +316,12 @@ fn wheel_file(filename : String, requires_python : String?) -> IndexFile {
 }
 
 ///|
-/// An `IndexFile` for an sdist filename that must be a valid PEP 625 name.
-fn sdist_file(filename : String, requires_python : String?) -> IndexFile {
-  let sdist = parse_sdist_filename(filename) catch {
+/// An `@moon_pyversion.IndexFile` for an sdist filename that must be a valid PEP 625 name.
+fn sdist_file(
+  filename : String,
+  requires_python : String?,
+) -> @moon_pyversion.IndexFile {
+  let sdist = @moon_pyversion.parse_sdist_filename(filename) catch {
     _ => abort("expected an sdist filename: \{filename}")
   }
   {
@@ -343,15 +351,18 @@ fn fixture_names() -> Array[String] {
 
 ///|
 /// Scan `directory` with an injected lister returning `names` verbatim.
-fn scan_of(directory : String, names : Array[String]) -> LocalIndex {
-  LocalIndex::scan(directory, lister=fn(_directory) { names }) catch {
+fn scan_of(
+  directory : String,
+  names : Array[String],
+) -> @moon_pyversion.LocalIndex {
+  @moon_pyversion.LocalIndex::scan(directory, lister=fn(_directory) { names }) catch {
     _ => abort("expected the scan of \{directory} to succeed")
   }
 }
 
 ///|
 /// The fixture index, scanned from the fixture names at `/mirror`.
-fn fixture_index() -> LocalIndex {
+fn fixture_index() -> @moon_pyversion.LocalIndex {
   scan_of("/mirror", fixture_names())
 }
 
@@ -359,33 +370,36 @@ fn fixture_index() -> LocalIndex {
 /// The `(code, ordinal)` of a scan failure with a caller-supplied lister.
 fn scan_with_error(
   directory : String,
-  lister : DirectoryLister,
+  lister : @moon_pyversion.DirectoryLister,
 ) -> (String, Int) {
   try {
-    ignore(LocalIndex::scan(directory, lister~))
+    ignore(@moon_pyversion.LocalIndex::scan(directory, lister~))
     ("<accepted>", -1)
   } catch {
-    VersionError::InvalidIndex(code, ordinal) => (code, ordinal)
+    @moon_pyversion.VersionError::InvalidIndex(code, ordinal) => (code, ordinal)
     other => ("unexpected:\{other.diagnostic()}", -1)
   }
 }
 
 ///|
-/// The `(code, ordinal)` of `LocalIndex::scan` called without a lister, which
+/// The `(code, ordinal)` of `@moon_pyversion.LocalIndex::scan` called without a lister, which
 /// exercises the default one.
 fn scan_default_error(directory : String) -> (String, Int) {
   try {
-    ignore(LocalIndex::scan(directory))
+    ignore(@moon_pyversion.LocalIndex::scan(directory))
     ("<accepted>", -1)
   } catch {
-    VersionError::InvalidIndex(code, ordinal) => (code, ordinal)
+    @moon_pyversion.VersionError::InvalidIndex(code, ordinal) => (code, ordinal)
     other => ("unexpected:\{other.diagnostic()}", -1)
   }
 }
 
 ///|
 /// The file with exactly this filename, which must be present.
-fn file_named(files : Array[IndexFile], filename : String) -> IndexFile {
+fn file_named(
+  files : Array[@moon_pyversion.IndexFile],
+  filename : String,
+) -> @moon_pyversion.IndexFile {
   for i = 0; i < files.length(); i = i + 1 {
     if files[i].filename == filename {
       return files[i]
@@ -396,7 +410,10 @@ fn file_named(files : Array[IndexFile], filename : String) -> IndexFile {
 
 ///|
 /// True when some file has exactly this filename.
-fn has_filename(files : Array[IndexFile], filename : String) -> Bool {
+fn has_filename(
+  files : Array[@moon_pyversion.IndexFile],
+  filename : String,
+) -> Bool {
   for i = 0; i < files.length(); i = i + 1 {
     if files[i].filename == filename {
       return true
@@ -418,7 +435,7 @@ fn has_reason(pairs : Array[(String, String)], filename : String) -> Bool {
 
 ///|
 /// The filenames of `files`, in order.
-fn filenames_of(files : Array[IndexFile]) -> Array[String] {
+fn filenames_of(files : Array[@moon_pyversion.IndexFile]) -> Array[String] {
   let out : Array[String] = []
   for i = 0; i < files.length(); i = i + 1 {
     out.push(files[i].filename)
@@ -446,7 +463,7 @@ fn cp312_tags() -> Array[String] {
 /// The seven files the rejection blocks share. Exactly one trips each rule of
 /// `explain_rejection` (given `demo>=2.0`), one is a valid candidate, and one is
 /// an sdist that always survives tag filtering.
-fn reason_files() -> Array[IndexFile] {
+fn reason_files() -> Array[@moon_pyversion.IndexFile] {
   [
     wheel_file("demo-1.0-py3-none-any.whl", None),
     wheel_file("demo-2.0-py3-none-any.whl", Some(">=3.12")),
@@ -464,17 +481,22 @@ fn reason_files() -> Array[IndexFile] {
 /// Every value kind, nested, with the exact shape the reader must produce.
 test "json: every value kind parses, nested" {
   assert_eq(json_of("null"), JsonNull)
-  assert_eq(json_of("true"), JsonBool(true))
-  assert_eq(json_of("false"), JsonBool(false))
-  assert_eq(json_of("\"text\""), JsonString("text"))
-  assert_eq(json_of("42"), JsonNumber("42"))
-  assert_eq(json_of("[]"), JsonArray([]))
-  assert_eq(json_of("{}"), JsonObject([]))
+  assert_eq(json_of("true"), @moon_pyversion.JsonBool(true))
+  assert_eq(json_of("false"), @moon_pyversion.JsonBool(false))
+  assert_eq(json_of("\"text\""), @moon_pyversion.JsonString("text"))
+  assert_eq(json_of("42"), @moon_pyversion.JsonNumber("42"))
+  assert_eq(json_of("[]"), @moon_pyversion.JsonArray([]))
+  assert_eq(json_of("{}"), @moon_pyversion.JsonObject([]))
   assert_eq(
     json_of("[{\"a\":[true,null]},[false]]"),
-    JsonArray([
-      JsonObject([("a", JsonArray([JsonBool(true), JsonNull]))]),
-      JsonArray([JsonBool(false)]),
+    @moon_pyversion.JsonArray([
+      @moon_pyversion.JsonObject([
+        (
+          "a",
+          @moon_pyversion.JsonArray([@moon_pyversion.JsonBool(true), JsonNull]),
+        ),
+      ]),
+      @moon_pyversion.JsonArray([@moon_pyversion.JsonBool(false)]),
     ]),
   )
 }
@@ -484,8 +506,11 @@ test "json: every value kind parses, nested" {
 /// finds a member by exact name.
 test "json: objects keep document order and field looks up by name" {
   let value = json_of("{\"b\":1,\"a\":[2],\"c\":{\"d\":null}}")
-  assert_eq(value.field("a"), Some(JsonArray([JsonNumber("2")])))
-  assert_eq(value.field("b"), Some(JsonNumber("1")))
+  assert_eq(
+    value.field("a"),
+    Some(@moon_pyversion.JsonArray([@moon_pyversion.JsonNumber("2")])),
+  )
+  assert_eq(value.field("b"), Some(@moon_pyversion.JsonNumber("1")))
   assert_eq(value.field("c").unwrap().field("d"), Some(JsonNull))
   assert_eq(value.field("missing"), None)
   // A non-object has no members; `field` answers None instead of raising.
@@ -493,7 +518,7 @@ test "json: objects keep document order and field looks up by name" {
   assert_eq(json_of("[]").field("a"), None)
   assert_eq(json_of("null").field("a"), None)
   match value {
-    JsonObject(members) => {
+    @moon_pyversion.JsonObject(members) => {
       assert_eq(members.length(), 3)
       assert_eq(members[0].0, "b")
       assert_eq(members[1].0, "a")
@@ -607,7 +632,7 @@ test "json: number grammar violations are rejected by code" {
 /// bare word is refused. `truex` parses as `true` and then fails on the trailing
 /// `x`, which is the trailing-content rule rather than a literal rule.
 test "json: literals are exact and bare words are refused" {
-  assert_eq(json_of(" true "), JsonBool(true))
+  assert_eq(json_of(" true "), @moon_pyversion.JsonBool(true))
   assert_json_error("True", "JSON_BAD_LITERAL")
   assert_json_error("NULL", "JSON_BAD_LITERAL")
   assert_json_error("nul", "JSON_BAD_LITERAL")
@@ -655,7 +680,10 @@ test "json: duplicate member names are refused" {
   assert_json_error("{\"a\":{\"b\":1,\"b\":2}}", "JSON_DUPLICATE_KEY")
   assert_eq(
     json_of("{\"A\":1,\"a\":2}"),
-    JsonObject([("A", JsonNumber("1")), ("a", JsonNumber("2"))]),
+    @moon_pyversion.JsonObject([
+      ("A", @moon_pyversion.JsonNumber("1")),
+      ("a", @moon_pyversion.JsonNumber("2")),
+    ]),
   )
 }
 
@@ -666,8 +694,11 @@ test "json: trailing content is refused" {
   assert_json_error("{} {}", "JSON_TRAILING")
   assert_json_error("[1,2]x", "JSON_TRAILING")
   assert_json_error("[1] []", "JSON_TRAILING")
-  assert_eq(json_of("[1] "), JsonArray([JsonNumber("1")]))
-  assert_eq(json_of("\n\t{}\r "), JsonObject([]))
+  assert_eq(
+    json_of("[1] "),
+    @moon_pyversion.JsonArray([@moon_pyversion.JsonNumber("1")]),
+  )
+  assert_eq(json_of("\n\t{}\r "), @moon_pyversion.JsonObject([]))
 }
 
 ///|
@@ -777,11 +808,11 @@ test "691: a realistic document maps onto the model" {
     "\"hashes\":{\"sha256\":\"cc33\"}," +
     "\"yanked\":\"broken sdist\"}" +
     "]}"
-  let index = SimpleIndex::parse(document) catch {
+  let index = @moon_pyversion.SimpleIndex::parse(document) catch {
     _ => abort("expected the document to parse")
   }
   assert_eq(index.name(), "Flask")
-  assert_eq(canonicalize_name(index.name()), "flask")
+  assert_eq(@moon_pyversion.canonicalize_name(index.name()), "flask")
   assert_eq(index.api_version(), Some("1.4"))
   assert_eq(index.versions(), ["3.0.4", "3.0.3"])
   assert_eq(index.files().length(), 2)
@@ -813,21 +844,23 @@ test "691: a realistic document maps onto the model" {
 /// document without it is readable and reports `None`; `name` is carried
 /// verbatim, since the index chooses its spelling.
 test "691: name is verbatim and api-version is optional" {
-  let index = SimpleIndex::parse("{\"name\":\"Zope.Interface\",\"files\":[]}") catch {
+  let index = @moon_pyversion.SimpleIndex::parse(
+    "{\"name\":\"Zope.Interface\",\"files\":[]}",
+  ) catch {
     _ => abort("expected the document to parse")
   }
   assert_eq(index.name(), "Zope.Interface")
   assert_eq(index.api_version(), None)
   assert_eq(index.files().length(), 0)
   assert_eq(index.versions(), [])
-  let empty_meta = SimpleIndex::parse(
+  let empty_meta = @moon_pyversion.SimpleIndex::parse(
     "{\"meta\":{},\"name\":\"x\",\"files\":[]}",
   ) catch {
     _ => abort("expected the document to parse")
   }
   assert_eq(empty_meta.api_version(), None)
   // An explicitly null api-version counts as absent, not as an error.
-  let null_meta = SimpleIndex::parse(
+  let null_meta = @moon_pyversion.SimpleIndex::parse(
     "{\"meta\":{\"api-version\":null},\"name\":\"x\",\"files\":[]}",
   ) catch {
     _ => abort("expected the document to parse")
@@ -984,7 +1017,7 @@ test "691: unknown members are ignored, duplicate members are refused" {
 /// not sorted) and must contain only strings.
 test "691: versions are optional, ordered and strings" {
   let document = "{\"meta\":{},\"name\":\"demo\",\"files\":[],\"versions\":[\"2.0\",\"1.0\",\"1.5\"]}"
-  let index = SimpleIndex::parse(document) catch {
+  let index = @moon_pyversion.SimpleIndex::parse(document) catch {
     _ => abort("expected the document to parse")
   }
   assert_eq(index.versions(), ["2.0", "1.0", "1.5"])
@@ -1076,7 +1109,9 @@ test "691: wheels and sdists classify, and a non-distribution is an error" {
     "{\"filename\":\"demo-1.0-py3-none-any.whl\",\"url\":\"u\",\"hashes\":{}}," +
     "{\"filename\":\"demo-1.0.tar.gz\",\"url\":\"u\",\"hashes\":{}}",
   )
-  let index = SimpleIndex::parse(mixed) catch { _ => abort("expected a parse") }
+  let index = @moon_pyversion.SimpleIndex::parse(mixed) catch {
+    _ => abort("expected a parse")
+  }
   assert_eq(index_filenames_of(index.wheels()), ["demo-1.0-py3-none-any.whl"])
   assert_eq(index_filenames_of(index.sdists()), ["demo-1.0.tar.gz"])
   let unknown = document_json(
@@ -1107,7 +1142,9 @@ test "691: to_index_file uses the url and carries requires-python" {
     "{\"filename\":\"demo-1.0.tar.gz\",\"url\":\"https://index.example/demo-1.0.tar.gz\"," +
     "\"hashes\":{}}",
   )
-  let index = SimpleIndex::parse(json) catch { _ => abort("expected a parse") }
+  let index = @moon_pyversion.SimpleIndex::parse(json) catch {
+    _ => abort("expected a parse")
+  }
   let wheel = index.files()[0].to_index_file() catch {
     _ => abort("expected a wheel")
   }
@@ -1129,7 +1166,7 @@ test "691: to_index_file uses the url and carries requires-python" {
   let bad = document_json(
     "{\"filename\":\"README.txt\",\"url\":\"u\",\"hashes\":{}}",
   )
-  let bad_index = SimpleIndex::parse(bad) catch {
+  let bad_index = @moon_pyversion.SimpleIndex::parse(bad) catch {
     _ => abort("expected a parse")
   }
   assert_eq(to_index_file_error(bad_index.files()[0]), "INDEX_UNKNOWN_DIST")
@@ -1200,8 +1237,11 @@ test "scan: build tags and compressed tag sets are visible" {
   // The build tag is not part of `IndexFile`, but it is still visible through
   // the filename parser, and the two files remain distinct entries.
   assert_false(built.filename == unbuilt.filename)
-  assert_eq(parse_wheel_filename(built.filename).build, Some((1, "")))
-  assert_eq(parse_wheel_filename(unbuilt.filename).build, None)
+  assert_eq(
+    @moon_pyversion.parse_wheel_filename(built.filename).build,
+    Some((1, "")),
+  )
+  assert_eq(@moon_pyversion.parse_wheel_filename(unbuilt.filename).build, None)
   // A compressed tag set expands, and the expansion is sorted.
   let compressed = file_named(index.files, "flask-3.0.3-py2.py3-none-any.whl")
   assert_eq(compressed.tags(), ["py2-none-any", "py3-none-any"])
@@ -1318,8 +1358,8 @@ test "scan: the default lister refuses instead of reporting an empty index" {
   assert_eq(scan_default_error("/anything"), ("INDEX_NO_FS", 0))
   // A caller-supplied lister that fails is reported with its own code and
   // position, untouched.
-  let failing : DirectoryLister = _directory => {
-    raise VersionError::InvalidIndex("LISTER_FAILED", 7)
+  let failing : @moon_pyversion.DirectoryLister = _directory => {
+    raise @moon_pyversion.VersionError::InvalidIndex("LISTER_FAILED", 7)
   }
   assert_eq(scan_with_error("/x", failing), ("LISTER_FAILED", 7))
 }
@@ -1332,7 +1372,7 @@ test "scan: an sdist has no tags, and an unparseable wheel name has none" {
   let index = fixture_index()
   assert_eq(file_named(index.files, "Flask-3.0.2.tar.gz").tags(), [])
   assert_eq(file_named(index.files, "numpy-1.26.3.zip").tags(), [])
-  let hand_built : IndexFile = {
+  let hand_built : @moon_pyversion.IndexFile = {
     filename: "broken-1.0.whl",
     path: "broken-1.0.whl",
     kind: WheelFile,
@@ -1344,11 +1384,21 @@ test "scan: an sdist has no tags, and an unparseable wheel name has none" {
   // Such a file can never be a candidate, because its tag set is empty.
   let requirement = resolve_requirement_of("broken")
   assert_eq(
-    resolve_candidates([hand_built], requirement, resolver_tag_list(), None).length(),
+    @moon_pyversion.resolve_candidates(
+      [hand_built],
+      requirement,
+      resolver_tag_list(),
+      None,
+    ).length(),
     0,
   )
   assert_eq(
-    explain_rejection([hand_built], requirement, resolver_tag_list(), None),
+    @moon_pyversion.explain_rejection(
+      [hand_built],
+      requirement,
+      resolver_tag_list(),
+      None,
+    ),
     [("broken-1.0.whl", "tags")],
   )
 }
@@ -1359,13 +1409,13 @@ test "scan: an sdist has no tags, and an unparseable wheel name has none" {
 /// Rule 1: the highest PEP 440 version is offered first, whatever the file kind,
 /// and the input array is left alone.
 test "resolver: candidates are ordered by version first" {
-  let files : Array[IndexFile] = [
+  let files : Array[@moon_pyversion.IndexFile] = [
     wheel_file("demo-1.0-py3-none-any.whl", None),
     wheel_file("demo-2.0-py3-none-any.whl", None),
     wheel_file("demo-1.5-py3-none-any.whl", None),
     sdist_file("demo-0.9.tar.gz", None),
   ]
-  let candidates = resolve_candidates(
+  let candidates = @moon_pyversion.resolve_candidates(
     files,
     resolve_requirement_of("demo"),
     resolver_tag_list(),
@@ -1384,14 +1434,14 @@ test "resolver: candidates are ordered by version first" {
 /// wheel-over-source preference expressed through the tag component of its sort
 /// key.
 test "resolver: a wheel outranks an sdist of the same version" {
-  let files : Array[IndexFile] = [
+  let files : Array[@moon_pyversion.IndexFile] = [
     sdist_file("demo-2.0.tar.gz", None),
     wheel_file("demo-2.0-py3-none-any.whl", None),
     sdist_file("demo-2.0.zip", None),
   ]
   assert_eq(
     filenames_of(
-      resolve_candidates(
+      @moon_pyversion.resolve_candidates(
         files,
         resolve_requirement_of("demo"),
         resolver_tag_list(),
@@ -1408,14 +1458,14 @@ test "resolver: a wheel outranks an sdist of the same version" {
 /// `Wheel.find_most_preferred_tag` takes the minimum priority over the file's
 /// tags and its sort key negates it, so the smallest index is preferred.
 test "resolver: the more preferred tag wins among equal wheels" {
-  let files : Array[IndexFile] = [
+  let files : Array[@moon_pyversion.IndexFile] = [
     wheel_file("demo-2.0-py3-none-any.whl", None),
     wheel_file("demo-2.0-cp312-abi3-manylinux_2_17_x86_64.whl", None),
     wheel_file("demo-2.0-cp312-cp312-manylinux_2_17_x86_64.whl", None),
   ]
   assert_eq(
     filenames_of(
-      resolve_candidates(
+      @moon_pyversion.resolve_candidates(
         files,
         resolve_requirement_of("demo"),
         cp312_tags(),
@@ -1432,7 +1482,7 @@ test "resolver: the more preferred tag wins among equal wheels" {
   let generic_first = ["py3-none-any", "cp312-cp312-manylinux_2_17_x86_64"]
   assert_eq(
     filenames_of(
-      resolve_candidates(
+      @moon_pyversion.resolve_candidates(
         files,
         resolve_requirement_of("demo"),
         generic_first,
@@ -1450,14 +1500,14 @@ test "resolver: the more preferred tag wins among equal wheels" {
 /// build number first and a tagged wheel above an untagged one, matching pip's
 /// `(int, str)`-versus-empty-tuple build component.
 test "resolver: a higher build tag wins a version tie" {
-  let files : Array[IndexFile] = [
+  let files : Array[@moon_pyversion.IndexFile] = [
     wheel_file("demo-2.0-py3-none-any.whl", None),
     wheel_file("demo-2.0-1-py3-none-any.whl", None),
     wheel_file("demo-2.0-2-py3-none-any.whl", None),
   ]
   assert_eq(
     filenames_of(
-      resolve_candidates(
+      @moon_pyversion.resolve_candidates(
         files,
         resolve_requirement_of("demo"),
         resolver_tag_list(),
@@ -1474,18 +1524,28 @@ test "resolver: a higher build tag wins a version tie" {
 /// With no supported tags every wheel is filtered out and only sdists remain,
 /// because PEP 425 constrains wheels and an sdist is built from source.
 test "resolver: an empty tag list leaves only sdists" {
-  let files : Array[IndexFile] = [
+  let files : Array[@moon_pyversion.IndexFile] = [
     wheel_file("demo-2.0-py3-none-any.whl", None),
     sdist_file("demo-2.0.tar.gz", None),
   ]
   assert_eq(
     filenames_of(
-      resolve_candidates(files, resolve_requirement_of("demo"), [], None),
+      @moon_pyversion.resolve_candidates(
+        files,
+        resolve_requirement_of("demo"),
+        [],
+        None,
+      ),
     ),
     ["demo-2.0.tar.gz"],
   )
   assert_eq(
-    explain_rejection(files, resolve_requirement_of("demo"), [], None),
+    @moon_pyversion.explain_rejection(
+      files,
+      resolve_requirement_of("demo"),
+      [],
+      None,
+    ),
     [("demo-2.0-py3-none-any.whl", "tags")],
   )
 }
@@ -1494,7 +1554,7 @@ test "resolver: an empty tag list leaves only sdists" {
 /// The three filters that are not about ordering. Each of the four files trips
 /// exactly one of them, and the "version" rule is checked before "tags".
 test "resolver: name, version and tag filters" {
-  let files : Array[IndexFile] = [
+  let files : Array[@moon_pyversion.IndexFile] = [
     wheel_file("demo-1.0-py3-none-any.whl", None),
     wheel_file("demo-2.0-py3-none-any.whl", None),
     wheel_file("other-1.0-py3-none-any.whl", None),
@@ -1502,7 +1562,7 @@ test "resolver: name, version and tag filters" {
   ]
   assert_eq(
     filenames_of(
-      resolve_candidates(
+      @moon_pyversion.resolve_candidates(
         files,
         resolve_requirement_of("demo==1.0"),
         resolver_tag_list(),
@@ -1512,7 +1572,7 @@ test "resolver: name, version and tag filters" {
     ["demo-1.0-py3-none-any.whl"],
   )
   assert_eq(
-    explain_rejection(
+    @moon_pyversion.explain_rejection(
       files,
       resolve_requirement_of("demo==1.0"),
       resolver_tag_list(),
@@ -1526,7 +1586,7 @@ test "resolver: name, version and tag filters" {
   )
   assert_eq(
     filenames_of(
-      resolve_candidates(
+      @moon_pyversion.resolve_candidates(
         files,
         resolve_requirement_of("demo"),
         resolver_tag_list(),
@@ -1536,7 +1596,7 @@ test "resolver: name, version and tag filters" {
     ["demo-2.0-py3-none-any.whl", "demo-1.0-py3-none-any.whl"],
   )
   assert_eq(
-    explain_rejection(
+    @moon_pyversion.explain_rejection(
       files,
       resolve_requirement_of("demo"),
       resolver_tag_list(),
@@ -1557,14 +1617,14 @@ test "resolver: name, version and tag filters" {
 test "resolver: requires-python is honoured when both sides are known" {
   let files = reason_files()
   let requirement = resolve_requirement_of("demo>=2.0")
-  let py312 = resolve_candidates(
+  let py312 = @moon_pyversion.resolve_candidates(
     files,
     requirement,
     resolver_tag_list(),
     Some(resolve_version_of("3.12.4")),
   )
   assert_true(has_filename(py312, "demo-2.0-py3-none-any.whl"))
-  let py39 = resolve_candidates(
+  let py39 = @moon_pyversion.resolve_candidates(
     files,
     requirement,
     resolver_tag_list(),
@@ -1572,7 +1632,7 @@ test "resolver: requires-python is honoured when both sides are known" {
   )
   assert_false(has_filename(py39, "demo-2.0-py3-none-any.whl"))
   assert_eq(
-    explain_rejection(
+    @moon_pyversion.explain_rejection(
       files,
       requirement,
       resolver_tag_list(),
@@ -1587,7 +1647,7 @@ test "resolver: requires-python is honoured when both sides are known" {
     ],
   )
   // No interpreter known: the constraint is not applied.
-  let unknown = resolve_candidates(
+  let unknown = @moon_pyversion.resolve_candidates(
     files,
     requirement,
     resolver_tag_list(),
@@ -1596,7 +1656,12 @@ test "resolver: requires-python is honoured when both sides are known" {
   assert_true(has_filename(unknown, "demo-2.0-py3-none-any.whl"))
   assert_false(
     has_reason(
-      explain_rejection(files, requirement, resolver_tag_list(), None),
+      @moon_pyversion.explain_rejection(
+        files,
+        requirement,
+        resolver_tag_list(),
+        None,
+      ),
       "demo-2.0-py3-none-any.whl",
     ),
   )
@@ -1608,14 +1673,14 @@ test "resolver: requires-python is honoured when both sides are known" {
 /// `_check_link_requires_python` logs "Ignoring invalid Requires-Python" and
 /// keeps the link. An empty one is likewise no constraint.
 test "resolver: an invalid requires-python is ignored, like pip" {
-  let files : Array[IndexFile] = [
+  let files : Array[@moon_pyversion.IndexFile] = [
     wheel_file("demo-1.0-py3-none-any.whl", Some("not-a-specifier")),
     wheel_file("demo-2.0-py3-none-any.whl", Some("")),
     wheel_file("demo-3.0-py3-none-any.whl", Some("   ")),
   ]
   assert_eq(
     filenames_of(
-      resolve_candidates(
+      @moon_pyversion.resolve_candidates(
         files,
         resolve_requirement_of("demo"),
         resolver_tag_list(),
@@ -1627,7 +1692,7 @@ test "resolver: an invalid requires-python is ignored, like pip" {
     ],
   )
   assert_eq(
-    explain_rejection(
+    @moon_pyversion.explain_rejection(
       files,
       resolve_requirement_of("demo"),
       resolver_tag_list(),
@@ -1644,14 +1709,14 @@ test "resolver: an invalid requires-python is ignored, like pip" {
 /// is decided over every name-matching file at once, so a prerelease is dropped
 /// only because a final version exists.
 test "resolver: the prerelease policy in all three modes" {
-  let mixed : Array[IndexFile] = [
+  let mixed : Array[@moon_pyversion.IndexFile] = [
     wheel_file("demo-1.0-py3-none-any.whl", None),
     wheel_file("demo-2.0rc1-py3-none-any.whl", None),
     wheel_file("demo-2.0.dev1-py3-none-any.whl", None),
   ]
   assert_eq(
     filenames_of(
-      resolve_candidates(
+      @moon_pyversion.resolve_candidates(
         mixed,
         resolve_requirement_of("demo"),
         resolver_tag_list(),
@@ -1662,7 +1727,7 @@ test "resolver: the prerelease policy in all three modes" {
   )
   assert_eq(
     filenames_of(
-      resolve_candidates(
+      @moon_pyversion.resolve_candidates(
         mixed,
         resolve_requirement_of("demo"),
         resolver_tag_list(),
@@ -1676,7 +1741,7 @@ test "resolver: the prerelease policy in all three modes" {
   )
   assert_eq(
     filenames_of(
-      resolve_candidates(
+      @moon_pyversion.resolve_candidates(
         mixed,
         resolve_requirement_of("demo"),
         resolver_tag_list(),
@@ -1687,13 +1752,13 @@ test "resolver: the prerelease policy in all three modes" {
     ["demo-1.0-py3-none-any.whl"],
   )
   // Only prereleases available: the automatic rule falls back to them.
-  let only_pre : Array[IndexFile] = [
+  let only_pre : Array[@moon_pyversion.IndexFile] = [
     wheel_file("demo-2.0rc1-py3-none-any.whl", None),
     wheel_file("demo-2.0.dev1-py3-none-any.whl", None),
   ]
   assert_eq(
     filenames_of(
-      resolve_candidates(
+      @moon_pyversion.resolve_candidates(
         only_pre,
         resolve_requirement_of("demo"),
         resolver_tag_list(),
@@ -1703,13 +1768,13 @@ test "resolver: the prerelease policy in all three modes" {
     ["demo-2.0rc1-py3-none-any.whl", "demo-2.0.dev1-py3-none-any.whl"],
   )
   // A specifier that is itself a prerelease admits prereleases, per PEP 440.
-  let pinned : Array[IndexFile] = [
+  let pinned : Array[@moon_pyversion.IndexFile] = [
     wheel_file("demo-2.0rc1-py3-none-any.whl", None),
     wheel_file("demo-1.0-py3-none-any.whl", None),
   ]
   assert_eq(
     filenames_of(
-      resolve_candidates(
+      @moon_pyversion.resolve_candidates(
         pinned,
         resolve_requirement_of("demo>=2.0rc1"),
         resolver_tag_list(),
@@ -1721,7 +1786,7 @@ test "resolver: the prerelease policy in all three modes" {
   // `explain_rejection` reports the policy as its own reason, and with
   // `prereleases = Some(true)` that reason cannot occur.
   assert_eq(
-    explain_rejection(
+    @moon_pyversion.explain_rejection(
       mixed,
       resolve_requirement_of("demo"),
       resolver_tag_list(),
@@ -1733,7 +1798,7 @@ test "resolver: the prerelease policy in all three modes" {
     ],
   )
   assert_eq(
-    explain_rejection(
+    @moon_pyversion.explain_rejection(
       mixed,
       resolve_requirement_of("demo"),
       resolver_tag_list(),
@@ -1749,14 +1814,14 @@ test "resolver: the prerelease policy in all three modes" {
 /// qualifies -- including when the requirement names a different project.
 test "resolver: select_best returns the head, or None" {
   let files = reason_files()
-  let best = select_best(
+  let best = @moon_pyversion.select_best(
     files,
     resolve_requirement_of("demo"),
     cp312_tags(),
     Some(resolve_version_of("3.12.4")),
   )
   assert_eq(best.unwrap().filename, "demo-3.0-py3-none-any.whl")
-  let none = select_best(
+  let none = @moon_pyversion.select_best(
     files,
     resolve_requirement_of("missing"),
     cp312_tags(),
@@ -1764,7 +1829,7 @@ test "resolver: select_best returns the head, or None" {
   )
   assert_true(none is None)
   // The same answer as taking the head of the ordered candidate list.
-  let candidates = resolve_candidates(
+  let candidates = @moon_pyversion.resolve_candidates(
     files,
     resolve_requirement_of("demo"),
     cp312_tags(),
@@ -1772,12 +1837,12 @@ test "resolver: select_best returns the head, or None" {
   )
   assert_eq(candidates[0].filename, best.unwrap().filename)
   // An exact pin that only a prerelease satisfies still resolves.
-  let pinned : Array[IndexFile] = [
+  let pinned : Array[@moon_pyversion.IndexFile] = [
     wheel_file("demo-2.0rc1-py3-none-any.whl", None),
     wheel_file("demo-1.0-py3-none-any.whl", None),
   ]
   assert_eq(
-    select_best(
+    @moon_pyversion.select_best(
       pinned,
       resolve_requirement_of("demo==2.0rc1"),
       resolver_tag_list(),
@@ -1796,7 +1861,7 @@ test "resolver: explain_rejection reports every reason with a stable code" {
   let files = reason_files()
   let requirement = resolve_requirement_of("demo>=2.0")
   let python = Some(resolve_version_of("3.9.18"))
-  assert_eq(explain_rejection(files, requirement, [], python), [
+  assert_eq(@moon_pyversion.explain_rejection(files, requirement, [], python), [
     ("demo-1.0-py3-none-any.whl", "version"),
     ("demo-2.0-py3-none-any.whl", "requires-python"),
     ("demo-3.0rc1-py3-none-any.whl", "prerelease"),
@@ -1805,24 +1870,37 @@ test "resolver: explain_rejection reports every reason with a stable code" {
     ("demo-2.0-cp39-cp39-win_amd64.whl", "tags"),
   ])
   // Only the sdist survives an empty tag list.
-  assert_eq(filenames_of(resolve_candidates(files, requirement, [], python)), [
-    "demo-2.0.tar.gz",
-  ])
+  assert_eq(
+    filenames_of(
+      @moon_pyversion.resolve_candidates(files, requirement, [], python),
+    ),
+    ["demo-2.0.tar.gz"],
+  )
   // The first rule wins: a file failing both name and version is "name", and
   // one failing both version and tags is "version".
-  let both : Array[IndexFile] = [
+  let both : Array[@moon_pyversion.IndexFile] = [
     wheel_file("other-0.1-cp39-cp39-win_amd64.whl", Some(">=9")),
   ]
-  assert_eq(explain_rejection(both, requirement, [], python), [
+  assert_eq(@moon_pyversion.explain_rejection(both, requirement, [], python), [
     ("other-0.1-cp39-cp39-win_amd64.whl", "name"),
   ])
   assert_eq(
-    explain_rejection(both, resolve_requirement_of("other>=99"), [], python),
+    @moon_pyversion.explain_rejection(
+      both,
+      resolve_requirement_of("other>=99"),
+      [],
+      python,
+    ),
     [("other-0.1-cp39-cp39-win_amd64.whl", "version")],
   )
   // With the tags available, the two wheels that only failed on tags are
   // ordered by version instead, and their reason disappears.
-  let with_tags = explain_rejection(files, requirement, cp312_tags(), python)
+  let with_tags = @moon_pyversion.explain_rejection(
+    files,
+    requirement,
+    cp312_tags(),
+    python,
+  )
   assert_eq(with_tags, [
     ("demo-1.0-py3-none-any.whl", "version"),
     ("demo-2.0-py3-none-any.whl", "requires-python"),
@@ -1840,8 +1918,13 @@ test "resolver: explain_rejection agrees with resolve_candidates" {
   let files = reason_files()
   let requirement = resolve_requirement_of("demo>=2.0")
   let python = Some(resolve_version_of("3.12.4"))
-  let kept = resolve_candidates(files, requirement, resolver_tag_list(), python)
-  let dropped = explain_rejection(
+  let kept = @moon_pyversion.resolve_candidates(
+    files,
+    requirement,
+    resolver_tag_list(),
+    python,
+  )
+  let dropped = @moon_pyversion.explain_rejection(
     files,
     requirement,
     resolver_tag_list(),

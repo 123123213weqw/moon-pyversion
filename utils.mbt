@@ -193,11 +193,23 @@ pub(all) struct WheelFilename {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend WheelFilename with Eq::{equal, not_equal}
+
+///|
+pub extend WheelFilename with @debug.Debug::{to_repr}
+
+///|
 /// A parsed source distribution filename.
 pub(all) struct SdistFilename {
   name : String
   version : Version
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend SdistFilename with Eq::{equal, not_equal}
+
+///|
+pub extend SdistFilename with @debug.Debug::{to_repr}
 
 ///|
 /// Parse a PEP 427 wheel filename. Only the compressed tag set is expanded:

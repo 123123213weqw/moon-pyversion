@@ -6,7 +6,7 @@
 ///|
 fn requirement_rejected(raw : String) -> Bool {
   try {
-    ignore(Requirement::parse(raw))
+    ignore(@moon_pyversion.Requirement::parse(raw))
     false
   } catch {
     _ => true
@@ -14,8 +14,8 @@ fn requirement_rejected(raw : String) -> Bool {
 }
 
 ///|
-fn requirement_of(raw : String) -> Requirement {
-  Requirement::parse(raw) catch {
+fn requirement_of(raw : String) -> @moon_pyversion.Requirement {
+  @moon_pyversion.Requirement::parse(raw) catch {
     _ => abort("expected \{raw} to parse")
   }
 }
@@ -152,8 +152,8 @@ test "requirement: empty and nonsense input is rejected" {
 
 ///|
 test "requirement: diagnostics carry a stable code" {
-  ignore(Requirement::parse("foo bar")) catch {
-    VersionError::InvalidRequirement(code, pos) => {
+  ignore(@moon_pyversion.Requirement::parse("foo bar")) catch {
+    @moon_pyversion.VersionError::InvalidRequirement(code, pos) => {
       assert_eq(code, "EXPECTED_SPECIFIER")
       // the offset of the first character that cannot continue the requirement
       assert_eq(pos, 4)

@@ -44,6 +44,9 @@ pub impl Show for MarkerError with fn to_string(self) {
 }
 
 ///|
+pub extend MarkerError with Show::{to_string, output}
+
+///|
 /// The complete marker vocabulary. Modelling it as a payload-free enum means a
 /// misspelling cannot survive parsing.
 pub(all) enum MarkerVar {
@@ -62,6 +65,12 @@ pub(all) enum MarkerVar {
   Extras
   DependencyGroups
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend MarkerVar with Eq::{equal, not_equal}
+
+///|
+pub extend MarkerVar with @debug.Debug::{to_repr}
 
 ///|
 /// The canonical environment key: what `Marker::to_string` prints and what a
@@ -163,6 +172,12 @@ pub(all) enum MarkerOp {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend MarkerOp with Eq::{equal, not_equal}
+
+///|
+pub extend MarkerOp with @debug.Debug::{to_repr}
+
+///|
 pub fn MarkerOp::symbol(self : MarkerOp) -> String {
   match self {
     Less => "<"
@@ -210,6 +225,12 @@ pub(all) enum MarkerOperand {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend MarkerOperand with Eq::{equal, not_equal}
+
+///|
+pub extend MarkerOperand with @debug.Debug::{to_repr}
+
+///|
 /// Render one operand the way `packaging` does: a key by its canonical name, a
 /// string re-quoted with `"` unless it already contains one, in which case `'`
 /// is used. A value containing both quote characters cannot be rendered, which
@@ -237,6 +258,12 @@ pub(all) struct MarkerClause {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend MarkerClause with Eq::{equal, not_equal}
+
+///|
+pub extend MarkerClause with @debug.Debug::{to_repr}
+
+///|
 pub fn MarkerClause::render(self : MarkerClause) -> String raise VersionError {
   self.lhs.render() + " " + self.op.symbol() + " " + self.rhs.render()
 }
@@ -251,6 +278,12 @@ pub(all) enum MarkerAtom {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend MarkerAtom with Eq::{equal, not_equal}
+
+///|
+pub extend MarkerAtom with @debug.Debug::{to_repr}
+
+///|
 pub(all) enum MarkerItem {
   Atom(MarkerAtom)
   And
@@ -258,11 +291,26 @@ pub(all) enum MarkerItem {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend MarkerItem with Eq::{equal, not_equal}
+
+///|
+pub extend MarkerItem with @debug.Debug::{to_repr}
+
+///|
 /// A parsed marker expression: a flat sequence of clauses, parenthesised groups
 /// and `and`/`or` operators.
 pub(all) struct Marker {
   items : Array[MarkerItem]
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend Marker with Show::{output}
+
+///|
+pub extend Marker with Eq::{equal, not_equal}
+
+///|
+pub extend Marker with @debug.Debug::{to_repr}
 
 ///|
 fn marker_is_space(c : Char) -> Bool {
@@ -763,6 +811,12 @@ pub(all) enum MarkerValue {
   Text(String)
   Names(Array[String])
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend MarkerValue with Eq::{equal, not_equal}
+
+///|
+pub extend MarkerValue with @debug.Debug::{to_repr}
 
 ///|
 /// The environment a marker is evaluated against. There is no ambient default:

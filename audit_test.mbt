@@ -1,6 +1,6 @@
 ///|
-fn audit_environment() -> MarkerEnvironment {
-  let environment = MarkerEnvironment::new()
+fn audit_environment() -> @moon_pyversion.MarkerEnvironment {
+  let environment = @moon_pyversion.MarkerEnvironment::new()
   environment.set("python_version", "3.11")
   environment.set("python_full_version", "3.11.9")
   environment.set("sys_platform", "linux")
@@ -54,7 +54,7 @@ fn demo_lock_file(
 
 ///|
 test "package audit joins metadata index lock and target into one ready decision" {
-  let report = audit_package(
+  let report = @moon_pyversion.audit_package(
     "Demo_Pkg>=1,<2",
     demo_metadata("1.2"),
     demo_index(),
@@ -77,7 +77,7 @@ test "package audit joins metadata index lock and target into one ready decision
 
 ///|
 test "package audit selects the locked version even when the index has a newer one" {
-  let report = audit_package(
+  let report = @moon_pyversion.audit_package(
     "demo-pkg>=1,<2",
     demo_metadata("1.1"),
     demo_index(),
@@ -93,7 +93,7 @@ test "package audit selects the locked version even when the index has a newer o
 
 ///|
 test "package audit reports metadata drift from the locked selection" {
-  let report = audit_package(
+  let report = @moon_pyversion.audit_package(
     "demo-pkg>=1,<2",
     demo_metadata("1.2"),
     demo_index(),
@@ -104,7 +104,7 @@ test "package audit reports metadata drift from the locked selection" {
   )
   assert_eq(report.disposition(), Blocked)
   assert_true(
-    report.issues.contains(AuditIssue::{
+    report.issues.contains(@moon_pyversion.AuditIssue::{
       code: "METADATA_SELECTION_MISMATCH",
       subject: "1.2 != 1.1",
     }),
@@ -113,7 +113,7 @@ test "package audit reports metadata drift from the locked selection" {
 
 ///|
 test "package audit refuses a lock file with a different digest" {
-  let report = audit_package(
+  let report = @moon_pyversion.audit_package(
     "demo-pkg>=1,<2",
     demo_metadata("1.2"),
     demo_index(),
@@ -124,7 +124,7 @@ test "package audit refuses a lock file with a different digest" {
   )
   assert_eq(report.disposition(), Blocked)
   assert_true(
-    report.issues.contains(AuditIssue::{
+    report.issues.contains(@moon_pyversion.AuditIssue::{
       code: "LOCK_SHA256_MISMATCH",
       subject: "demo_pkg-1.2-py3-none-any.whl",
     }),
@@ -133,7 +133,7 @@ test "package audit refuses a lock file with a different digest" {
 
 ///|
 test "package audit refuses a selected file absent from the lock" {
-  let report = audit_package(
+  let report = @moon_pyversion.audit_package(
     "demo-pkg>=1,<2",
     demo_metadata("1.2"),
     demo_index(),
@@ -144,7 +144,7 @@ test "package audit refuses a selected file absent from the lock" {
   )
   assert_eq(report.disposition(), Blocked)
   assert_true(
-    report.issues.contains(AuditIssue::{
+    report.issues.contains(@moon_pyversion.AuditIssue::{
       code: "LOCK_FILE_MISSING",
       subject: "demo_pkg-1.2-py3-none-any.whl",
     }),
@@ -158,7 +158,7 @@ fn bundle_lock() -> String {
 }
 
 ///|
-fn other_audit_input() -> AuditInput {
+fn other_audit_input() -> @moon_pyversion.AuditInput {
   {
     requirement_text: "Other_Pkg==2.0",
     metadata_text: "Metadata-Version: 2.4\nName: other-pkg\nVersion: 2.0\n",
@@ -167,7 +167,7 @@ fn other_audit_input() -> AuditInput {
 }
 
 ///|
-fn demo_audit_input() -> AuditInput {
+fn demo_audit_input() -> @moon_pyversion.AuditInput {
   {
     requirement_text: "Demo_Pkg>=1,<2",
     metadata_text: demo_metadata("1.2"),
@@ -177,7 +177,7 @@ fn demo_audit_input() -> AuditInput {
 
 ///|
 test "bundle audits two projects against one lock and accepts hex case" {
-  let bundle = audit_bundle(
+  let bundle = @moon_pyversion.audit_bundle(
     [demo_audit_input(), other_audit_input()],
     bundle_lock(),
     audit_environment(),
@@ -193,7 +193,7 @@ test "bundle audits two projects against one lock and accepts hex case" {
 
 ///|
 test "bundle reports a duplicate canonical project input" {
-  let bundle = audit_bundle(
+  let bundle = @moon_pyversion.audit_bundle(
     [demo_audit_input(), demo_audit_input()],
     demo_lock("1.2"),
     audit_environment(),
@@ -203,13 +203,16 @@ test "bundle reports a duplicate canonical project input" {
   assert_eq(bundle.disposition(), Blocked)
   assert_eq(bundle.counts(), (2, 0, 0))
   assert_eq(bundle.issues, [
-    AuditIssue::{ code: "DUPLICATE_PROJECT_INPUT", subject: "demo-pkg", },
+    @moon_pyversion.AuditIssue::{
+      code: "DUPLICATE_PROJECT_INPUT",
+      subject: "demo-pkg",
+    },
   ])
 }
 
 ///|
 test "bundle full coverage reports a lock entry without an input" {
-  let bundle = audit_bundle(
+  let bundle = @moon_pyversion.audit_bundle(
     [demo_audit_input()],
     bundle_lock(),
     audit_environment(),
@@ -219,13 +222,16 @@ test "bundle full coverage reports a lock entry without an input" {
   )
   assert_eq(bundle.disposition(), Blocked)
   assert_eq(bundle.issues, [
-    AuditIssue::{ code: "LOCK_ENTRY_UNAUDITED", subject: "other-pkg", },
+    @moon_pyversion.AuditIssue::{
+      code: "LOCK_ENTRY_UNAUDITED",
+      subject: "other-pkg",
+    },
   ])
 }
 
 ///|
 test "package audit requires a selected sha256 digest" {
-  let report = audit_package(
+  let report = @moon_pyversion.audit_package(
     "demo-pkg>=1,<2",
     demo_metadata("1.2"),
     demo_index(with_hash=false),
@@ -236,7 +242,7 @@ test "package audit requires a selected sha256 digest" {
   )
   assert_eq(report.disposition(), Blocked)
   assert_true(
-    report.issues.contains(AuditIssue::{
+    report.issues.contains(@moon_pyversion.AuditIssue::{
       code: "SELECTED_SHA256_MISSING",
       subject: "demo_pkg-1.2-py3-none-any.whl",
     }),
@@ -245,7 +251,7 @@ test "package audit requires a selected sha256 digest" {
 
 ///|
 test "a requirement excluded by its marker is not required" {
-  let report = audit_package(
+  let report = @moon_pyversion.audit_package(
     "demo-pkg>=1; sys_platform == 'win32'",
     demo_metadata("1.2"),
     demo_index(),
@@ -261,7 +267,7 @@ test "a requirement excluded by its marker is not required" {
 
 ///|
 test "package audit refuses a target with no compatible wheel tag" {
-  let report = audit_package(
+  let report = @moon_pyversion.audit_package(
     "demo-pkg>=1,<2",
     demo_metadata("1.2"),
     demo_index(),
@@ -272,7 +278,7 @@ test "package audit refuses a target with no compatible wheel tag" {
   )
   assert_eq(report.disposition(), Blocked)
   assert_true(
-    report.issues.contains(AuditIssue::{
+    report.issues.contains(@moon_pyversion.AuditIssue::{
       code: "CANDIDATE_MISSING",
       subject: "demo-pkg",
     }),
@@ -281,7 +287,7 @@ test "package audit refuses a target with no compatible wheel tag" {
 
 ///|
 test "direct URL requirement is kept outside index selection" {
-  let report = audit_package(
+  let report = @moon_pyversion.audit_package(
     "demo-pkg @ https://example.invalid/demo.whl",
     demo_metadata("1.2"),
     demo_index(),
@@ -292,7 +298,7 @@ test "direct URL requirement is kept outside index selection" {
   )
   assert_eq(report.disposition(), Blocked)
   assert_true(
-    report.issues.contains(AuditIssue::{
+    report.issues.contains(@moon_pyversion.AuditIssue::{
       code: "DIRECT_URL_NOT_INDEXED",
       subject: "demo-pkg",
     }),
@@ -302,7 +308,7 @@ test "direct URL requirement is kept outside index selection" {
 
 ///|
 test "package audit redacts credentials in a direct URL requirement" {
-  let report = audit_package(
+  let report = @moon_pyversion.audit_package(
     "demo-pkg @ https://example.invalid/demo.whl?token=secret",
     demo_metadata("1.2"),
     demo_index(),
@@ -319,7 +325,7 @@ test "package audit redacts credentials in a direct URL requirement" {
 ///|
 test "multiple applicable lock entries are reported as ambiguous" {
   let second = "[[packages]]\nname = \"demo-pkg\"\nversion = \"1.1\"\nwheels = [{name = \"demo_pkg-1.1-py3-none-any.whl\", url = \"https://example.invalid/1.1.whl\", hashes = {sha256 = \"bb\"}}]\n"
-  let report = audit_package(
+  let report = @moon_pyversion.audit_package(
     "demo-pkg>=1,<2",
     demo_metadata("1.2"),
     demo_index(),
@@ -330,7 +336,7 @@ test "multiple applicable lock entries are reported as ambiguous" {
   )
   assert_eq(report.disposition(), Blocked)
   assert_true(
-    report.issues.contains(AuditIssue::{
+    report.issues.contains(@moon_pyversion.AuditIssue::{
       code: "LOCK_ENTRY_AMBIGUOUS",
       subject: "demo-pkg",
     }),
@@ -349,7 +355,7 @@ test "real PyPI Flask metadata participates in an end-to-end audit" {
   assert_true(!flask.is_empty())
   let index = "{\"meta\":{\"api-version\":\"1.1\"},\"name\":\"Flask\",\"files\":[{\"filename\":\"Flask-0.12.5-py3-none-any.whl\",\"url\":\"https://files.pythonhosted.org/example.whl\",\"hashes\":{\"sha256\":\"0123456789abcdef\"},\"requires-python\":\">=2.6\"}]}"
   let lock = "lock-version = \"1.0\"\ncreated-by = \"audit-test\"\n[[packages]]\nname = \"Flask\"\nversion = \"0.12.5\"\nwheels = [{name = \"Flask-0.12.5-py3-none-any.whl\", url = \"https://files.pythonhosted.org/example.whl\", hashes = {sha256 = \"0123456789abcdef\"}}]\n"
-  let report = audit_package(
+  let report = @moon_pyversion.audit_package(
     "Flask==0.12.5",
     flask,
     index,

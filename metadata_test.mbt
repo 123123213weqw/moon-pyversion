@@ -28,8 +28,8 @@ fn document_of(lines : Array[String]) -> String {
 
 ///|
 /// Parse a document that must be valid.
-fn metadata_of(text : String) -> Metadata {
-  Metadata::parse(text) catch {
+fn metadata_of(text : String) -> @moon_pyversion.Metadata {
+  @moon_pyversion.Metadata::parse(text) catch {
     _ => abort("expected the document to parse: \{text}")
   }
 }
@@ -39,10 +39,10 @@ fn metadata_of(text : String) -> Metadata {
 /// test can assert *why* a document was rejected.
 fn metadata_error(text : String) -> String {
   try {
-    ignore(Metadata::parse(text))
+    ignore(@moon_pyversion.Metadata::parse(text))
     "<accepted>"
   } catch {
-    VersionError::InvalidMetadata(code, _) => code
+    @moon_pyversion.VersionError::InvalidMetadata(code, _) => code
     other => "unexpected:\{other.diagnostic()}"
   }
 }
@@ -57,8 +57,8 @@ fn assert_metadata_error(text : String, code : String) -> Unit {
 }
 
 ///|
-fn version_of(text : String) -> Version {
-  Version::parse(text) catch {
+fn version_of(text : String) -> @moon_pyversion.Version {
+  @moon_pyversion.Version::parse(text) catch {
     _ => abort("expected \{text} to be a version")
   }
 }
@@ -67,17 +67,17 @@ fn version_of(text : String) -> Version {
 /// Parse, render, re-parse and assert the round trip: the rendered document must
 /// re-parse to the same metadata (the caller's `raw` is not part of the fixed
 /// point) and must render to itself.
-fn assert_round_trip(text : String) -> Metadata {
+fn assert_round_trip(text : String) -> @moon_pyversion.Metadata {
   let first = metadata_of(text)
-  let rendered = Metadata::to_string(first)
-  let second = Metadata::parse(rendered) catch {
+  let rendered = @moon_pyversion.Metadata::to_string(first)
+  let second = @moon_pyversion.Metadata::parse(rendered) catch {
     _ => abort("expected the rendering to re-parse: \{rendered}")
   }
   // `assert_eq` is a raising function, so a helper compares by hand.
   if { ..second, raw: first.raw, } != first {
     abort("the round trip changed the metadata: \{rendered}")
   }
-  if Metadata::to_string(second) != rendered {
+  if @moon_pyversion.Metadata::to_string(second) != rendered {
     abort("to_string is not a fixed point: \{rendered}")
   }
   second
@@ -186,7 +186,7 @@ test "metadata: header names are case-insensitive and canonical on output" {
     "metadata-version: 2.1\nNAME: demo\nversion: 1.0\n",
   )
   assert_eq(metadata.name, "demo")
-  let rendered = Metadata::to_string(metadata)
+  let rendered = @moon_pyversion.Metadata::to_string(metadata)
   assert_true(
     rendered.has_prefix("Metadata-Version: 2.1\nName: demo\nVersion: 1.0\n"),
   )
@@ -196,7 +196,7 @@ test "metadata: header names are case-insensitive and canonical on output" {
     base_document() +
     "Download-URL: https://example.com/f\nProject-URL: Source, https://example.com/s\n",
   )
-  let text = Metadata::to_string(with_urls)
+  let text = @moon_pyversion.Metadata::to_string(with_urls)
   assert_true(text.contains("Download-URL: https://example.com/f"))
   assert_true(text.contains("Project-URL: Source, https://example.com/s"))
 }
@@ -538,7 +538,7 @@ test "metadata: License-Expression forbids License and License :: classifiers" {
   )
   assert_eq(metadata.classifiers, ["Programming Language :: Python"])
   // A `License ::` classifier without the expression is legal, and warned about
-  // by diagnostics().
+  // by @moon_pyversion.diagnostics().
   let legacy = metadata_of(
     base_document() + "Classifier: License :: OSI Approved :: MIT License\n",
   )
@@ -769,7 +769,7 @@ test "metadata: to_string emits the specification's field order" {
     ]),
   )
   assert_eq(
-    Metadata::to_string(metadata),
+    @moon_pyversion.Metadata::to_string(metadata),
     "Metadata-Version: 2.1\nName: demo\nVersion: 1.0\nSummary: s\n",
   )
 }
@@ -778,14 +778,14 @@ test "metadata: to_string emits the specification's field order" {
 test "metadata: to_string renders the description as the body" {
   let metadata = metadata_of(base_document() + "Summary: s\n\nHello.\n")
   assert_eq(
-    Metadata::to_string(metadata),
+    @moon_pyversion.Metadata::to_string(metadata),
     "Metadata-Version: 2.1\nName: demo\nVersion: 1.0\nSummary: s\n\nHello.\n",
   )
   // An empty description has to stay a header, because an empty body means
   // "no description".
   let empty = metadata_of(base_document() + "Description:\n")
   assert_eq(
-    Metadata::to_string(empty),
+    @moon_pyversion.Metadata::to_string(empty),
     "Metadata-Version: 2.1\nName: demo\nVersion: 1.0\nDescription: \n",
   )
 }
@@ -968,7 +968,7 @@ test "metadata: header values are stripped of surrounding whitespace" {
   let metadata = metadata_of(base_document() + "Summary:   foo   \n")
   assert_eq(metadata.summary, Some("foo"))
   assert_eq(
-    Metadata::to_string(metadata),
+    @moon_pyversion.Metadata::to_string(metadata),
     "Metadata-Version: 2.1\nName: demo\nVersion: 1.0\nSummary: foo\n",
   )
 }
@@ -1323,7 +1323,7 @@ test "metadata: the three rules that a corpus replay found" {
     base_document() + "Provides-Extra: demo_\n",
     "PROVIDES_EXTRA_INVALID",
   )
-  // `Metadata::extras` reports the PEP 685 *compare* form (`demo-x`), which is
+  // `@moon_pyversion.Metadata::extras` reports the PEP 685 *compare* form (`demo-x`), which is
   // this library's documented choice, not the spelling the field holds.
   assert_eq(
     metadata_of(base_document() + "Provides-Extra: demo_x\n").extras(),

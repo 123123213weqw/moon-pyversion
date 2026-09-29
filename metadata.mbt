@@ -925,6 +925,15 @@ pub(all) struct Metadata {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend Metadata with Show::{output}
+
+///|
+pub extend Metadata with Eq::{equal, not_equal}
+
+///|
+pub extend Metadata with @debug.Debug::{to_repr}
+
+///|
 /// Parse and validate a `METADATA`/`PKG-INFO` document (PEP 566).
 ///
 /// The checks run in a fixed order, so the error a broken document reports is

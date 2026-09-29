@@ -20,12 +20,24 @@ pub(all) struct PackageAudit {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend PackageAudit with Eq::{equal, not_equal}
+
+///|
+pub extend PackageAudit with @debug.Debug::{to_repr}
+
+///|
 /// A stable machine-readable finding. `subject` identifies the project,
 /// version or filename involved without embedding whole input documents.
 pub(all) struct AuditIssue {
   code : String
   subject : String
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend AuditIssue with Eq::{equal, not_equal}
+
+///|
+pub extend AuditIssue with @debug.Debug::{to_repr}
 
 ///|
 /// Whether the requested dependency needs no action, is reproducibly ready,
@@ -35,6 +47,12 @@ pub(all) enum AuditDisposition {
   Ready
   Blocked
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend AuditDisposition with Eq::{equal, not_equal}
+
+///|
+pub extend AuditDisposition with @debug.Debug::{to_repr}
 
 ///|
 pub fn PackageAudit::disposition(self : PackageAudit) -> AuditDisposition {
@@ -407,6 +425,12 @@ pub(all) struct AuditInput {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend AuditInput with Eq::{equal, not_equal}
+
+///|
+pub extend AuditInput with @debug.Debug::{to_repr}
+
+///|
 /// An ordered set of package audits against one lock and one target. This is
 /// intentionally not a dependency resolver: it audits exactly the inputs the
 /// caller supplies and does not infer or fetch missing transitive projects.
@@ -414,6 +438,12 @@ pub(all) struct AuditBundle {
   reports : Array[PackageAudit]
   issues : Array[AuditIssue]
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend AuditBundle with Eq::{equal, not_equal}
+
+///|
+pub extend AuditBundle with @debug.Debug::{to_repr}
 
 ///|
 pub fn AuditBundle::disposition(self : AuditBundle) -> AuditDisposition {

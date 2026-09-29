@@ -36,8 +36,8 @@ fn lock_without_created_by(body : String) -> String {
 
 ///|
 /// Parse a document that must be valid.
-fn lock_of(text : String) -> Pylock {
-  Pylock::parse(text) catch {
+fn lock_of(text : String) -> @moon_pyversion.Pylock {
+  @moon_pyversion.Pylock::parse(text) catch {
     _ => abort("expected a valid lock file: \{text}")
   }
 }
@@ -47,10 +47,10 @@ fn lock_of(text : String) -> Pylock {
 /// test can assert *why* a document was rejected.
 fn lock_error(text : String) -> String {
   try {
-    ignore(Pylock::parse(text))
+    ignore(@moon_pyversion.Pylock::parse(text))
     "<accepted>"
   } catch {
-    VersionError::InvalidPylock(code, _) => code
+    @moon_pyversion.VersionError::InvalidPylock(code, _) => code
     other => "unexpected:\{other.diagnostic()}"
   }
 }
@@ -59,10 +59,11 @@ fn lock_error(text : String) -> String {
 /// The `(code, ordinal)` pair of a rejected document, or `("<accepted>", -1)`.
 fn lock_error_at(text : String) -> (String, Int) {
   try {
-    ignore(Pylock::parse(text))
+    ignore(@moon_pyversion.Pylock::parse(text))
     ("<accepted>", -1)
   } catch {
-    VersionError::InvalidPylock(code, ordinal) => (code, ordinal)
+    @moon_pyversion.VersionError::InvalidPylock(code, ordinal) =>
+      (code, ordinal)
     other => ("unexpected:\{other.diagnostic()}", -1)
   }
 }
@@ -106,7 +107,7 @@ fn assert_entry_codes(cases : Array[(String, String)]) -> Unit {
 
 ///|
 /// The single entry of a document that holds exactly one package.
-fn lock_entry(fields : String) -> PylockPackage {
+fn lock_entry(fields : String) -> @moon_pyversion.PylockPackage {
   lock_of(lock_document("\n[[packages]]\n" + fields)).packages()[0]
 }
 
@@ -116,9 +117,11 @@ fn lock_entry(fields : String) -> PylockPackage {
 /// The set-valued keys (`extras`, `dependency_groups`) are seeded empty rather
 /// than left out: a PEP 751 marker may test them, and an environment that cannot
 /// answer a key raises instead of answering. Tests that want the raising
-/// behaviour build their environment with `MarkerEnvironment::new` directly.
-fn marker_environment_of(pairs : Array[(String, String)]) -> MarkerEnvironment {
-  let environment = MarkerEnvironment::new()
+/// behaviour build their environment with `@moon_pyversion.MarkerEnvironment::new` directly.
+fn marker_environment_of(
+  pairs : Array[(String, String)],
+) -> @moon_pyversion.MarkerEnvironment {
+  let environment = @moon_pyversion.MarkerEnvironment::new()
   environment.set_names("extras", [])
   environment.set_names("dependency_groups", [])
   for pair in pairs {
@@ -209,7 +212,9 @@ test "pylock: a minimal lock file parses and every accessor is empty" {
   assert_true(entry.path is None)
   assert_false(entry.is_source_tree())
   assert_false(entry.is_direct_reference())
-  assert_false(lock.supports_python(Version::parse("2.7")) is false)
+  assert_false(
+    lock.supports_python(@moon_pyversion.Version::parse("2.7")) is false,
+  )
 }
 
 ///|
@@ -379,10 +384,16 @@ test "pylock: packages.requires-python must parse" {
   )
   assert_eq(entry.requires_python, Some(">=3.8"))
   assert_true(
-    entry.requires_python_set().unwrap().contains(Version::parse("3.12")),
+    entry
+    .requires_python_set()
+    .unwrap()
+    .contains(@moon_pyversion.Version::parse("3.12")),
   )
   assert_false(
-    entry.requires_python_set().unwrap().contains(Version::parse("3.7")),
+    entry
+    .requires_python_set()
+    .unwrap()
+    .contains(@moon_pyversion.Version::parse("3.7")),
   )
   assert_entry_codes([
     (
@@ -453,19 +464,24 @@ test "pylock: requires-python is a specifier set" {
   )
   assert_eq(lock.requires_python(), Some(">=3.9"))
   assert_true(
-    lock.requires_python_set().unwrap().contains(Version::parse("3.13")),
+    lock
+    .requires_python_set()
+    .unwrap()
+    .contains(@moon_pyversion.Version::parse("3.13")),
   )
-  assert_true(lock.supports_python(Version::parse("3.9")))
-  assert_false(lock.supports_python(Version::parse("3.8")))
+  assert_true(lock.supports_python(@moon_pyversion.Version::parse("3.9")))
+  assert_false(lock.supports_python(@moon_pyversion.Version::parse("3.8")))
   // A trailing comma is accepted: measured against `packaging`, whose
-  // `SpecifierSet(">=3.9,")` is `>=3.9`.
+  // `@moon_pyversion.SpecifierSet(">=3.9,")` is `>=3.9`.
   assert_eq(
     lock_of(lock_document("requires-python = \">=3.9,\"\npackages = []\n")).requires_python(),
     Some(">=3.9,"),
   )
   let unrestricted = lock_of(lock_document("packages = []\n"))
   assert_eq(unrestricted.requires_python(), None)
-  assert_true(unrestricted.supports_python(Version::parse("2.7")))
+  assert_true(
+    unrestricted.supports_python(@moon_pyversion.Version::parse("2.7")),
+  )
   assert_codes([
     (
       lock_document("requires-python = 3\npackages = []\n"),
@@ -1186,12 +1202,12 @@ test "pylock: is_applicable reports an environment key it was not given" {
   let entry = lock_entry(
     "name = \"spam\"\nversion = \"1.0\"\nmarker = \"python_version >= '3.8'\"\n",
   )
-  let empty = MarkerEnvironment::new()
+  let empty = @moon_pyversion.MarkerEnvironment::new()
   let raised = try {
     ignore(entry.is_applicable(empty))
     false
   } catch {
-    UndefinedEnvironmentName(_) => true
+    @moon_pyversion.UndefinedEnvironmentName(_) => true
     _ => false
   }
   assert_true(raised)
@@ -1209,11 +1225,11 @@ test "pylock: is_applicable reports an environment key it was not given" {
 ///|
 test "pylock: text that is not TOML is an InvalidToml, not an InvalidPylock" {
   let broken = try {
-    ignore(Pylock::parse("lock-version = \n"))
+    ignore(@moon_pyversion.Pylock::parse("lock-version = \n"))
     "<accepted>"
   } catch {
-    VersionError::InvalidToml(code, _) => code
-    VersionError::InvalidPylock(code, _) => "pylock:\{code}"
+    @moon_pyversion.VersionError::InvalidToml(code, _) => code
+    @moon_pyversion.VersionError::InvalidPylock(code, _) => "pylock:\{code}"
     other => "unexpected:\{other.diagnostic()}"
   }
   assert_false(broken == "<accepted>")

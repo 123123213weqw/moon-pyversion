@@ -60,6 +60,12 @@ pub(all) struct UpgradeCandidate {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend UpgradeCandidate with Eq::{equal, not_equal}
+
+///|
+pub extend UpgradeCandidate with @debug.Debug::{to_repr}
+
+///|
 /// Parse a candidate's version, and remember the `requires-python` it declares
 /// (if any) as text: this module compares it against the target interpreter, and
 /// the comparison is the only thing it needs it for.
@@ -90,6 +96,12 @@ pub(all) enum UpgradeRejection {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend UpgradeRejection with Eq::{equal, not_equal}
+
+///|
+pub extend UpgradeRejection with @debug.Debug::{to_repr}
+
+///|
 /// The stable spelling of a rejection rule, for reports and for the corpus.
 pub fn UpgradeRejection::code(self : UpgradeRejection) -> String {
   match self {
@@ -108,6 +120,9 @@ pub(all) struct UpgradePlan {
   shortlist : Array[UpgradeCandidate]
   dropped : Array[(UpgradeCandidate, UpgradeRejection)]
 } derive(@debug.Debug)
+
+///|
+pub extend UpgradePlan with @debug.Debug::{to_repr}
 
 ///|
 /// Decide the version part of an upgrade. See the module documentation for the
