@@ -190,3 +190,30 @@ issues: none
 此独立消费者使用确定的最小输入，不代替仓库中真实 PyPI 双包场景与四后端 CI；
 也不证明实际 wheel 内容的摘要或完整传递依赖可安装。对应 GitHub CI：
 `ba8a383` 的 [全部任务成功记录](https://github.com/123123213weqw/moon-pyversion/actions/runs/35520747149)。
+
+## 0.3.0 — 2026-09-30
+
+发布前验证（moonc 0.10.14，V100）：
+
+```sh
+moon fmt --check
+moon check --deny-warn          # 四后端逐一执行
+moon test --deny-warn           # 300 个测试块全过
+moon publish --dry-run          # Check passed, 202 Accepted
+```
+
+正式发布在 `123123213weqw` 登录态下执行 `moon publish`，服务端返回 `200 OK`，发布坐标：
+
+```text
+123123213weqw/moon_pyversion@0.3.0
+```
+
+mooncakes.io 页面确认 `0.3.0 (latest)`。独立消费验证：全新模块 `probe/consume_pyv`
+执行 `moon add 123123213weqw/moon_pyversion@0.3.0`（注意版本固定由 `moon add` 写入
+moon.mod 的 import，而不是 moon.pkg），`moon update` 输出
+`Downloading 123123213weqw/moon_pyversion@0.3.0`；消费测试调用 `Version::parse`、
+`SpecifierSet::parse/filter`（`1.0 == 1.0.0`、`>=1.0, !=1.4.*, <2.0` 过滤）结果
+`1/1` 通过。该验证不引用开发仓库相对路径。
+
+0.3.0 内容：0.2.0 之后积压的全部 Unreleased 工作（lock-aware 审计、M13 升级短名单、
+M12 标签生成、PEP 751 分歧定论）加上 moonc 0.10.14 迁移、API 快照门禁与基准示例。
