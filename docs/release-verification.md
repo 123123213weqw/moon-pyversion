@@ -217,3 +217,10 @@ moon.mod 的 import，而不是 moon.pkg），`moon update` 输出
 
 0.3.0 内容：0.2.0 之后积压的全部 Unreleased 工作（lock-aware 审计、M13 升级短名单、
 M12 标签生成、PEP 751 分歧定论）加上 moonc 0.10.14 迁移、API 快照门禁与基准示例。
+
+## 0.4.0 — 2026-10-01
+
+`moon publish` 返回 `200 OK`，坐标 `123123213weqw/moon_pyversion@0.4.0`。独立消费
+验证：全新模块 `moon add` 下载成功（索引重建一次，symbols CDN 超时为已知噪声），
+测试覆盖 is_prerelease/base_version 访问器与单条 Specifier::parse/contains，`1/1`
+通过。内容：packaging 对齐访问器、单条约束 API、版本政策。
