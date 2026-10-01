@@ -433,6 +433,61 @@ fn format_version(v : Version) -> String {
 }
 
 ///|
+
+///|
+/// True when the version carries a pre-release marker (a/b/rc), a dev
+/// marker, or both — the combined gate pip uses when a specifier did
+/// not opt into pre-releases.
+pub fn Version::is_prerelease(self : Version) -> Bool {
+  self.has_pre || self.has_dev
+}
+
+///|
+/// True when the version carries a post-release marker.
+pub fn Version::is_postrelease(self : Version) -> Bool {
+  self.has_post
+}
+
+///|
+/// True when the version carries a dev marker.
+pub fn Version::is_devrelease(self : Version) -> Bool {
+  self.has_dev
+}
+
+///|
+/// The public form: the version with local segments removed, e.g.
+/// 1.0+abc -> 1.0. Mirrors the spec's "public version" notion used for
+/// equality against local-ignoring constraints.
+pub fn Version::public(self : Version) -> String {
+  if self.local_segments.length() == 0 {
+    return self.to_string()
+  }
+  let stripped : Version = { ..self, local_segments: [], }
+  stripped.to_string()
+}
+
+///|
+/// The release-only form: epoch and release components with pre, post,
+/// dev, and local segments dropped, e.g. 1.0.1rc1 -> 1.0.1. This is
+/// what "the next release would be" comparisons want.
+pub fn Version::base_version(self : Version) -> String {
+  let stripped : Version = {
+    ..self,
+    has_pre: false,
+    has_post: false,
+    has_dev: false,
+    local_segments: [],
+  }
+  stripped.to_string()
+}
+
+///|
+/// The epoch component as an integer string ("0" for the common case).
+pub fn Version::epoch_string(self : Version) -> String {
+  self.epoch.to_string()
+}
+
+///|
 pub fn Version::to_string(self : Version) -> String {
   format_version(self)
 }
