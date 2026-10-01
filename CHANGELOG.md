@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0 — 2026-10-01
+
+- packaging-parity Version accessors: is_prerelease (pre or dev marker,
+  the gate pip applies), is_postrelease, is_devrelease, public (local
+  segments stripped), base_version (pre/post/dev/local stripped — the
+  next-release comparison form), epoch_string.
+- Single-specifier API: Specifier::parse reads one constraint term
+  without set syntax and Specifier::contains tests it against a
+  version with the same single-candidate prerelease policy as
+  SpecifierSet::contains.
+- Versioning policy documented (VERSIONING.md): frozen machine
+  interfaces (stable issue codes, byte-stable canonicalized output),
+  spec-revision handling, release checklist.
+- Proposal refreshed to 0.3.0+ engineering facts (10,242 production
+  lines, three CI gates, moonc 0.10.14 migration, benchmark posture).
+
 ## 0.3.0 — 2026-09-29
 
 Collects everything since 0.2.0: the lock-aware audit and multi-project
