@@ -364,6 +364,30 @@ fn SpecifierSet::allows_prereleases(self : SpecifierSet) -> Bool {
 }
 
 ///|
+
+///|
+/// Parse one constraint term (e.g. ">=1.4" or "!=1.4.*") without the
+/// surrounding set syntax; mirrors pypa/packaging's Specifier constructor.
+pub fn Specifier::parse(input : String) -> Self raise VersionError {
+  parse_specifier(input)
+}
+
+///|
+/// Test one constraint term against a version. A prerelease candidate is
+/// rejected only when the caller explicitly opts out, matching the
+/// single-candidate policy of SpecifierSet::contains.
+pub fn Specifier::contains(
+  self : Specifier,
+  version : Version,
+  prereleases? : Bool? = None,
+) -> Bool {
+  if version_is_prerelease(version) && prereleases == Some(false) {
+    return false
+  }
+  specifier_contains(self, version)
+}
+
+///|
 pub fn SpecifierSet::contains(
   self : SpecifierSet,
   version : Version,
