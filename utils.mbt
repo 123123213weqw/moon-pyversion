@@ -65,17 +65,13 @@ fn is_identifier(text : String) -> Bool {
 }
 
 ///|
-/// PEP 503 name normalization: lowercase, then collapse every run of `-`, `_`
-/// and `.` into a single `-`.
-///
-/// Leading and trailing separators survive as a single `-`, matching
-/// `packaging`: `canonicalize_name("-foo-") == "-foo-"`.
-///
-/// ```moonbit nocheck
-/// canonicalize_name("Flask")                 // "flask"
-/// canonicalize_name("importlib_metadata")    // "importlib-metadata"
-/// canonicalize_name("zope.interface")        // "zope-interface"
-/// canonicalize_name("Foo__Bar")              // "foo-bar"
+/// ```mbt check
+/// test {
+///   inspect(
+///     @moon_pyversion.canonicalize_name("Flask_Login"),
+///     content="flask-login",
+///   )
+/// }
 /// ```
 pub fn canonicalize_name(name : String) -> String {
   let out : Array[Char] = []

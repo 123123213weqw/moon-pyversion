@@ -435,9 +435,12 @@ fn format_version(v : Version) -> String {
 ///|
 
 ///|
-/// True when the version carries a pre-release marker (a/b/rc), a dev
-/// marker, or both — the combined gate pip uses when a specifier did
-/// not opt into pre-releases.
+/// ```mbt check
+/// test {
+///   let v = @moon_pyversion.Version::parse("1.0rc1")
+///   inspect(@moon_pyversion.Version::is_prerelease(v), content="true")
+/// }
+/// ```
 pub fn Version::is_prerelease(self : Version) -> Bool {
   self.has_pre || self.has_dev
 }
@@ -467,9 +470,12 @@ pub fn Version::public(self : Version) -> String {
 }
 
 ///|
-/// The release-only form: epoch and release components with pre, post,
-/// dev, and local segments dropped, e.g. 1.0.1rc1 -> 1.0.1. This is
-/// what "the next release would be" comparisons want.
+/// ```mbt check
+/// test {
+///   let v = @moon_pyversion.Version::parse("1.0rc1.post2+local")
+///   inspect(@moon_pyversion.Version::base_version(v), content="1.0")
+/// }
+/// ```
 pub fn Version::base_version(self : Version) -> String {
   let stripped : Version = {
     ..self,

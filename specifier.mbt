@@ -373,9 +373,13 @@ pub fn Specifier::parse(input : String) -> Self raise VersionError {
 }
 
 ///|
-/// Test one constraint term against a version. A prerelease candidate is
-/// rejected only when the caller explicitly opts out, matching the
-/// single-candidate policy of SpecifierSet::contains.
+/// ```mbt check
+/// test {
+///   let spec = @moon_pyversion.Specifier::parse(">=1.4")
+///   let hit = @moon_pyversion.Version::parse("1.5")
+///   inspect(@moon_pyversion.Specifier::contains(spec, hit), content="true")
+/// }
+/// ```
 pub fn Specifier::contains(
   self : Specifier,
   version : Version,
@@ -408,6 +412,19 @@ pub fn SpecifierSet::contains(
 }
 
 ///|
+/// ```mbt check
+/// test {
+///   let spec = @moon_pyversion.SpecifierSet::parse(">=1.0, <2.0")
+///   let candidates = [
+///     @moon_pyversion.Version::parse("0.9"),
+///     @moon_pyversion.Version::parse("1.5"),
+///   ]
+///   inspect(
+///     @moon_pyversion.SpecifierSet::filter(candidates, spec).length(),
+///     content="1",
+///   )
+/// }
+/// ```
 pub fn SpecifierSet::filter(
   versions : Array[Version],
   spec : SpecifierSet,
