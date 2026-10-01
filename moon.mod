@@ -1,6 +1,6 @@
 name = "123123213weqw/moon_pyversion"
 
-version = "0.4.0"
+version = "0.4.1"
 
 readme = "README.mbt.md"
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 — 2026-10-01
+
+- Executable documentation: five core entry points (is_prerelease,
+  base_version, Specifier::contains, SpecifierSet::filter,
+  canonicalize_name) carry mbt-check examples executed by moon test.
+
 ## 0.4.0 — 2026-10-01
 
 - packaging-parity Version accessors: is_prerelease (pre or dev marker,
