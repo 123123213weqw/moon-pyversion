@@ -1,5 +1,62 @@
 # Changelog
 
+## 0.5.0 — 2026-11-12
+
+The judgment core: six new capabilities that turn parsed metadata into
+answers, wired end to end from a requirement string to a named failure
+list and from a raw index file to viable installation candidates.
+
+Requirement::satisfied_by answers the PEP 508 question in one call -
+Satisfied, VersionRejected (with the constraint rendering),
+MarkerRejected (with the marker text), or EvalError when PEP 508 makes
+the marker unanswerable (unknown variable, set membership against an
+unset extras value: an error, never a silent false). Version rejection
+takes priority; the marker is never consulted for a version that
+cannot pass. satisfied_by_version is the markerless shortcut with the
+prerelease policy flowing through.
+
+all_satisfied_by runs the resolver's outer loop over a whole
+requirement list, one candidate version per project through a lookup
+function - because a single version cannot serve requirements about
+different projects. Four named failure kinds: no candidate for the
+project, version outside the constraint set (canonical rendering),
+marker false, marker error. None when all agree.
+
+MarkerEnvironment::from_runtime builds the marker environment from
+four facts the caller actually has - python full version,
+implementation name, platform system, machine architecture - deriving
+python_version (first two components, refusing an under-specified
+version) and sys_platform (windows becomes win32). Everything else
+stays unset so PEP 508's error semantics hold.
+
+PyProject bridges pyproject.toml to those calls: from_toml reads the
+[project] table (canonicalized name, marker-preserving dependencies,
+requires-python, optional-dependencies keyed by canonical extra),
+refusing a malformed dependency entry by name rather than
+understating the project. check_runtime runs the whole chain from
+four runtime facts: the python gate first (it governs whether the
+project may be installed), then every dependency through
+all_satisfied_by. with_extra appends a declared extra's requirements
+and refuses an undeclared extra.
+
+select_candidates is the pip-side mirror: which file entries of a
+PEP 691 simple index are viable on this runtime. Version from the
+filename (wheel or sdist parser; junk names are excluded and named,
+not aborts), then the gates in order - yanked with reason,
+requires-python against the runtime, the caller's constraint set,
+and the prerelease policy last (pip's default: prefer finals, fall
+back to prereleases when no final survives). The answer is both
+lists: candidates in index order and every exclusion with its named
+reason.
+
+Also in this release: the models operation on moon-historycheck (a
+sibling repository) is not part of this module - this entry records
+only moon_pyversion's own surface. The toolchain pin moves to
+0.1.20261104 (the #derive syntax the tree now uses); CI installs it
+from this repository's own release asset after hustcer/setup-moonbit's
+core bundling became incompatible with the newest core layout.
+
+## 0.4.1
 ## 0.4.1 — 2026-10-01
 
 - Executable documentation: five core entry points (is_prerelease,
