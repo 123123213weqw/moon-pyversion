@@ -57,7 +57,7 @@ fn lock_error(text : String) -> String {
 
 ///|
 /// The `(code, ordinal)` pair of a rejected document, or `("<accepted>", -1)`.
-fn lock_error_at(text : String) -> (String, Int) {
+fn lock_error_at(text : String) -> (String, Int32) {
   try {
     ignore(@moon_pyversion.Pylock::parse(text))
     ("<accepted>", -1)
@@ -79,7 +79,7 @@ fn assert_lock_error(text : String, code : String) -> Unit {
 
 ///|
 /// Assert that a document is rejected with `code` at `ordinal`.
-fn assert_lock_error_at(text : String, code : String, ordinal : Int) -> Unit {
+fn assert_lock_error_at(text : String, code : String, ordinal : Int32) -> Unit {
   let outcome = lock_error_at(text)
   if outcome.0 != code || outcome.1 != ordinal {
     abort(

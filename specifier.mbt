@@ -63,7 +63,7 @@ fn split_specifier_list(input : String) -> Array[String] {
 }
 
 ///|
-fn parse_operator(text : String) -> (SpecifierOp, Int) raise VersionError {
+fn parse_operator(text : String) -> (SpecifierOp, Int32) raise VersionError {
   if text.has_prefix("===") {
     (ArbitraryEqual, 3)
   } else if text.has_prefix("~=") {
@@ -286,7 +286,7 @@ fn compatible_contains(v : Version, spec_v : Version) -> Bool {
 }
 
 ///|
-fn compare_without_local(left : Version, right : Version) -> Int {
+fn compare_without_local(left : Version, right : Version) -> Int32 {
   let l = { ..left, local_segments: [], }
   let r = { ..right, local_segments: [], }
   l.compare(r)
@@ -386,7 +386,7 @@ pub fn Specifier::parse(input : String) -> Self raise VersionError {
 pub fn Specifier::contains(
   self : Specifier,
   version : Version,
-  prereleases? : Bool? = None,
+  prereleases~ : Bool? = None,
 ) -> Bool {
   if version_is_prerelease(version) && prereleases == Some(false) {
     return false
@@ -398,7 +398,7 @@ pub fn Specifier::contains(
 pub fn SpecifierSet::contains(
   self : SpecifierSet,
   version : Version,
-  prereleases? : Bool? = None,
+  prereleases~ : Bool? = None,
 ) -> Bool {
   // packaging >=26: a single candidate has no stable alternative, so the
   // automatic policy permits prereleases. filter has the full candidate set.
@@ -431,7 +431,7 @@ pub fn SpecifierSet::contains(
 pub fn SpecifierSet::filter(
   versions : Array[Version],
   spec : SpecifierSet,
-  prereleases? : Bool? = None,
+  prereleases~ : Bool? = None,
 ) -> Array[Version] {
   let out : Array[Version] = []
   let pre : Array[Version] = []

@@ -37,7 +37,7 @@
 
 ///|
 /// The `(code, offset)` a JSON text is rejected with, or `("<accepted>", -1)`.
-fn json_error_at(text : String) -> (String, Int) {
+fn json_error_at(text : String) -> (String, Int32) {
   try {
     ignore(@moon_pyversion.parse_json(text))
     ("<accepted>", -1)
@@ -122,7 +122,7 @@ fn json_escape_with(c : Char) -> String {
 ///|
 /// `open` repeated `depth` times around the scalar `1`, closed by `close`
 /// repeated `depth` times, e.g. `("[", "]")` or `("{\"a\":", "}")`.
-fn nested_json(open : String, close : String, depth : Int) -> String {
+fn nested_json(open : String, close : String, depth : Int32) -> String {
   let builder = StringBuilder()
   for i = 0; i < depth; i = i + 1 {
     builder.write_string(open)
@@ -137,7 +137,7 @@ fn nested_json(open : String, close : String, depth : Int) -> String {
 ///|
 /// The `(code, ordinal)` a simple-index document is rejected with, or
 /// `("<accepted>", -1)`.
-fn index_error_at(json : String) -> (String, Int) {
+fn index_error_at(json : String) -> (String, Int32) {
   try {
     ignore(@moon_pyversion.SimpleIndex::parse(json))
     ("<accepted>", -1)
@@ -253,7 +253,7 @@ fn index_filenames_of(
 /// The `(code, ordinal)` of a `@moon_pyversion.wheels()`/`@moon_pyversion.sdists()` classification failure, or
 /// `("<accepted>", -1)`. The document itself must parse, so a failure here is
 /// unambiguously a classification failure.
-fn classify_error(json : String, wheels : Bool) -> (String, Int) {
+fn classify_error(json : String, wheels : Bool) -> (String, Int32) {
   try {
     let index = @moon_pyversion.SimpleIndex::parse(json)
     if wheels {
@@ -371,7 +371,7 @@ fn fixture_index() -> @moon_pyversion.LocalIndex {
 fn scan_with_error(
   directory : String,
   lister : @moon_pyversion.DirectoryLister,
-) -> (String, Int) {
+) -> (String, Int32) {
   try {
     ignore(@moon_pyversion.LocalIndex::scan(directory, lister~))
     ("<accepted>", -1)
@@ -384,7 +384,7 @@ fn scan_with_error(
 ///|
 /// The `(code, ordinal)` of `@moon_pyversion.LocalIndex::scan` called without a lister, which
 /// exercises the default one.
-fn scan_default_error(directory : String) -> (String, Int) {
+fn scan_default_error(directory : String) -> (String, Int32) {
   try {
     ignore(@moon_pyversion.LocalIndex::scan(directory))
     ("<accepted>", -1)
@@ -536,8 +536,8 @@ test "json: the two-character escapes decode" {
     ('"', '"'),
     ('\\', '\\'),
     ('/', '/'),
-    ('b', Int::unsafe_to_char(0x08)),
-    ('f', Int::unsafe_to_char(0x0C)),
+    ('b', Int32::unsafe_to_char(0x08)),
+    ('f', Int32::unsafe_to_char(0x0C)),
     ('n', '\n'),
     ('r', '\r'),
     ('t', '\t'),
@@ -555,11 +555,11 @@ test "json: \\uXXXX decodes BMP, NUL and surrogate pairs" {
   assert_eq(json_string_of("\"\\u0041\""), "A")
   assert_eq(
     json_string_of("\"\\u00E9\""),
-    String::from_array([Int::unsafe_to_char(0xE9)]),
+    String::from_array([Int32::unsafe_to_char(0xE9)]),
   )
   assert_eq(
     json_string_of("\"\\u0000\""),
-    String::from_array([Int::unsafe_to_char(0)]),
+    String::from_array([Int32::unsafe_to_char(0)]),
   )
   let pair = json_string_of("\"\\uD83D\\uDE00\"")
   assert_eq(pair, "\u{1F600}")
@@ -647,26 +647,26 @@ test "json: literals are exact and bare words are refused" {
 /// and the C1 range are ordinary characters.
 test "json: control characters must be escaped, DEL and C1 need not be" {
   assert_json_error(
-    json_string_with(Int::unsafe_to_char(0)),
+    json_string_with(Int32::unsafe_to_char(0)),
     "JSON_CONTROL_CHAR",
   )
   assert_json_error(
-    json_string_with(Int::unsafe_to_char(1)),
+    json_string_with(Int32::unsafe_to_char(1)),
     "JSON_CONTROL_CHAR",
   )
   assert_json_error(json_string_with('\t'), "JSON_CONTROL_CHAR")
   assert_json_error(json_string_with('\n'), "JSON_CONTROL_CHAR")
   assert_json_error(
-    json_string_with(Int::unsafe_to_char(0x1F)),
+    json_string_with(Int32::unsafe_to_char(0x1F)),
     "JSON_CONTROL_CHAR",
   )
   assert_eq(
-    json_string_of(json_string_with(Int::unsafe_to_char(0x7F))),
-    String::from_array([Int::unsafe_to_char(0x7F)]),
+    json_string_of(json_string_with(Int32::unsafe_to_char(0x7F))),
+    String::from_array([Int32::unsafe_to_char(0x7F)]),
   )
   assert_eq(
-    json_string_of(json_string_with(Int::unsafe_to_char(0x85))),
-    String::from_array([Int::unsafe_to_char(0x85)]),
+    json_string_of(json_string_with(Int32::unsafe_to_char(0x85))),
+    String::from_array([Int32::unsafe_to_char(0x85)]),
   )
 }
 

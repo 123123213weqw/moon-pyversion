@@ -328,7 +328,7 @@ fn marker_is_space(c : Char) -> Bool {
 /// A cursor over the characters of a marker expression.
 priv struct MarkerParser {
   chars : Array[Char]
-  mut pos : Int
+  mut pos : Int32
 }
 
 ///|
@@ -353,7 +353,11 @@ fn MarkerParser::skip_space(self : MarkerParser) -> Unit {
 }
 
 ///|
-fn MarkerParser::slice(self : MarkerParser, start : Int, stop : Int) -> String {
+fn MarkerParser::slice(
+  self : MarkerParser,
+  start : Int32,
+  stop : Int32,
+) -> String {
   String::from_array(self.chars[start:stop].to_owned())
 }
 
@@ -361,7 +365,7 @@ fn MarkerParser::slice(self : MarkerParser, start : Int, stop : Int) -> String {
 /// A word boundary in the sense of the Python `\b` anchor: exactly one of the
 /// characters on either side of `index` is a word character. `index` may equal
 /// the length, meaning end of input.
-fn marker_boundary(chars : Array[Char], index : Int) -> Bool {
+fn marker_boundary(chars : Array[Char], index : Int32) -> Bool {
   let left_word = index > 0 && is_word_char(chars[index - 1])
   let right_word = index < chars.length() && is_word_char(chars[index])
   left_word != right_word
@@ -446,7 +450,7 @@ fn MarkerParser::read_quoted(self : MarkerParser) -> String? raise VersionError 
 /// one documented gap: it is reported as unrepresentable rather than decoded.
 fn decode_python_string(
   raw : String,
-  offset : Int,
+  offset : Int32,
 ) -> String raise VersionError {
   if !raw.contains("\\") {
     return raw
@@ -475,16 +479,16 @@ fn decode_python_string(
       out.write_char('\t')
       i = i + 2
     } else if next == 'b' {
-      out.write_char(Int::unsafe_to_char(8))
+      out.write_char(Int32::unsafe_to_char(8))
       i = i + 2
     } else if next == 'f' {
-      out.write_char(Int::unsafe_to_char(12))
+      out.write_char(Int32::unsafe_to_char(12))
       i = i + 2
     } else if next == 'v' {
-      out.write_char(Int::unsafe_to_char(11))
+      out.write_char(Int32::unsafe_to_char(11))
       i = i + 2
     } else if next == 'a' {
-      out.write_char(Int::unsafe_to_char(7))
+      out.write_char(Int32::unsafe_to_char(7))
       i = i + 2
     } else if next == '\\' || next == '\'' || next == '"' {
       out.write_char(next)
@@ -492,7 +496,7 @@ fn decode_python_string(
     } else if next == 'x' {
       match read_hex(chars, i + 2, 2) {
         Some(value) => {
-          out.write_char(Int::unsafe_to_char(value))
+          out.write_char(Int32::unsafe_to_char(value))
           i = i + 4
         }
         None =>
@@ -501,7 +505,7 @@ fn decode_python_string(
     } else if next == 'u' {
       match read_hex(chars, i + 2, 4) {
         Some(value) => {
-          out.write_char(Int::unsafe_to_char(value))
+          out.write_char(Int32::unsafe_to_char(value))
           i = i + 6
         }
         None =>
@@ -521,7 +525,7 @@ fn decode_python_string(
         value = value * 8 + (chars[i + 1 + used].to_int() - '0'.to_int())
         used = used + 1
       }
-      out.write_char(Int::unsafe_to_char(value))
+      out.write_char(Int32::unsafe_to_char(value))
       i = i + 1 + used
     } else {
       // An unrecognised escape keeps its backslash, as Python does.
@@ -539,7 +543,7 @@ fn is_octal_digit(c : Char) -> Bool {
 
 ///|
 /// Read exactly `width` hexadecimal digits, or nothing.
-fn read_hex(chars : Array[Char], start : Int, width : Int) -> Int? {
+fn read_hex(chars : Array[Char], start : Int32, width : Int32) -> Int32? {
   if start + width > chars.length() {
     return None
   }
@@ -554,7 +558,7 @@ fn read_hex(chars : Array[Char], start : Int, width : Int) -> Int? {
 }
 
 ///|
-fn hex_value(c : Char) -> Int? {
+fn hex_value(c : Char) -> Int32? {
   if c >= '0' && c <= '9' {
     Some(c.to_int() - '0'.to_int())
   } else if c >= 'a' && c <= 'f' {

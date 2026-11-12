@@ -15,7 +15,7 @@ fn demo_metadata(version : String) -> String {
 }
 
 ///|
-fn demo_index(with_hash? : Bool = true) -> String {
+fn demo_index(with_hash~ : Bool = true) -> String {
   let hash = if with_hash { "\"sha256\":\"aa\"" } else { "" }
   "{\"meta\":{\"api-version\":\"1.1\"},\"name\":\"demo-pkg\",\"files\":[" +
   "{\"filename\":\"demo_pkg-1.1-py3-none-any.whl\",\"url\":\"https://example.invalid/1.1.whl\",\"hashes\":{" +

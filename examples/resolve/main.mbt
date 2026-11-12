@@ -141,7 +141,7 @@ fn demo_index() -> String {
 /// `text` padded on the right with spaces to `width`, or unchanged when it is
 /// already at least that wide. `String::length` counts code points, which is
 /// what a fixed-width column needs for the ASCII names here.
-fn pad(text : String, width : Int) -> String {
+fn pad(text : String, width : Int32) -> String {
   let mut out = text
   let mut width_left = width - text.length()
   while width_left > 0 {
@@ -228,7 +228,7 @@ fn rejection_rules() -> Array[String] {
 fn count_reason(
   rejections : Array[(String, String)],
   reason : String,
-) -> (Int, String?) {
+) -> (Int32, String?) {
   let mut count = 0
   let mut first : String? = None
   for entry in rejections {

@@ -4,18 +4,18 @@
 /// meaningful, a UTF-16 offset.
 #derive(Eq, @debug.Debug)
 pub(all) suberror VersionError {
-  InvalidVersion(String, Int)
-  InvalidSpecifier(String, Int)
-  InvalidName(String, Int)
-  InvalidFilename(String, Int)
-  InvalidRequirement(String, Int)
-  InvalidMarker(String, Int)
-  InvalidToml(String, Int)
-  InvalidLicense(String, Int)
-  InvalidMetadata(String, Int)
-  InvalidIndex(String, Int)
-  InvalidPylock(String, Int)
-  InvalidTag(String, Int)
+  InvalidVersion(String, Int32)
+  InvalidSpecifier(String, Int32)
+  InvalidName(String, Int32)
+  InvalidFilename(String, Int32)
+  InvalidRequirement(String, Int32)
+  InvalidMarker(String, Int32)
+  InvalidToml(String, Int32)
+  InvalidLicense(String, Int32)
+  InvalidMetadata(String, Int32)
+  InvalidIndex(String, Int32)
+  InvalidPylock(String, Int32)
+  InvalidTag(String, Int32)
 }
 
 ///|
@@ -74,7 +74,7 @@ pub(all) struct Version {
   epoch : @bigint.BigInt
   release : Array[@bigint.BigInt]
   has_pre : Bool
-  pre_kind : Int
+  pre_kind : Int32
   pre_num : @bigint.BigInt
   has_post : Bool
   post_num : @bigint.BigInt
@@ -98,31 +98,31 @@ pub extend Version with @debug.Debug::{to_repr}
 ///|
 priv struct Cursor {
   source : String
-  mut pos : Int
+  mut pos : Int32
 }
 
 ///|
-fn is_digit(c : Int) -> Bool {
+fn is_digit(c : Int32) -> Bool {
   c >= 48 && c <= 57
 }
 
 ///|
-fn is_ascii_letter(c : Int) -> Bool {
+fn is_ascii_letter(c : Int32) -> Bool {
   (c >= 65 && c <= 90) || (c >= 97 && c <= 122)
 }
 
 ///|
-fn is_alnum(c : Int) -> Bool {
+fn is_alnum(c : Int32) -> Bool {
   is_digit(c) || is_ascii_letter(c)
 }
 
 ///|
-fn is_separator(c : Int) -> Bool {
+fn is_separator(c : Int32) -> Bool {
   c == 46 || c == 45 || c == 95
 }
 
 ///|
-fn Cursor::peek(self : Cursor) -> Int {
+fn Cursor::peek(self : Cursor) -> Int32 {
   if self.pos >= self.source.length() {
     -1
   } else {
@@ -131,7 +131,7 @@ fn Cursor::peek(self : Cursor) -> Int {
 }
 
 ///|
-fn Cursor::peek_at(self : Cursor, offset : Int) -> Int {
+fn Cursor::peek_at(self : Cursor, offset : Int32) -> Int32 {
   let idx = self.pos + offset
   if idx >= self.source.length() {
     -1
@@ -170,7 +170,7 @@ fn Cursor::match_label(self : Cursor, label : String) -> Bool {
 ///|
 /// Returns `(kind, length)` where kind is 1..3 for a/b/rc pre-releases,
 /// 4 for post-releases, and 5 for dev-releases.
-fn Cursor::suffix_info(self : Cursor) -> (Int, Int) {
+fn Cursor::suffix_info(self : Cursor) -> (Int32, Int32) {
   if self.match_label("alpha") {
     (1, 5)
   } else if self.match_label("beta") {
@@ -214,7 +214,7 @@ fn Cursor::consume_separator(self : Cursor) -> Bool {
 /// Match a suffix label `offset` characters ahead of the cursor without
 /// moving it. Returns `(kind, length)` with the same meaning as
 /// `Cursor::suffix_info`.
-fn Cursor::label_at(self : Cursor, offset : Int) -> (Int, Int) {
+fn Cursor::label_at(self : Cursor, offset : Int32) -> (Int32, Int32) {
   let saved = self.pos
   self.pos += offset
   let (kind, len) = self.suffix_info()
@@ -227,7 +227,7 @@ fn Cursor::label_at(self : Cursor, offset : Int) -> (Int, Int) {
 /// previous component (`1.0post1`) or introduced by any single separator
 /// (`1.0.post1`, `1.0-post1`). The separator is part of the match only when a
 /// label follows it; otherwise it stays available for the next suffix group.
-fn Cursor::peek_suffix(self : Cursor) -> (Int, Int) {
+fn Cursor::peek_suffix(self : Cursor) -> (Int32, Int32) {
   let (direct_kind, direct_len) = self.label_at(0)
   if direct_kind != 0 {
     return (direct_kind, direct_len)
@@ -516,8 +516,8 @@ pub fn Version::normalize(input : String) -> String raise VersionError {
 fn compare_bigint_arrays(
   left : Array[@bigint.BigInt],
   right : Array[@bigint.BigInt],
-) -> Int {
-  let len = Int::max(left.length(), right.length())
+) -> Int32 {
+  let len = Int32::max(left.length(), right.length())
   for i = 0; i < len; i = i + 1 {
     let l = if i < left.length() {
       left[i]
@@ -538,7 +538,7 @@ fn compare_bigint_arrays(
 }
 
 ///|
-fn compare_numeric_local(left : String, right : String) -> Int {
+fn compare_numeric_local(left : String, right : String) -> Int32 {
   if left.length() != right.length() {
     left.length().compare(right.length())
   } else {
@@ -547,8 +547,8 @@ fn compare_numeric_local(left : String, right : String) -> Int {
 }
 
 ///|
-fn compare_local(left : Array[LocalPart], right : Array[LocalPart]) -> Int {
-  let len = Int::min(left.length(), right.length())
+fn compare_local(left : Array[LocalPart], right : Array[LocalPart]) -> Int32 {
+  let len = Int32::min(left.length(), right.length())
   for i = 0; i < len; i = i + 1 {
     let l = left[i]
     let r = right[i]
@@ -574,7 +574,7 @@ fn compare_local(left : Array[LocalPart], right : Array[LocalPart]) -> Int {
 }
 
 ///|
-pub fn Version::compare(left : Version, right : Version) -> Int {
+pub fn Version::compare(left : Version, right : Version) -> Int32 {
   let c_epoch = left.epoch.compare(right.epoch)
   if c_epoch != 0 {
     return c_epoch

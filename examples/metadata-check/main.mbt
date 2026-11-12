@@ -165,7 +165,7 @@ fn report(
   name : String,
   document : String,
   lock : Array[(String, String)],
-) -> Int {
+) -> Int32 {
   println("== \{name}")
   let metadata = @pyversion.Metadata::parse(document) catch {
     error => {
@@ -282,7 +282,7 @@ fn lock_document() -> String {
 fn applicable_lock(
   document : String,
   environment : @pyversion.MarkerEnvironment,
-) -> (Array[(String, String)], Int) {
+) -> (Array[(String, String)], Int32) {
   let lock = @pyversion.Pylock::parse(document) catch {
     _ => abort("the lock document this example compiles in must parse")
   }

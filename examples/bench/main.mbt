@@ -54,7 +54,7 @@ fn main raise {
 }
 
 ///|
-fn parse_probe(versions : Array[String]) -> (Int, Int) {
+fn parse_probe(versions : Array[String]) -> (Int32, Int32) {
   let mut ok = 0
   let mut fail = 0
   for v in versions {

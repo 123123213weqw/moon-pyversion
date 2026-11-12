@@ -44,7 +44,7 @@
 /// The first two entries of a version, the way Python's `python_version[:2]`
 /// behaves: a slice clamps instead of raising, so a major-only version yields
 /// one entry.
-fn first_two(version : Array[Int]) -> Array[Int] {
+fn first_two(version : Array[Int32]) -> Array[Int32] {
   if version.length() <= 2 {
     return version.copy()
   }
@@ -54,7 +54,7 @@ fn first_two(version : Array[Int]) -> Array[Int] {
 ///|
 /// `[3, 10]` becomes `"310"`, `[3]` becomes `"3"`, the way `packaging`'s
 /// `_version_nodot` spells an interpreter version.
-fn version_nodot(version : Array[Int]) -> String {
+fn version_nodot(version : Array[Int32]) -> String {
   let sb = StringBuilder()
   for part in version {
     sb.write_string(part.to_string())
@@ -106,7 +106,7 @@ fn is_threaded_cpython(abis : Array[String]) -> Bool {
 /// The tuple comparison `python_version >= (3, 2)` the reference uses for the
 /// two stable-ABI decisions. A one-element version (a major version only) never
 /// supports them, which is what `len(python_version) > 1` says there.
-fn at_least_3_2(python_version : Array[Int]) -> Bool {
+fn at_least_3_2(python_version : Array[Int32]) -> Bool {
   if python_version.length() < 2 {
     return false
   }
@@ -116,7 +116,7 @@ fn at_least_3_2(python_version : Array[Int]) -> Bool {
 ///|
 /// `packaging`'s `_abi3_applies`: PEP 384 landed in 3.2, and a free-threaded
 /// build does not support the stable ABI.
-fn abi3_applies(python_version : Array[Int], threading : Bool) -> Bool {
+fn abi3_applies(python_version : Array[Int32], threading : Bool) -> Bool {
   at_least_3_2(python_version) && !threading
 }
 
@@ -124,7 +124,7 @@ fn abi3_applies(python_version : Array[Int], threading : Bool) -> Bool {
 /// `packaging`'s `_abi3t_applies`: PEP 803's threaded stable ABI, which the
 /// reference generates back to 3.2 as well, to leave room for `abi3t` wheels
 /// that support older limited-API versions.
-fn abi3t_applies(python_version : Array[Int], threading : Bool) -> Bool {
+fn abi3t_applies(python_version : Array[Int32], threading : Bool) -> Bool {
   at_least_3_2(python_version) && threading
 }
 
@@ -159,7 +159,7 @@ fn remove_first(items : Array[String], value : String) -> Unit {
 /// //  "cp312-none-linux_x86_64", "cp311-abi3-linux_x86_64", ...]
 /// ```
 pub fn cpython_tags(
-  python_version : Array[Int],
+  python_version : Array[Int32],
   abis : Array[String],
   platforms : Array[String],
 ) -> Array[String] raise VersionError {
@@ -268,7 +268,7 @@ pub fn generic_tags(
 /// supports without a compiled component, in `packaging`'s
 /// `_py_interpreter_range` order -- the exact version, then the major-only one,
 /// then every earlier minor of that major.
-fn py_interpreter_range(python_version : Array[Int]) -> Array[String] {
+fn py_interpreter_range(python_version : Array[Int32]) -> Array[String] {
   let out : Array[String] = []
   if python_version.length() > 1 {
     out.push("py\{version_nodot(first_two(python_version))}")
@@ -289,7 +289,7 @@ fn py_interpreter_range(python_version : Array[Int]) -> Array[String] {
 /// are the only tags whose computation does not depend on the target platform
 /// at all, which is why a single-platform library can still ship them.
 pub fn pure_python_tags(
-  python_version : Array[Int],
+  python_version : Array[Int32],
 ) -> Array[String] raise VersionError {
   if python_version.length() == 0 {
     raise VersionError::InvalidTag("TAG_VERSION_REQUIRED", 0)
@@ -310,7 +310,7 @@ pub fn pure_python_tags(
 /// `interpreter` may be `None` (an unnamed interpreter) or an empty string: the
 /// reference tests truthiness, so both mean "do not emit that line".
 pub fn compatible_tags(
-  python_version : Array[Int],
+  python_version : Array[Int32],
   interpreter : String?,
   platforms : Array[String],
 ) -> Array[String] raise VersionError {
@@ -345,7 +345,7 @@ pub fn compatible_tags(
 /// predates the architecture is not an error -- it is how the reference says
 /// "no such wheel can exist", and it is what keeps `mac_platforms("10.3",
 /// "x86_64")` from inventing tags.
-fn mac_binary_formats(version : (Int, Int), arch : String) -> Array[String] {
+fn mac_binary_formats(version : (Int32, Int32), arch : String) -> Array[String] {
   let formats : Array[String] = [arch]
   if arch == "x86_64" {
     if version < (10, 4) {
@@ -396,7 +396,7 @@ fn mac_binary_formats(version : (Int, Int), arch : String) -> Array[String] {
 /// 11 on the major version is the release and the minor one is a midyear update;
 /// and on 11+ the compatible 10.x range is replayed for `x86_64` (with the
 /// `universal2` spelling only for other architectures).
-pub fn mac_platforms(version : (Int, Int), arch : String) -> Array[String] {
+pub fn mac_platforms(version : (Int32, Int32), arch : String) -> Array[String] {
   let out : Array[String] = []
   if version >= (10, 0) && version < (11, 0) {
     for minor = version.1; minor >= 0; minor = minor - 1 {
@@ -435,7 +435,7 @@ pub fn mac_platforms(version : (Int, Int), arch : String) -> Array[String] {
 /// `supported` is ordered most specific first -- and the same rule the resolver
 /// uses to order candidates. It is public here so callers who built their tag
 /// list with the functions above can rank wheels with it.
-pub fn tag_rank(tags : Array[String], supported : Array[String]) -> Int {
+pub fn tag_rank(tags : Array[String], supported : Array[String]) -> Int32 {
   let mut best = supported.length()
   for i = 0; i < tags.length(); i = i + 1 {
     for j = 0; j < supported.length(); j = j + 1 {

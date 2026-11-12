@@ -10,9 +10,9 @@ pub(all) struct PackageAudit {
   metadata_name : String
   metadata_version : String
   index_name : String
-  index_files : Int
-  ignored_index_files : Int
-  yanked_files : Int
+  index_files : Int32
+  ignored_index_files : Int32
+  yanked_files : Int32
   candidates : Array[String]
   selected_file : String?
   selected_version : String?
@@ -193,7 +193,7 @@ pub fn audit_package(
   environment : MarkerEnvironment,
   python_text : String,
   tags : Array[String],
-  allow_yanked? : Bool = false,
+  allow_yanked~ : Bool = false,
 ) -> PackageAudit raise {
   let lock = Pylock::parse(pylock_toml)
   audit_package_with_lock(
@@ -471,7 +471,7 @@ pub fn AuditBundle::disposition(self : AuditBundle) -> AuditDisposition {
 }
 
 ///|
-pub fn AuditBundle::counts(self : AuditBundle) -> (Int, Int, Int) {
+pub fn AuditBundle::counts(self : AuditBundle) -> (Int32, Int32, Int32) {
   let mut ready = 0
   let mut blocked = 0
   let mut not_required = 0
@@ -528,8 +528,8 @@ pub fn audit_bundle(
   environment : MarkerEnvironment,
   python_text : String,
   tags : Array[String],
-  allow_yanked? : Bool = false,
-  require_lock_coverage? : Bool = false,
+  allow_yanked~ : Bool = false,
+  require_lock_coverage~ : Bool = false,
 ) -> AuditBundle raise {
   let lock = Pylock::parse(pylock_toml)
   let python = Version::parse(python_text)

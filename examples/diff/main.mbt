@@ -58,7 +58,7 @@ fn Rng::next(self : Rng) -> UInt64 {
 }
 
 ///|
-fn Rng::below(self : Rng, bound : Int) -> Int {
+fn Rng::below(self : Rng, bound : Int32) -> Int32 {
   (self.next() % bound.to_uint64()).to_int()
 }
 
@@ -427,7 +427,7 @@ fn emit_cmp(
 }
 
 ///|
-fn mode_name(mode : Int) -> String {
+fn mode_name(mode : Int32) -> String {
   if mode == 0 {
     "auto"
   } else if mode == 1 {
@@ -438,7 +438,7 @@ fn mode_name(mode : Int) -> String {
 }
 
 ///|
-fn mode_setting(mode : Int) -> Bool? {
+fn mode_setting(mode : Int32) -> Bool? {
   if mode == 0 {
     None
   } else if mode == 1 {
@@ -542,7 +542,7 @@ fn emit_order(
 }
 
 ///|
-fn sample_every(items : Array[String], limit : Int) -> Array[String] {
+fn sample_every(items : Array[String], limit : Int32) -> Array[String] {
   let out : Array[String] = []
   let total = items.length()
   if total <= limit {
@@ -564,7 +564,7 @@ fn sample_every(items : Array[String], limit : Int) -> Array[String] {
 fn sample_versions(
   rng : Rng,
   items : Array[String],
-  count : Int,
+  count : Int32,
 ) -> Array[String] {
   let out : Array[String] = []
   if items.length() == 0 {
@@ -998,7 +998,7 @@ fn escape_record(text : String) -> String {
 
 ///|
 /// A non-negative integer in lowercase hexadecimal, without padding.
-fn hex_lower(value : Int) -> String {
+fn hex_lower(value : Int32) -> String {
   if value == 0 {
     return "0"
   }
@@ -2337,7 +2337,7 @@ fn tag_compute(
 /// is ranked by its earliest -- and the reference decides the answer with its own
 /// selector rather than with a second copy of the rule.
 fn select_projection(supported : Array[String], items : String) -> String {
-  let ranks : Array[Int] = []
+  let ranks : Array[Int32] = []
   if !items.is_empty() {
     for segment in items.split(";") {
       ranks.push(@pyversion.tag_rank(tag_list(segment.to_owned()), supported))
@@ -2367,11 +2367,11 @@ fn select_projection(supported : Array[String], items : String) -> String {
 ///|
 /// `"3.12"` to `[3, 12]`; an empty field is an empty version, which is a case in
 /// its own right: the library rejects it instead of reading the host.
-fn tag_version(text : String) -> Array[Int] {
+fn tag_version(text : String) -> Array[Int32] {
   if text.is_empty() {
     return []
   }
-  let out : Array[Int] = []
+  let out : Array[Int32] = []
   for part in text.split(".") {
     match tag_int(part.to_owned()) {
       Some(value) => out.push(value)
@@ -2385,7 +2385,7 @@ fn tag_version(text : String) -> Array[Int] {
 /// ASCII digits to a non-negative `Int`, or `None`. Written out rather than
 /// imported because this example package does not depend on `moonbitlang/core/string`,
 /// and the payloads are all plain integers.
-fn tag_int(text : String) -> Int? {
+fn tag_int(text : String) -> Int32? {
   let chars = text.to_array()
   if chars.length() == 0 {
     return None

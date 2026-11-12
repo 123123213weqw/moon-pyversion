@@ -127,7 +127,7 @@ fn trim_release(release : Array[@bigint.BigInt]) -> Array[@bigint.BigInt] {
 /// ```
 pub fn canonicalize_version(
   version : String,
-  strip_trailing_zero? : Bool = true,
+  strip_trailing_zero~ : Bool = true,
 ) -> String {
   match parse_version_opt(version) {
     Some(v) =>
@@ -150,7 +150,7 @@ fn parse_version_opt(raw : String) -> Version? {
 ///|
 /// Split `text` on `-` into at most `max_parts` pieces, the remainder staying
 /// in the last piece (`str.split(sep, maxsplit)`).
-fn split_limited(text : String, max_parts : Int) -> Array[String] {
+fn split_limited(text : String, max_parts : Int32) -> Array[String] {
   let out : Array[String] = []
   let chars = text.to_array()
   let current : Array[Char] = []
@@ -167,7 +167,7 @@ fn split_limited(text : String, max_parts : Int) -> Array[String] {
 }
 
 ///|
-fn count_char(text : String, needle : Char) -> Int {
+fn count_char(text : String, needle : Char) -> Int32 {
   let mut count = 0
   for c in text {
     if c == needle {
@@ -185,7 +185,7 @@ fn count_char(text : String, needle : Char) -> Int {
 pub(all) struct WheelFilename {
   name : String
   version : Version
-  build : (Int, String)?
+  build : (Int32, String)?
   tags : Array[String]
 }
 
@@ -243,7 +243,7 @@ pub fn parse_wheel_filename(
     Some(v) => v
     None => raise VersionError::InvalidFilename("WHEEL_VERSION", 0)
   }
-  let build : (Int, String)? = if dashes == 5 {
+  let build : (Int32, String)? = if dashes == 5 {
     let build_part = parts[2]
     match split_build_tag(build_part) {
       Some(tag) => Some(tag)
@@ -273,7 +273,7 @@ fn is_valid_wheel_name(name : String) -> Bool {
 
 ///|
 /// PEP 427 build tag: leading ASCII digits plus an arbitrary remainder.
-fn split_build_tag(text : String) -> (Int, String)? {
+fn split_build_tag(text : String) -> (Int32, String)? {
   let chars = text.to_array()
   if chars.length() == 0 || !chars[0].is_ascii_digit() {
     return None

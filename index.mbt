@@ -15,7 +15,7 @@
 /// this bound keeps the recursion of the reader finite on every backend.
 /// A document nested exactly this deep is accepted, one level more raises
 /// `JSON_DEPTH`.
-const JSON_MAX_DEPTH : Int = 128
+const JSON_MAX_DEPTH : Int32 = 128
 
 ///|
 /// A JSON value. `JsonNumber` keeps the **source text** of the number, so
@@ -58,7 +58,11 @@ pub fn JsonValue::field(self : JsonValue, key : String) -> JsonValue? {
 ///|
 /// An `InvalidIndex` error whose position is the UTF-16 code unit offset of
 /// the character at `index`, the offset convention of `version.mbt`.
-fn json_error(code : String, chars : Array[Char], index : Int) -> VersionError {
+fn json_error(
+  code : String,
+  chars : Array[Char],
+  index : Int32,
+) -> VersionError {
   let stop = if index < chars.length() { index } else { chars.length() }
   let mut offset = 0
   for i = 0; i < stop; i = i + 1 {
@@ -76,7 +80,7 @@ fn is_json_space(c : Char) -> Bool {
 
 ///|
 /// Offset of the first non-whitespace character at or after `start`.
-fn skip_json_space(chars : Array[Char], start : Int) -> Int {
+fn skip_json_space(chars : Array[Char], start : Int32) -> Int32 {
   let mut i = start
   while i < chars.length() && is_json_space(chars[i]) {
     i = i + 1
@@ -86,7 +90,7 @@ fn skip_json_space(chars : Array[Char], start : Int) -> Int {
 
 ///|
 /// Offset just past the run of ASCII digits beginning at `start`.
-fn skip_json_digits(chars : Array[Char], start : Int) -> Int {
+fn skip_json_digits(chars : Array[Char], start : Int32) -> Int32 {
   let mut i = start
   while i < chars.length() && chars[i].is_ascii_digit() {
     i = i + 1
@@ -96,7 +100,7 @@ fn skip_json_digits(chars : Array[Char], start : Int) -> Int {
 
 ///|
 /// The code unit denoted by the four hex digits at `start` (RFC 8259 `\uXXXX`).
-fn read_hex4(chars : Array[Char], start : Int) -> Int raise VersionError {
+fn read_hex4(chars : Array[Char], start : Int32) -> Int32 raise VersionError {
   if start + 4 > chars.length() {
     raise json_error("JSON_BAD_UNICODE", chars, start)
   }
@@ -119,8 +123,8 @@ fn simple_escape(c : Char) -> Char? {
     '"' => Some('"')
     '\\' => Some('\\')
     '/' => Some('/')
-    'b' => Some(Int::unsafe_to_char(0x08))
-    'f' => Some(Int::unsafe_to_char(0x0C))
+    'b' => Some(Int32::unsafe_to_char(0x08))
+    'f' => Some(Int32::unsafe_to_char(0x0C))
     'n' => Some('\n')
     'r' => Some('\r')
     't' => Some('\t')
@@ -131,7 +135,7 @@ fn simple_escape(c : Char) -> Char? {
 ///|
 /// True when `chars` at `start` spells `word` exactly (RFC 8259 literals are
 /// case sensitive).
-fn matches_keyword(chars : Array[Char], start : Int, word : String) -> Bool {
+fn matches_keyword(chars : Array[Char], start : Int32, word : String) -> Bool {
   let expected = word.to_array()
   if start + expected.length() > chars.length() {
     return false
@@ -153,8 +157,8 @@ fn matches_keyword(chars : Array[Char], start : Int, word : String) -> Bool {
 /// and is rejected rather than replaced.
 fn parse_json_string(
   chars : Array[Char],
-  start : Int,
-) -> (String, Int) raise VersionError {
+  start : Int32,
+) -> (String, Int32) raise VersionError {
   let out : Array[Char] = []
   let mut i = start + 1
   while true {
@@ -205,12 +209,14 @@ fn parse_json_string(
       }
       i = i + 6
       out.push(
-        Int::unsafe_to_char(0x10000 + (high - 0xD800) * 0x400 + (low - 0xDC00)),
+        Int32::unsafe_to_char(
+          0x10000 + (high - 0xD800) * 0x400 + (low - 0xDC00),
+        ),
       )
     } else if high >= 0xDC00 && high <= 0xDFFF {
       raise json_error("JSON_LONE_SURROGATE", chars, i - 4)
     } else {
-      out.push(Int::unsafe_to_char(high))
+      out.push(Int32::unsafe_to_char(high))
     }
   }
   (String::from_array(out), i)
@@ -225,8 +231,8 @@ fn parse_json_string(
 /// and are rejected by `parse_json_value`.
 fn parse_json_number(
   chars : Array[Char],
-  start : Int,
-) -> (String, Int) raise VersionError {
+  start : Int32,
+) -> (String, Int32) raise VersionError {
   let mut i = start
   if i < chars.length() && chars[i] == '-' {
     i = i + 1
@@ -267,9 +273,9 @@ fn parse_json_number(
 /// Parse an object, with `start` on the opening brace.
 fn parse_json_object(
   chars : Array[Char],
-  start : Int,
-  depth : Int,
-) -> (JsonValue, Int) raise VersionError {
+  start : Int32,
+  depth : Int32,
+) -> (JsonValue, Int32) raise VersionError {
   let members : Array[(String, JsonValue)] = []
   let mut i = skip_json_space(chars, start + 1)
   let mut finished = false
@@ -317,9 +323,9 @@ fn parse_json_object(
 /// Parse an array, with `start` on the opening bracket.
 fn parse_json_array(
   chars : Array[Char],
-  start : Int,
-  depth : Int,
-) -> (JsonValue, Int) raise VersionError {
+  start : Int32,
+  depth : Int32,
+) -> (JsonValue, Int32) raise VersionError {
   let items : Array[JsonValue] = []
   let mut i = skip_json_space(chars, start + 1)
   let mut finished = false
@@ -350,9 +356,9 @@ fn parse_json_array(
 /// Parse one value, with `start` on its first character.
 fn parse_json_value(
   chars : Array[Char],
-  start : Int,
-  depth : Int,
-) -> (JsonValue, Int) raise VersionError {
+  start : Int32,
+  depth : Int32,
+) -> (JsonValue, Int32) raise VersionError {
   if depth > JSON_MAX_DEPTH {
     raise json_error("JSON_DEPTH", chars, start)
   }
@@ -469,7 +475,7 @@ pub(all) struct SimpleIndexFile {
   hashes : Array[(String, String)]
   requires_python : String?
   yanked : SimpleYanked
-  size : Int?
+  size : Int32?
   upload_time : String?
 }
 
@@ -542,7 +548,7 @@ pub fn SimpleIndex::versions(self : SimpleIndex) -> Array[String] {
 /// An `InvalidIndex` whose position is a *structural* index -- the ordinal of
 /// the offending `files[]` entry, or `0` for a document-level problem -- not a
 /// byte offset, which the JSON layer has already forgotten.
-fn index_error(code : String, ordinal : Int) -> VersionError {
+fn index_error(code : String, ordinal : Int32) -> VersionError {
   VersionError::InvalidIndex(code, ordinal)
 }
 
@@ -553,7 +559,7 @@ fn require_string(
   value : JsonValue,
   key : String,
   code : String,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> String raise VersionError {
   match value.field(key) {
     Some(JsonString(text)) => text
@@ -569,7 +575,7 @@ fn optional_string(
   value : JsonValue,
   key : String,
   code : String,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> String? raise VersionError {
   match value.field(key) {
     None | Some(JsonNull) => None
@@ -588,7 +594,7 @@ fn optional_string(
 /// constraint".
 fn parse_simple_file(
   value : JsonValue,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> SimpleIndexFile raise VersionError {
   let hashes : Array[(String, String)] = []
   match value.field("hashes") {
@@ -835,7 +841,7 @@ fn make_index_file(
   path : String,
   kind : IndexFileKind,
   requires_python : String?,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> IndexFile raise VersionError {
   let parsed = match kind {
     WheelFile =>
@@ -921,7 +927,7 @@ pub extend LocalIndex with @debug.Debug::{to_repr}
 /// rather than pretending the directory is empty.
 pub fn LocalIndex::scan(
   directory : String,
-  lister? : DirectoryLister = no_directory_lister,
+  lister~ : DirectoryLister = no_directory_lister,
 ) -> LocalIndex raise VersionError {
   let entries = lister(directory)
   let files : Array[IndexFile] = []
@@ -1062,14 +1068,14 @@ fn requires_python_ok(file : IndexFile, python : Version?) -> Bool {
 /// The rule itself lives in `tags.mbt` as `tag_rank`, because it is the same
 /// rule `packaging.tags.create_compatible_tags_selector` applies and the tag
 /// corpus checks both against it.
-fn tag_priority(file : IndexFile, supported : Array[String]) -> Int {
+fn tag_priority(file : IndexFile, supported : Array[String]) -> Int32 {
   tag_rank(file.tags(), supported)
 }
 
 ///|
 /// The PEP 427 build tag of a wheel, or `None` for an sdist or an untagged
 /// wheel.
-fn build_tag_of(file : IndexFile) -> (Int, String)? {
+fn build_tag_of(file : IndexFile) -> (Int32, String)? {
   if file.kind is SdistFile {
     return None
   }
@@ -1085,7 +1091,7 @@ fn build_tag_of(file : IndexFile) -> (Int, String)? {
 /// empty tuple otherwise, so a tagged wheel outranks an untagged one and a
 /// larger build number outranks a smaller one; the string half compares
 /// lexically, as `str` comparison does.
-fn compare_build_tag(a : (Int, String)?, b : (Int, String)?) -> Int {
+fn compare_build_tag(a : (Int32, String)?, b : (Int32, String)?) -> Int32 {
   match (a, b) {
     (None, None) => 0
     (Some(_), None) => -1
@@ -1131,7 +1137,7 @@ fn compare_candidates(
   a : IndexFile,
   b : IndexFile,
   supported : Array[String],
-) -> Int {
+) -> Int32 {
   let by_version = Version::compare(a.version, b.version)
   if by_version != 0 {
     return -by_version
@@ -1207,7 +1213,7 @@ pub fn resolve_candidates(
   requirement : Requirement,
   tags : Array[String],
   python : Version?,
-  prereleases? : Bool? = None,
+  prereleases~ : Bool? = None,
 ) -> Array[IndexFile] {
   let allowed = allowed_versions(files, requirement, prereleases)
   let out : Array[IndexFile] = []
@@ -1227,7 +1233,7 @@ pub fn select_best(
   requirement : Requirement,
   tags : Array[String],
   python : Version?,
-  prereleases? : Bool? = None,
+  prereleases~ : Bool? = None,
 ) -> IndexFile? {
   let candidates = resolve_candidates(
     files,
@@ -1266,7 +1272,7 @@ pub fn explain_rejection(
   requirement : Requirement,
   tags : Array[String],
   python : Version?,
-  prereleases? : Bool? = None,
+  prereleases~ : Bool? = None,
 ) -> Array[(String, String)] {
   let allowed = allowed_versions(files, requirement, prereleases)
   let out : Array[(String, String)] = []

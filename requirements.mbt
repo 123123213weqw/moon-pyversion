@@ -111,7 +111,7 @@ fn sorted_unique(items : Array[String]) -> Array[String] {
 
 ///|
 /// Skip ASCII spaces and tabs starting at `pos`.
-fn skip_space(chars : Array[Char], pos : Int) -> Int {
+fn skip_space(chars : Array[Char], pos : Int32) -> Int32 {
   let mut i = pos
   while i < chars.length() && is_requirement_space(chars[i]) {
     i = i + 1
@@ -120,7 +120,7 @@ fn skip_space(chars : Array[Char], pos : Int) -> Int {
 }
 
 ///|
-fn slice(chars : Array[Char], start : Int, stop : Int) -> String {
+fn slice(chars : Array[Char], start : Int32, stop : Int32) -> String {
   String::from_array(chars[start:stop].to_owned())
 }
 
@@ -133,8 +133,8 @@ fn slice(chars : Array[Char], start : Int, stop : Int) -> String {
 /// bracket: `name[a,]` is not a requirement.
 fn parse_extras(
   chars : Array[Char],
-  pos : Int,
-) -> (Array[String], Int) raise VersionError {
+  pos : Int32,
+) -> (Array[String], Int32) raise VersionError {
   let extras : Array[String] = []
   let mut cursor = pos + 1
   cursor = skip_space(chars, cursor)
@@ -173,7 +173,7 @@ fn parse_extras(
 /// trimmed, then validated by the marker parser.
 fn parse_marker_text(
   chars : Array[Char],
-  pos : Int,
+  pos : Int32,
 ) -> String raise VersionError {
   let text = slice(chars, pos, chars.length()).trim().to_owned()
   if text.is_empty() {
@@ -212,7 +212,7 @@ fn split_keeping_empty(body : String) -> Array[String] {
 /// `>=1.0,` is a requirement while `>=1.0,,` and `>=1.0, ,<2` are not, even
 /// though the bare specifier parser tolerates all three. Returns the offset of
 /// the offending comma, or nothing when the layout is fine.
-fn specifier_layout_error(body : String) -> Int? {
+fn specifier_layout_error(body : String) -> Int32? {
   let segments = split_keeping_empty(body)
   if segments[0].trim().is_empty() {
     return Some(0)
@@ -233,7 +233,7 @@ fn specifier_layout_error(body : String) -> Int? {
 /// The specifier may be wrapped in parentheses, which is a spelling PEP 508
 /// dropped but the oracle still accepts; a `;` inside those parentheses does
 /// not separate a marker.
-fn specifier_end(chars : Array[Char], pos : Int) -> Int {
+fn specifier_end(chars : Array[Char], pos : Int32) -> Int32 {
   let mut cursor = pos
   let mut depth = 0
   while cursor < chars.length() {
@@ -434,9 +434,9 @@ pub(all) enum Satisfaction {
   /// membership test against an unset variable, per PEP 508's rules.
   EvalError(String)
 }
+
 ///|
 pub extend Satisfaction with @debug.Debug::{to_repr}
-
 
 ///|
 /// Check this requirement against one candidate version in one environment.
@@ -454,7 +454,7 @@ pub fn Requirement::satisfied_by(
   self : Requirement,
   version : Version,
   environment : MarkerEnvironment,
-  prereleases? : Bool? = None,
+  prereleases~ : Bool? = None,
 ) -> Satisfaction {
   if !self.specifier.contains(version, prereleases~) {
     return VersionRejected(self.specifier.to_string())
@@ -462,23 +462,15 @@ pub fn Requirement::satisfied_by(
   match self.marker_text {
     None => return Satisfied
     Some(text) => {
-      let marker = Some(Marker::parse(text)) catch {
-        _ => None
-      }
+      let marker = Some(Marker::parse(text)) catch { _ => None }
       let marker = match marker {
         None => return EvalError("unparseable marker: " + text)
         Some(m) => m
       }
       let verdict = Some(marker.evaluate(environment)) catch {
-        UndefinedEnvironmentName(message) => {
-          return EvalError(message)
-        }
-        UndefinedComparison(message) => {
-          return EvalError(message)
-        }
-        SetValuedOnLeft(a, b) => {
-          return EvalError(a + ":" + b)
-        }
+        UndefinedEnvironmentName(message) => return EvalError(message)
+        UndefinedComparison(message) => return EvalError(message)
+        SetValuedOnLeft(a, b) => return EvalError(a + ":" + b)
       }
       let verdict = match verdict {
         None => false
@@ -499,7 +491,7 @@ pub fn Requirement::satisfied_by(
 pub fn Requirement::satisfied_by_version(
   self : Requirement,
   version : Version,
-  prereleases? : Bool? = None,
+  prereleases~ : Bool? = None,
 ) -> Bool {
   self.specifier.contains(version, prereleases~)
 }

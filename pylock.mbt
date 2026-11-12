@@ -668,7 +668,7 @@ pub fn Pylock::accepts_environment(
 /// An `InvalidPylock` whose position is a *structural* index -- the ordinal of the
 /// offending `[[packages]]` entry, or `0` for a document-level problem -- not a
 /// byte offset, which the TOML layer has already forgotten.
-fn pylock_error(code : String, ordinal : Int) -> VersionError {
+fn pylock_error(code : String, ordinal : Int32) -> VersionError {
   VersionError::InvalidPylock(code, ordinal)
 }
 
@@ -697,7 +697,7 @@ fn optional_text(
   table : Toml,
   key : String,
   code : String,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> String? raise VersionError {
   match table.get(key) {
     None => None
@@ -714,7 +714,7 @@ fn string_list(
   key : String,
   type_code : String,
   entry_code : String,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> Array[String] raise VersionError {
   match table.get(key) {
     None => []
@@ -739,7 +739,7 @@ fn require_table(
   table : Toml,
   key : String,
   code : String,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> Toml raise VersionError {
   match table.get(key) {
     Some(TTable(value)) => value
@@ -755,7 +755,7 @@ fn require_table(
 fn validate_marker(
   text : String,
   code : String,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> Unit raise VersionError {
   ignore(Marker::parse(text)) catch {
     _ => raise pylock_error(code, ordinal)
@@ -769,7 +769,7 @@ fn validate_marker(
 fn validate_specifier(
   text : String,
   code : String,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> Unit raise VersionError {
   ignore(SpecifierSet::parse(text)) catch {
     _ => raise pylock_error(code, ordinal)
@@ -782,7 +782,7 @@ fn validate_specifier(
 fn validate_name(
   text : String,
   code : String,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> Unit raise VersionError {
   if !is_valid_requirement_name(text) {
     raise pylock_error(code, ordinal)
@@ -796,7 +796,7 @@ fn validate_name(
 /// entry" -- and anything else is `FILE_HASHES_NOT_TABLE` or `FILE_HASH_TYPE`.
 fn parse_hashes(
   table : Toml,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> Array[(String, String)] raise VersionError {
   match table.get("hashes") {
     None => raise pylock_error("FILE_HASHES_REQUIRED", ordinal)
@@ -822,7 +822,7 @@ fn parse_hashes(
 /// integer is `FILE_SIZE_NEGATIVE` (a file cannot have one), and anything else is
 /// `FILE_SIZE_TYPE`. The width is TOML's own `Int64`, because a wheel may be
 /// larger than the `Int` a backend is happy to hold.
-fn parse_size(table : Toml, ordinal : Int) -> Int64? raise VersionError {
+fn parse_size(table : Toml, ordinal : Int32) -> Int64? raise VersionError {
   match table.get("size") {
     None => None
     Some(TInt(value)) =>
@@ -840,7 +840,10 @@ fn parse_size(table : Toml, ordinal : Int) -> Int64? raise VersionError {
 /// source spelling, and anything else -- a string included -- is
 /// `FILE_UPLOAD_TIME_TYPE`. The specification's UTC rule is not checked here; the
 /// spelling is what a caller gets, so an installation tool can apply its own rule.
-fn parse_upload_time(table : Toml, ordinal : Int) -> String? raise VersionError {
+fn parse_upload_time(
+  table : Toml,
+  ordinal : Int32,
+) -> String? raise VersionError {
   match table.get("upload-time") {
     None => None
     Some(TDatetime(text)) => {
@@ -905,7 +908,7 @@ fn is_utc_datetime(text : String) -> Bool {
 fn parse_file(
   table : Toml,
   kind : PylockFileKind,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> PylockFile raise VersionError {
   let name = optional_text(table, "name", "FILE_NAME_TYPE", ordinal)
   let url = optional_text(table, "url", "FILE_URL_TYPE", ordinal)
@@ -928,7 +931,7 @@ fn parse_file(
 fn parse_file_list(
   items : Array[TomlValue],
   kind : PylockFileKind,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> Array[PylockFile] raise VersionError {
   let out : Array[PylockFile] = []
   for item in items {
@@ -943,7 +946,7 @@ fn parse_file_list(
 ///|
 /// `[packages.vcs]`: `type` must be a registered VCS, `commit-id` is required, and
 /// one of `url` and `path` has to say where the repository is.
-fn parse_vcs(table : Toml, ordinal : Int) -> PylockVcs raise VersionError {
+fn parse_vcs(table : Toml, ordinal : Int32) -> PylockVcs raise VersionError {
   let vcs = require_table(table, "vcs", "VCS_NOT_TABLE", ordinal)
   let vcs_type = match vcs.get("type") {
     Some(TString(value)) if !value.is_empty() => value
@@ -978,7 +981,7 @@ fn parse_vcs(table : Toml, ordinal : Int) -> PylockVcs raise VersionError {
 /// and `editable` defaults to `false`.
 fn parse_directory(
   table : Toml,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> PylockDirectory raise VersionError {
   let directory = require_table(
     table, "directory", "DIRECTORY_NOT_TABLE", ordinal,
@@ -1003,7 +1006,10 @@ fn parse_directory(
 /// `[packages.archive]`: the same record shape as a wheel, plus the rule that a
 /// direct reference to an archive has to say where the archive is (its `url` or
 /// its `path`), because nothing else in the document can name it.
-fn parse_archive(table : Toml, ordinal : Int) -> PylockFile raise VersionError {
+fn parse_archive(
+  table : Toml,
+  ordinal : Int32,
+) -> PylockFile raise VersionError {
   let archive = require_table(table, "archive", "ARCHIVE_NOT_TABLE", ordinal)
   let file = parse_file(archive, ArchiveFile, ordinal)
   if file.url is None && file.path is None {
@@ -1026,7 +1032,7 @@ fn parse_dependency(
   table : Toml,
   package_name : String,
   package_version : Version?,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> PylockDependency raise VersionError {
   let name = match table.get("name") {
     Some(TString(value)) if !value.is_empty() => value
@@ -1100,7 +1106,7 @@ fn has_member(table : Toml, key : String) -> Bool {
 /// conflict a document reports does not depend on the order its members happen to
 /// be written in. Two direct references, or a direct reference next to a file
 /// list, conflict.
-fn check_sources(table : Toml, ordinal : Int) -> Unit raise VersionError {
+fn check_sources(table : Toml, ordinal : Int32) -> Unit raise VersionError {
   let mut direct = 0
   let mut lists = 0
   for key in source_keys() {
@@ -1126,7 +1132,7 @@ fn check_sources(table : Toml, ordinal : Int) -> Unit raise VersionError {
 /// `directory`, `archive`, `files`, `wheels`, `sdist`, `index`, `path`.
 fn parse_package(
   table : Toml,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> PylockPackage raise VersionError {
   let name = match table.get("name") {
     Some(TString(value)) if !value.is_empty() => value

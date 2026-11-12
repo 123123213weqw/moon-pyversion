@@ -80,18 +80,18 @@
 /// (rule 1): `1.0 1.1 1.2 2.1 2.2 2.3 2.4`. The later versions stay in the order
 /// so a field introduced by one of them can still be ranked, but a document
 /// declaring one is rejected.
-const ACCEPTED_METADATA_VERSION_RANK : Int = 7
+const ACCEPTED_METADATA_VERSION_RANK : Int32 = 7
 
 ///|
 /// The rank of the metadata version that first allowed `Provides-Extra` and the
 /// `extra` marker variable (2.1), used by the last clause of rule 9.
-const EXTRA_SUPPORT_VERSION_RANK : Int = 3
+const EXTRA_SUPPORT_VERSION_RANK : Int32 = 3
 
 ///|
 /// Rank of a `Metadata-Version` in the core metadata ordering: `1.0`→0 `1.1`→1
 /// `1.2`→2 `2.1`→3 `2.2`→4 `2.3`→5 `2.4`→6 `2.5`→7 `2.6`→8. `None` for anything
 /// else, including the 2.0 that PEP 426 never released.
-fn version_rank(version : String) -> Int? {
+fn version_rank(version : String) -> Int32? {
   match version {
     "1.0" => Some(0)
     "1.1" => Some(1)
@@ -217,7 +217,7 @@ fn canonical_field_name(key : String) -> String {
 priv struct Header {
   key : String
   value : String
-  offset : Int
+  offset : Int32
 }
 
 ///|
@@ -251,7 +251,7 @@ fn is_header_name_char(c : Char) -> Bool {
 
 ///|
 /// True when every character of `chars[from:to]` may appear in a field name.
-fn is_header_name(chars : Array[Char], from : Int, to : Int) -> Bool {
+fn is_header_name(chars : Array[Char], from : Int32, to : Int32) -> Bool {
   for i = from; i < to; i = i + 1 {
     if !is_header_name_char(chars[i]) {
       return false
@@ -262,7 +262,12 @@ fn is_header_name(chars : Array[Char], from : Int, to : Int) -> Bool {
 
 ///|
 /// The first index of `needle` in `chars[from:to]`, or `-1`.
-fn find_char(chars : Array[Char], from : Int, to : Int, needle : Char) -> Int {
+fn find_char(
+  chars : Array[Char],
+  from : Int32,
+  to : Int32,
+  needle : Char,
+) -> Int32 {
   for i = from; i < to; i = i + 1 {
     if chars[i] == needle {
       return i
@@ -360,7 +365,7 @@ fn split_document(text : String) -> (Array[Header], String) {
 ///|
 /// The character offset of the first header called `key`, or 0 when it is
 /// absent. A value level error is reported at the first occurrence of its field.
-fn field_offset(headers : Array[Header], key : String) -> Int {
+fn field_offset(headers : Array[Header], key : String) -> Int32 {
   for header in headers {
     if header.key == key {
       return header.offset
@@ -403,7 +408,7 @@ fn first_value(headers : Array[Header], key : String) -> String? {
 /// reported error does not depend on the order the fields appear in.
 fn collect_fields(
   headers : Array[Header],
-  rank : Int,
+  rank : Int32,
 ) -> Map[String, Array[String]] raise VersionError {
   let fields : Map[String, Array[String]] = Map([])
   for header in headers {
@@ -524,7 +529,7 @@ fn is_mime_token_char(c : Char) -> Bool {
 
 ///|
 /// `chars` advanced past the run of spaces and tabs that starts at `start`.
-fn skip_wsp(chars : Array[Char], start : Int) -> Int {
+fn skip_wsp(chars : Array[Char], start : Int32) -> Int32 {
   let mut i = start
   while i < chars.length() && is_wsp(chars[i]) {
     i = i + 1
@@ -534,7 +539,7 @@ fn skip_wsp(chars : Array[Char], start : Int) -> Int {
 
 ///|
 /// `chars` advanced past the MIME token that starts at `start`, if any.
-fn scan_token(chars : Array[Char], start : Int) -> Int {
+fn scan_token(chars : Array[Char], start : Int32) -> Int32 {
   let mut i = start
   while i < chars.length() && is_mime_token_char(chars[i]) {
     i = i + 1

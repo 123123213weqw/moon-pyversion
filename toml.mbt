@@ -90,7 +90,7 @@ fn MTable::find(self : MTable, key : String) -> MEntry? {
 fn concat_path(
   prefix : Array[String],
   key : Array[String],
-  count : Int,
+  count : Int32,
 ) -> Array[String] {
   let out : Array[String] = []
   for i = 0; i < prefix.length(); i = i + 1 {
@@ -113,22 +113,22 @@ fn push_path(path : Array[String], key : String) -> Array[String] {
 }
 
 ///|
-fn is_ws(c : Int) -> Bool {
+fn is_ws(c : Int32) -> Bool {
   c == 32 || c == 9
 }
 
 ///|
-fn is_digit_int(c : Int) -> Bool {
+fn is_digit_int(c : Int32) -> Bool {
   c >= 48 && c <= 57
 }
 
 ///|
-fn is_hex_int(c : Int) -> Bool {
+fn is_hex_int(c : Int32) -> Bool {
   (c >= 48 && c <= 57) || (c >= 65 && c <= 70) || (c >= 97 && c <= 102)
 }
 
 ///|
-fn is_base_digit(c : Int, base : Int) -> Bool {
+fn is_base_digit(c : Int32, base : Int32) -> Bool {
   if base == 16 {
     is_hex_int(c)
   } else if base == 8 {
@@ -139,7 +139,7 @@ fn is_base_digit(c : Int, base : Int) -> Bool {
 }
 
 ///|
-fn is_bare_key_int(c : Int) -> Bool {
+fn is_bare_key_int(c : Int32) -> Bool {
   (c >= 48 && c <= 57) ||
   (c >= 65 && c <= 90) ||
   (c >= 97 && c <= 122) ||
@@ -151,7 +151,7 @@ fn is_bare_key_int(c : Int) -> Bool {
 /// TOML 1.0 forbids raw control characters in strings; tabs are always fine
 /// and newlines are fine inside multi-line strings. A lone `\r` never reaches
 /// this check because `\r\n` is normalized away before parsing starts.
-fn is_illegal_str_char(c : Int, multiline : Bool) -> Bool {
+fn is_illegal_str_char(c : Int32, multiline : Bool) -> Bool {
   if c == 9 {
     false
   } else if multiline && c == 10 {
@@ -168,7 +168,7 @@ fn is_illegal_str_char(c : Int, multiline : Bool) -> Bool {
 /// arrays uniform.
 priv struct Parser {
   src : String
-  mut pos : Int
+  mut pos : Int32
   root : MTable
   mut current_path : Array[String]
   mut pending : Array[Array[String]]
@@ -184,7 +184,7 @@ fn new_parser(src : String) -> Parser {
 /// The `Int` carried by `VersionError::InvalidToml` is a UTF-16 offset into
 /// the CRLF-normalized source, matching the offsets used elsewhere in this
 /// module.
-fn toml_error(code : String, pos : Int) -> VersionError {
+fn toml_error(code : String, pos : Int32) -> VersionError {
   VersionError::InvalidToml(code, pos)
 }
 
@@ -195,7 +195,7 @@ fn[T] Parser::fail(self : Parser, code : String) -> T raise VersionError {
 
 ///|
 /// Code unit at the cursor, or `-1` at end of input.
-fn Parser::peek(self : Parser) -> Int {
+fn Parser::peek(self : Parser) -> Int32 {
   if self.pos >= self.src.length() {
     -1
   } else {
@@ -204,7 +204,7 @@ fn Parser::peek(self : Parser) -> Int {
 }
 
 ///|
-fn Parser::peek_at(self : Parser, offset : Int) -> Int {
+fn Parser::peek_at(self : Parser, offset : Int32) -> Int32 {
   let i = self.pos + offset
   if i < 0 || i >= self.src.length() {
     -1
@@ -646,7 +646,7 @@ fn Parser::parse_escape(
 fn Parser::parse_hex_escape(
   self : Parser,
   out : StringBuilder,
-  digits : Int,
+  digits : Int32,
 ) -> Unit raise VersionError {
   let mut value = 0
   for i = 0; i < digits; i = i + 1 {
@@ -667,7 +667,7 @@ fn Parser::parse_hex_escape(
 }
 
 ///|
-fn toml_hex_value(c : Int) -> Int {
+fn toml_hex_value(c : Int32) -> Int32 {
   if c >= 48 && c <= 57 {
     c - 48
   } else if c >= 65 && c <= 70 {
@@ -820,7 +820,7 @@ fn Parser::is_time_delimiter(self : Parser) -> Bool {
 }
 
 ///|
-fn Parser::read_int(self : Parser, digits : Int) -> Int {
+fn Parser::read_int(self : Parser, digits : Int32) -> Int32 {
   let mut value = 0
   for i = 0; i < digits; i = i + 1 {
     value = value * 10 + (self.peek() - 48)
@@ -887,7 +887,7 @@ fn Parser::parse_offset(self : Parser) -> Unit raise VersionError {
 }
 
 ///|
-fn days_in_month(year : Int, month : Int) -> Int {
+fn days_in_month(year : Int32, month : Int32) -> Int32 {
   if month == 2 {
     if is_leap_year(year) {
       29
@@ -902,7 +902,7 @@ fn days_in_month(year : Int, month : Int) -> Int {
 }
 
 ///|
-fn is_leap_year(year : Int) -> Bool {
+fn is_leap_year(year : Int32) -> Bool {
   (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
 }
 
@@ -1015,7 +1015,7 @@ fn Parser::parse_number(self : Parser) -> TomlValue? raise VersionError {
 fn Parser::make_int_in_base(
   self : Parser,
   digits : String,
-  base : Int,
+  base : Int32,
 ) -> TomlValue raise VersionError {
   // TOML integers are 64-bit signed values, so they are parsed as `Int64`; a
   // 32-bit `Int` would reject `0xDEADBEEF` on a wasm32 target.
@@ -1074,7 +1074,7 @@ fn strip_underscores(text : String) -> String {
 ///|
 fn Parser::parse_value(
   self : Parser,
-  depth : Int,
+  depth : Int32,
 ) -> TomlValue raise VersionError {
   if depth > 256 {
     self.fail("NESTING_TOO_DEEP")
@@ -1138,7 +1138,7 @@ fn Parser::parse_value(
 ///|
 fn Parser::parse_array(
   self : Parser,
-  depth : Int,
+  depth : Int32,
 ) -> TomlValue raise VersionError {
   self.advance()
   let items : Array[TomlValue] = []
@@ -1174,7 +1174,7 @@ fn Parser::parse_array(
 /// a multi-line string or an array.
 fn Parser::parse_inline_table(
   self : Parser,
-  depth : Int,
+  depth : Int32,
 ) -> TomlValue raise VersionError {
   self.advance()
   let table = new_table()
@@ -1408,7 +1408,7 @@ fn escape_basic(text : String) -> String {
 }
 
 ///|
-fn hex4(value : Int) -> String {
+fn hex4(value : Int32) -> String {
   let digits = "0123456789ABCDEF"
   let out = StringBuilder()
   for shift = 12; shift >= 0; shift = shift - 4 {
