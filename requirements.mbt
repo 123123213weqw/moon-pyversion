@@ -416,3 +416,90 @@ pub fn Requirement::to_string(self : Requirement) -> String {
 pub impl Show for Requirement with fn to_string(self) {
   self.to_string()
 }
+
+///|
+/// The outcome of checking one requirement against one candidate: the
+/// PEP 508 judgment in a single answer, with the reason spelled out so a
+/// caller can report why a candidate fell out.
+#derive(@debug.Debug)
+pub(all) enum Satisfaction {
+  /// The version matches the constraints, and the marker (if any) is true
+  /// in the given environment.
+  Satisfied
+  /// The version does not match the constraint set.
+  VersionRejected(String)
+  /// The version matches, but the marker is false in this environment.
+  MarkerRejected(String)
+  /// The marker could not be evaluated - an unknown variable or a set
+  /// membership test against an unset variable, per PEP 508's rules.
+  EvalError(String)
+}
+///|
+pub extend Satisfaction with @debug.Debug::{to_repr}
+
+
+///|
+/// Check this requirement against one candidate version in one environment.
+/// This is the PEP 508 core operation a resolver performs per candidate:
+/// name-side extras are the *provider's* concern (the caller decides what
+/// to request), so this checks the specifier and the marker only - the
+/// extras list says which optional features the requirement *declares*,
+/// not what the installed distribution must carry.
+///
+/// A requirement without a marker is satisfied by any version the
+/// constraints accept. Marker evaluation follows PEP 508: unknown
+/// variables and membership tests on unset variables are errors, not
+/// silently false - surfaced as `MarkerError` with the reason.
+pub fn Requirement::satisfied_by(
+  self : Requirement,
+  version : Version,
+  environment : MarkerEnvironment,
+  prereleases? : Bool? = None,
+) -> Satisfaction {
+  if !self.specifier.contains(version, prereleases~) {
+    return VersionRejected(self.specifier.to_string())
+  }
+  match self.marker_text {
+    None => return Satisfied
+    Some(text) => {
+      let marker = Some(Marker::parse(text)) catch {
+        _ => None
+      }
+      let marker = match marker {
+        None => return EvalError("unparseable marker: " + text)
+        Some(m) => m
+      }
+      let verdict = Some(marker.evaluate(environment)) catch {
+        UndefinedEnvironmentName(message) => {
+          return EvalError(message)
+        }
+        UndefinedComparison(message) => {
+          return EvalError(message)
+        }
+        SetValuedOnLeft(a, b) => {
+          return EvalError(a + ":" + b)
+        }
+      }
+      let verdict = match verdict {
+        None => false
+        Some(b) => b
+      }
+      if verdict {
+        Satisfied
+      } else {
+        MarkerRejected(text)
+      }
+    }
+  }
+}
+
+///|
+/// The same judgment for the common no-marker case, without building an
+/// environment: satisfies when the version matches the constraints.
+pub fn Requirement::satisfied_by_version(
+  self : Requirement,
+  version : Version,
+  prereleases? : Bool? = None,
+) -> Bool {
+  self.specifier.contains(version, prereleases~)
+}
