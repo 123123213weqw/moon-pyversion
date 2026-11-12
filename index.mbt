@@ -21,6 +21,7 @@ const JSON_MAX_DEPTH : Int = 128
 /// A JSON value. `JsonNumber` keeps the **source text** of the number, so
 /// `"1.40"` and `"1.4e0"` stay distinct and nothing here depends on
 /// floating-point formatting or precision. `JsonObject` keeps document order.
+#derive(Eq, @debug.Debug)
 pub(all) enum JsonValue {
   JsonNull
   JsonBool(Bool)
@@ -28,7 +29,7 @@ pub(all) enum JsonValue {
   JsonString(String)
   JsonArray(Array[JsonValue])
   JsonObject(Array[(String, JsonValue)])
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend JsonValue with Eq::{equal, not_equal}
@@ -442,10 +443,11 @@ pub fn parse_json(text : String) -> JsonValue raise VersionError {
 /// string; `Yanked("")` is "yanked with no reason", which is what `true` means
 /// and the two spellings are deliberately collapsed, since PEP 592 gives the
 /// boolean no other meaning.
+#derive(Eq, @debug.Debug)
 pub(all) enum SimpleYanked {
   NotYanked
   Yanked(String)
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend SimpleYanked with Eq::{equal, not_equal}
@@ -460,6 +462,7 @@ pub extend SimpleYanked with @debug.Debug::{to_repr}
 /// caller's job. Members this module does not model -- including PEP 658's
 /// `dist-info-metadata`/`core-metadata` -- are ignored, as PEP 691 requires of
 /// clients.
+#derive(Eq, @debug.Debug)
 pub(all) struct SimpleIndexFile {
   filename : String
   url : String
@@ -468,7 +471,7 @@ pub(all) struct SimpleIndexFile {
   yanked : SimpleYanked
   size : Int?
   upload_time : String?
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend SimpleIndexFile with Eq::{equal, not_equal}
@@ -496,12 +499,13 @@ pub fn SimpleIndexFile::hash_for(
 /// A parsed PEP 691 "simple repository API" document. The fields are private;
 /// read them through `SimpleIndex::name`, `SimpleIndex::api_version`,
 /// `SimpleIndex::files` and `SimpleIndex::versions`.
+#derive(@debug.Debug)
 pub struct SimpleIndex {
   name : String
   api_version : String?
   files : Array[SimpleIndexFile]
   versions : Array[String]
-} derive(@debug.Debug)
+}
 
 ///|
 pub extend SimpleIndex with @debug.Debug::{to_repr}
@@ -737,10 +741,11 @@ pub fn SimpleIndex::sdists(
 
 ///|
 /// Whether an `IndexFile` is a wheel or a source distribution.
+#derive(Eq, @debug.Debug)
 pub(all) enum IndexFileKind {
   WheelFile
   SdistFile
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend IndexFileKind with Eq::{equal, not_equal}
@@ -758,6 +763,7 @@ pub extend IndexFileKind with @debug.Debug::{to_repr}
 /// response). `requires_python` is the PEP 345 / PEP 503 constraint when the
 /// source knows it: a bare listing does not and leaves it `None`, while
 /// `SimpleIndexFile::to_index_file` carries the JSON member over.
+#derive(Eq, @debug.Debug)
 pub(all) struct IndexFile {
   filename : String
   path : String
@@ -765,7 +771,7 @@ pub(all) struct IndexFile {
   name : String
   version : Version
   requires_python : String?
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend IndexFile with Eq::{equal, not_equal}
@@ -887,13 +893,14 @@ fn no_directory_lister(_directory : String) -> Array[String] raise VersionError 
 
 ///|
 /// The distribution files of one directory.
+#derive(@debug.Debug)
 pub(all) struct LocalIndex {
   /// The directory the files were found in, as given to `scan`.
   directory : String
   /// Every recognized distribution file, ordered by normalized name and then
   /// by file name, so a scan is reproducible across filesystems and platforms.
   files : Array[IndexFile]
-} derive(@debug.Debug)
+}
 
 ///|
 pub extend LocalIndex with @debug.Debug::{to_repr}

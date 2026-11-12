@@ -1,4 +1,5 @@
 ///|
+#derive(Eq, @debug.Debug)
 pub(all) enum SpecifierOp {
   Equal
   NotEqual
@@ -8,7 +9,7 @@ pub(all) enum SpecifierOp {
   GreaterEqual
   Compatible
   ArbitraryEqual
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend SpecifierOp with Eq::{equal, not_equal}
@@ -17,21 +18,23 @@ pub extend SpecifierOp with Eq::{equal, not_equal}
 pub extend SpecifierOp with @debug.Debug::{to_repr}
 
 ///|
+#derive(@debug.Debug)
 pub(all) struct Specifier {
   op : SpecifierOp
   raw_version : String
   version : Version?
   wildcard : Bool
-} derive(@debug.Debug)
+}
 
 ///|
 pub extend Specifier with @debug.Debug::{to_repr}
 
 ///|
+#derive(@debug.Debug)
 pub(all) struct SpecifierSet {
   specs : Array[Specifier]
   original : String
-} derive(@debug.Debug)
+}
 
 ///|
 pub extend SpecifierSet with @debug.Debug::{to_repr}

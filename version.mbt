@@ -2,6 +2,7 @@
 /// A stable, structured error for version, specifier and packaging-metadata
 /// parsing. Every variant carries a stable code and, where a position is
 /// meaningful, a UTF-16 offset.
+#derive(Eq, @debug.Debug)
 pub(all) suberror VersionError {
   InvalidVersion(String, Int)
   InvalidSpecifier(String, Int)
@@ -15,7 +16,7 @@ pub(all) suberror VersionError {
   InvalidIndex(String, Int)
   InvalidPylock(String, Int)
   InvalidTag(String, Int)
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub fn VersionError::diagnostic(self : VersionError) -> String {
@@ -52,10 +53,11 @@ pub extend VersionError with Show::{to_string, output}
 ///|
 /// One normalized local-version segment. Numeric segments are compared as
 /// integers; textual segments are compared case-insensitively.
+#derive(Eq, @debug.Debug)
 pub(all) struct LocalPart {
   text : String
   numeric : Bool
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend LocalPart with Eq::{equal, not_equal}
@@ -66,6 +68,7 @@ pub extend LocalPart with @debug.Debug::{to_repr}
 ///|
 /// A parsed PEP 440 version. `raw` keeps the caller's original string, while
 /// `to_string` returns the normalized public form.
+#derive(@debug.Debug)
 pub(all) struct Version {
   raw : String
   epoch : @bigint.BigInt
@@ -78,7 +81,7 @@ pub(all) struct Version {
   has_dev : Bool
   dev_num : @bigint.BigInt
   local_segments : Array[LocalPart]
-} derive(@debug.Debug)
+}
 
 ///|
 pub extend Version with Compare::{op_lt, op_le, op_ge, op_gt}

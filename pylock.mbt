@@ -153,6 +153,7 @@ const PYLOCK_LOCK_VERSION : String = "1.0"
 /// Which member of a package a `PylockFile` came from. The lists keep the
 /// specification's own spellings apart so a caller can tell a wheel from an
 /// sdist from an archive without re-reading the document.
+#derive(Eq, @debug.Debug)
 pub(all) enum PylockFileKind {
   /// A `[[packages.files]]` entry, the draft spelling this module also accepts.
   FilesEntry
@@ -162,7 +163,7 @@ pub(all) enum PylockFileKind {
   SdistFile
   /// The `[packages.archive]` table.
   ArchiveFile
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend PylockFileKind with Eq::{equal, not_equal}
@@ -193,6 +194,7 @@ pub fn PylockFileKind::key(self : PylockFileKind) -> String {
 /// or `path`. `hashes` keeps document order and is empty when the member is
 /// absent. `upload_time` is the datetime's source spelling, because no date
 /// arithmetic happens anywhere in this library.
+#derive(Eq, @debug.Debug)
 pub(all) struct PylockFile {
   /// `name`, as written; `Some` only when the member is present and non-empty.
   name : String?
@@ -211,7 +213,7 @@ pub(all) struct PylockFile {
   subdirectory : String?
   /// The member this record was read from.
   kind : PylockFileKind
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend PylockFile with Eq::{equal, not_equal}
@@ -289,6 +291,7 @@ fn last_path_component(text : String) -> String? {
 /// `vcs_type` is one of the registered types (`git`, `hg`, `bzr`, `svn`),
 /// `commit_id` is required because the specification wants an immutable revision,
 /// and at least one of `url` and `path` says where the repository is.
+#derive(Eq, @debug.Debug)
 pub(all) struct PylockVcs {
   /// `packages.vcs.type`, one of `git hg bzr svn`.
   vcs_type : String
@@ -303,7 +306,7 @@ pub(all) struct PylockVcs {
   commit_id : String
   /// `packages.vcs.subdirectory`, relative to the root of the source tree.
   subdirectory : String?
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend PylockVcs with Eq::{equal, not_equal}
@@ -315,6 +318,7 @@ pub extend PylockVcs with @debug.Debug::{to_repr}
 /// `[packages.directory]`: a source tree on the local filesystem. `editable`
 /// records what the lock time was, and the specification lets an installer
 /// ignore it.
+#derive(Eq, @debug.Debug)
 pub(all) struct PylockDirectory {
   /// `packages.directory.path`, relative to the lock file when it is relative.
   path : String
@@ -322,7 +326,7 @@ pub(all) struct PylockDirectory {
   editable : Bool
   /// `packages.directory.subdirectory`.
   subdirectory : String?
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend PylockDirectory with Eq::{equal, not_equal}
@@ -340,6 +344,7 @@ pub extend PylockDirectory with @debug.Debug::{to_repr}
 /// specification's dependency entry defines at all, but the brief for this module
 /// records them, so they are read and validated like any other marker and name
 /// list. Unknown keys of an entry are ignored.
+#derive(Eq, @debug.Debug)
 pub(all) struct PylockDependency {
   /// `name`, as written but checked against the PEP 508 name syntax.
   name : String
@@ -349,7 +354,7 @@ pub(all) struct PylockDependency {
   marker : String?
   /// `extras`, as written and in document order.
   extras : Array[String]
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend PylockDependency with Eq::{equal, not_equal}
@@ -362,6 +367,7 @@ pub extend PylockDependency with @debug.Debug::{to_repr}
 /// one of several entries for the same name that different environments select
 /// between. Read `marker` through `PylockPackage::is_applicable` rather than
 /// evaluating it by hand.
+#derive(Eq, @debug.Debug)
 pub(all) struct PylockPackage {
   /// `name`, exactly as written; `canonicalize_name` makes spellings comparable.
   name : String
@@ -390,7 +396,7 @@ pub(all) struct PylockPackage {
   index : String?
   /// `packages.path`, the draft local path source form.
   path : String?
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend PylockPackage with Eq::{equal, not_equal}
@@ -468,6 +474,7 @@ pub fn PylockPackage::is_applicable(
 ///|
 /// A validated `pylock.toml` document. The fields are private; read them through
 /// the accessors, so the spelling of every member lives in one place.
+#derive(Eq, @debug.Debug)
 pub struct Pylock {
   lock_version : String
   environments : Array[String]
@@ -477,7 +484,7 @@ pub struct Pylock {
   default_groups : Array[String]
   created_by : String
   packages : Array[PylockPackage]
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend Pylock with Eq::{equal, not_equal}

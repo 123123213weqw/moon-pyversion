@@ -53,11 +53,12 @@
 /// `version` is `None` when the caller's spelling is not a PEP 440 version at
 /// all: the candidate is then reported as `Unparsable` instead of being dropped
 /// from the list, so a report can account for every input it was given.
+#derive(Eq, @debug.Debug)
 pub(all) struct UpgradeCandidate {
   raw : String
   version : Version?
   requires_python : String?
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend UpgradeCandidate with Eq::{equal, not_equal}
@@ -86,6 +87,7 @@ pub fn UpgradeCandidate::parse(
 /// The rule that dropped a candidate. Closed on purpose: a report that says
 /// "rejected" without saying why is not actionable, and the differential corpus
 /// asserts the exact reason for each candidate.
+#derive(Eq, @debug.Debug)
 pub(all) enum UpgradeRejection {
   Unparsable
   Same
@@ -93,7 +95,7 @@ pub(all) enum UpgradeRejection {
   OutOfRange
   Prerelease
   RequiresPython
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend UpgradeRejection with Eq::{equal, not_equal}
@@ -116,10 +118,11 @@ pub fn UpgradeRejection::code(self : UpgradeRejection) -> String {
 
 ///|
 /// The result: what to test, and what was dropped with the reason.
+#derive(@debug.Debug)
 pub(all) struct UpgradePlan {
   shortlist : Array[UpgradeCandidate]
   dropped : Array[(UpgradeCandidate, UpgradeRejection)]
-} derive(@debug.Debug)
+}
 
 ///|
 pub extend UpgradePlan with @debug.Debug::{to_repr}

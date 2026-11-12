@@ -5,6 +5,7 @@
 /// local date-time, a local date or a local time. No date arithmetic and no
 /// timezone normalization is performed, so `1979-05-27 07:32:00Z` keeps both
 /// its separator and its `Z`.
+#derive(Eq, @debug.Debug)
 pub(all) enum TomlValue {
   TString(String)
   TInt(Int64)
@@ -13,7 +14,7 @@ pub(all) enum TomlValue {
   TDatetime(String)
   TArray(Array[TomlValue])
   TTable(Toml)
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend TomlValue with Eq::{equal, not_equal}
@@ -28,9 +29,10 @@ pub extend TomlValue with @debug.Debug::{to_repr}
 /// re-sorted, so `Toml::to_string` is deterministic; lookups are a linear
 /// scan, which is fine for the small tables found in `pyproject.toml` and
 /// `pylock.toml`.
+#derive(Eq, @debug.Debug)
 pub(all) struct Toml {
   entries : Array[(String, TomlValue)]
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend Toml with Eq::{equal, not_equal}

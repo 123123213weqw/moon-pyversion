@@ -2,6 +2,7 @@
 /// The result of joining one requirement, one core-metadata document, one
 /// PEP 691 index response and one PEP 751 lock file for a concrete target.
 /// Strings are retained for reporting; no file is downloaded or executed.
+#derive(Eq, @debug.Debug)
 pub(all) struct PackageAudit {
   project : String
   requirement : String
@@ -17,7 +18,7 @@ pub(all) struct PackageAudit {
   selected_version : String?
   lock_versions : Array[String]
   issues : Array[AuditIssue]
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend PackageAudit with Eq::{equal, not_equal}
@@ -28,10 +29,11 @@ pub extend PackageAudit with @debug.Debug::{to_repr}
 ///|
 /// A stable machine-readable finding. `subject` identifies the project,
 /// version or filename involved without embedding whole input documents.
+#derive(Eq, @debug.Debug)
 pub(all) struct AuditIssue {
   code : String
   subject : String
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend AuditIssue with Eq::{equal, not_equal}
@@ -42,11 +44,12 @@ pub extend AuditIssue with @debug.Debug::{to_repr}
 ///|
 /// Whether the requested dependency needs no action, is reproducibly ready,
 /// or is blocked by at least one cross-document inconsistency.
+#derive(Eq, @debug.Debug)
 pub(all) enum AuditDisposition {
   NotRequired
   Ready
   Blocked
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend AuditDisposition with Eq::{equal, not_equal}
@@ -418,11 +421,12 @@ fn audit_package_with_lock(
 ///|
 /// One explicit project request and its two externally supplied artifacts.
 /// The shared PEP 751 lock and target environment are passed to `audit_bundle`.
+#derive(Eq, @debug.Debug)
 pub(all) struct AuditInput {
   requirement_text : String
   metadata_text : String
   index_json : String
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend AuditInput with Eq::{equal, not_equal}
@@ -434,10 +438,11 @@ pub extend AuditInput with @debug.Debug::{to_repr}
 /// An ordered set of package audits against one lock and one target. This is
 /// intentionally not a dependency resolver: it audits exactly the inputs the
 /// caller supplies and does not infer or fetch missing transitive projects.
+#derive(Eq, @debug.Debug)
 pub(all) struct AuditBundle {
   reports : Array[PackageAudit]
   issues : Array[AuditIssue]
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend AuditBundle with Eq::{equal, not_equal}

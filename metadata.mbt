@@ -851,6 +851,7 @@ fn marker_mentions_extra(text : String) -> Bool {
 ///
 /// `raw` is the text handed to `Metadata::parse`. It is the caller's document,
 /// not a canonical form, so it is not part of the `to_string` fixed point.
+#derive(Eq, @debug.Debug)
 pub(all) struct Metadata {
   /// `Metadata-Version` (rule 1), one of `1.0 1.1 1.2 2.1 2.2 2.3 2.4`.
   metadata_version : String
@@ -922,7 +923,7 @@ pub(all) struct Metadata {
   obsoletes : Array[String]
   /// The document as handed to `Metadata::parse`.
   raw : String
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend Metadata with Show::{output}

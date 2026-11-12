@@ -24,6 +24,7 @@
 
 ///|
 /// A parsed PEP 508 requirement.
+#derive(@debug.Debug)
 pub(all) struct Requirement {
   /// The project name exactly as written; call `canonicalize_name` to compare.
   name : String
@@ -37,7 +38,7 @@ pub(all) struct Requirement {
   marker_text : String?
   /// The caller's original string.
   raw : String
-} derive(@debug.Debug)
+}
 
 ///|
 pub extend Requirement with @debug.Debug::{to_repr}

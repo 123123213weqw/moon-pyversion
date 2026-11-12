@@ -49,6 +49,7 @@ pub extend MarkerError with Show::{to_string, output}
 ///|
 /// The complete marker vocabulary. Modelling it as a payload-free enum means a
 /// misspelling cannot survive parsing.
+#derive(Eq, @debug.Debug)
 pub(all) enum MarkerVar {
   PythonVersion
   PythonFullVersion
@@ -64,7 +65,7 @@ pub(all) enum MarkerVar {
   Extra
   Extras
   DependencyGroups
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend MarkerVar with Eq::{equal, not_equal}
@@ -158,6 +159,7 @@ fn marker_var_spellings() -> Array[String] {
 
 ///|
 /// The comparison operators of a marker clause.
+#derive(Eq, @debug.Debug)
 pub(all) enum MarkerOp {
   Less
   LessEqual
@@ -169,7 +171,7 @@ pub(all) enum MarkerOp {
   ArbitraryEqual
   In
   NotIn
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend MarkerOp with Eq::{equal, not_equal}
@@ -219,10 +221,11 @@ fn marker_op_symbols() -> Array[String] {
 
 ///|
 /// One side of a comparison: either an environment key or a quoted string.
+#derive(Eq, @debug.Debug)
 pub(all) enum MarkerOperand {
   Variable(MarkerVar)
   Value(String)
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend MarkerOperand with Eq::{equal, not_equal}
@@ -251,11 +254,12 @@ fn MarkerOperand::render(self : MarkerOperand) -> String raise VersionError {
 
 ///|
 /// One `lhs op rhs` clause.
+#derive(Eq, @debug.Debug)
 pub(all) struct MarkerClause {
   lhs : MarkerOperand
   op : MarkerOp
   rhs : MarkerOperand
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend MarkerClause with Eq::{equal, not_equal}
@@ -272,10 +276,11 @@ pub fn MarkerClause::render(self : MarkerClause) -> String raise VersionError {
 /// A member of the flat list a marker expression parses into. `and`/`or` are
 /// members rather than tree nodes because that single choice decides both the
 /// rendering and the `any(all(...))` evaluation order.
+#derive(Eq, @debug.Debug)
 pub(all) enum MarkerAtom {
   Clause(MarkerClause)
   Group(Marker)
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend MarkerAtom with Eq::{equal, not_equal}
@@ -284,11 +289,12 @@ pub extend MarkerAtom with Eq::{equal, not_equal}
 pub extend MarkerAtom with @debug.Debug::{to_repr}
 
 ///|
+#derive(Eq, @debug.Debug)
 pub(all) enum MarkerItem {
   Atom(MarkerAtom)
   And
   Or
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend MarkerItem with Eq::{equal, not_equal}
@@ -299,9 +305,10 @@ pub extend MarkerItem with @debug.Debug::{to_repr}
 ///|
 /// A parsed marker expression: a flat sequence of clauses, parenthesised groups
 /// and `and`/`or` operators.
+#derive(Eq, @debug.Debug)
 pub(all) struct Marker {
   items : Array[MarkerItem]
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend Marker with Show::{output}
@@ -807,10 +814,11 @@ fn normalize_atom(atom : MarkerAtom) -> MarkerAtom {
 ///|
 /// The value of a marker key at evaluation time. Most keys hold plain strings;
 /// `extras` and `dependency_groups` hold sets of names.
+#derive(Eq, @debug.Debug)
 pub(all) enum MarkerValue {
   Text(String)
   Names(Array[String])
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend MarkerValue with Eq::{equal, not_equal}

@@ -181,12 +181,13 @@ fn count_char(text : String, needle : Char) -> Int {
 /// A parsed wheel filename: a normalized project name, the version, the
 /// optional PEP 427 build tag split into `(leading digits, remainder)` and the
 /// expanded tag set.
+#derive(Eq, @debug.Debug)
 pub(all) struct WheelFilename {
   name : String
   version : Version
   build : (Int, String)?
   tags : Array[String]
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend WheelFilename with Eq::{equal, not_equal}
@@ -196,10 +197,11 @@ pub extend WheelFilename with @debug.Debug::{to_repr}
 
 ///|
 /// A parsed source distribution filename.
+#derive(Eq, @debug.Debug)
 pub(all) struct SdistFilename {
   name : String
   version : Version
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend SdistFilename with Eq::{equal, not_equal}
