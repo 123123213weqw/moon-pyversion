@@ -1096,3 +1096,73 @@ pub fn Marker::variables(self : Marker) -> Array[MarkerVar] {
 pub fn validate_marker_text(text : String) -> Unit raise VersionError {
   ignore(Marker::parse(text))
 }
+
+///|
+/// Build a PEP 508 marker environment from the fields a caller usually
+/// has on hand after parsing project metadata: the python full version
+/// (`3.11.4`), the implementation name (`cpython`), the platform system
+/// (`linux` / `darwin` / `windows`), and the machine architecture
+/// (`x86_64` / `aarch64`). The derived spellings PEP 508 defines follow
+/// from these: `python_version` is the first two components, `sys_platform`
+/// maps from the system by the platform table (`linux`/`darwin` stay,
+/// `windows` becomes `win32`), and `platform_machine` carries the
+/// architecture verbatim.
+///
+/// Everything else stays unset, exactly as `MarkerEnvironment::new`
+/// leaves it - `extra` and `dependency_groups` remain unset variables,
+/// so membership tests on them evaluate to errors per PEP 508 rather
+/// than silently false. Callers with more of the environment (os_name,
+/// platform_release, abi) set it directly afterwards.
+pub fn MarkerEnvironment::from_runtime(
+  python_full_version : String,
+  implementation_name : String,
+  platform_system : String,
+  platform_machine : String,
+) -> MarkerEnvironment raise VersionError {
+  let env = MarkerEnvironment::new()
+  env.set("python_full_version", python_full_version)
+  // python_version: the first two release components of the full
+  // version; anything without a second component is refused - PEP 508
+  // environments always carry a full dotted version.
+  let mut seen = 0
+  let mut short = ""
+  for c in python_full_version {
+    if c == '.' {
+      seen = seen + 1
+      if seen == 2 {
+        break
+      }
+    }
+    if seen <= 1 {
+      short = short + c.to_string()
+    }
+  }
+  if seen < 1 || short.is_empty() {
+    raise VersionError::InvalidVersion("MARKER_PYTHON_VERSION", 0)
+  }
+  env.set("python_version", short)
+  env.set("implementation_name", implementation_name)
+  env.set("platform_system", platform_system)
+  // The sys.platform spelling: windows is win32 in the marker world.
+  let sys_platform = if platform_system == "windows" {
+    "win32"
+  } else {
+    platform_system
+  }
+  env.set("sys_platform", sys_platform)
+  env.set("platform_machine", platform_machine)
+  env
+}
+
+///|
+/// The raw text stored for a variable, or None when unset - a test and
+/// debug helper over the same table evaluate reads.
+pub fn MarkerEnvironment::get_text(
+  self : MarkerEnvironment,
+  key : String,
+) -> String? {
+  match self.values.get(key) {
+    Some(text) => Some(text)
+    None => None
+  }
+}

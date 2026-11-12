@@ -355,3 +355,46 @@ test "marker: requirements hand their marker to this module" {
     assert_true(requirement_rejected("foo; \{rejected}"))
   }
 }
+
+///|
+test "from_runtime derives the PEP 508 spellings" {
+  let env = @moon_pyversion.MarkerEnvironment::from_runtime(
+    "3.11.4", "cpython", "linux", "x86_64",
+  )
+  // Direct fields.
+  assert_eq(env.get_text("python_full_version"), Some("3.11.4"))
+  assert_eq(env.get_text("implementation_name"), Some("cpython"))
+  assert_eq(env.get_text("platform_system"), Some("linux"))
+  assert_eq(env.get_text("platform_machine"), Some("x86_64"))
+  // Derived spellings.
+  assert_eq(env.get_text("python_version"), Some("3.11"))
+  assert_eq(env.get_text("sys_platform"), Some("linux"))
+  // Windows maps to win32.
+  let win = @moon_pyversion.MarkerEnvironment::from_runtime(
+    "3.12.0", "cpython", "windows", "AMD64",
+  )
+  assert_eq(win.get_text("sys_platform"), Some("win32"))
+  assert_eq(win.get_text("python_version"), Some("3.12"))
+  // A version without a second component is refused, not guessed.
+  let refused = Some(
+    @moon_pyversion.MarkerEnvironment::from_runtime(
+      "3", "cpython", "linux", "x86_64",
+    ),
+  ) catch {
+    _ => None
+  }
+  let refused = match refused {
+    None => true
+    Some(_) => false
+  }
+  assert_eq(refused, true)
+  // The environment drives markers end to end.
+  let marker = @moon_pyversion.Marker::parse(
+    "python_version >= '3.11' and sys_platform == 'linux'",
+  )
+  assert_eq(marker.evaluate(env), true)
+  let mac = @moon_pyversion.MarkerEnvironment::from_runtime(
+    "3.11.4", "cpython", "darwin", "arm64",
+  )
+  assert_eq(marker.evaluate(mac), false)
+}
