@@ -451,3 +451,253 @@ pub fn SpecifierSet::filter(
     out
   }
 }
+
+///|
+/// A minimal "0" version, for the unreachable branches below.
+fn zero_version() -> Version {
+  {
+    raw: "",
+    epoch: @bigint.BigInt::from_int(0),
+    release: [@bigint.BigInt::from_int(0)],
+    has_pre: false,
+    pre_kind: 0,
+    pre_num: @bigint.BigInt::from_int(0),
+    has_post: false,
+    post_num: @bigint.BigInt::from_int(0),
+    has_dev: false,
+    dev_num: @bigint.BigInt::from_int(0),
+    local_segments: [],
+  }
+}
+
+///|
+/// The operand of an ordered clause (`>`, `<`, `>=`, `<=`, `~=`), all of
+/// which always carry a parsed version.
+fn spec_operand(s : Specifier) -> Version {
+  match s.version {
+    Some(v) => v
+    None => zero_version()
+  }
+}
+
+///|
+/// True when both operands share an epoch and release digits. This is where
+/// packaging's carve-outs live - a `>` clause does not admit the
+/// post-releases of its operand, a `<` clause does not admit the
+/// pre-releases sitting at its operand - so it is exactly where an
+/// "implied" clause could stop being implied: inside one family the ordered
+/// clauses are not pure intervals.
+fn same_release_family(a : Version, b : Version) -> Bool {
+  a.epoch.compare(b.epoch) == 0 &&
+  compare_bigint_arrays(a.release, b.release) == 0
+}
+
+///|
+/// A version with one extra textual local segment, used to probe whether a
+/// clause treats every local variant of a pin alike: a clause that admits
+/// both the pin and this probe is local-agnostic over the pin's family.
+fn with_probe_local(v : Version) -> Version {
+  let segments : Array[LocalPart] = []
+  for segment in v.local_segments {
+    segments.push(segment)
+  }
+  segments.push({ text: "zz", numeric: false, })
+  { ..v, local_segments: segments, }
+}
+
+///|
+/// Whether an `==pin` clause (non-wildcard) already decides `clause`: the
+/// clause must admit the whole family the pin admits, not just the pin's
+/// own spelling. A pin that carries local segments admits exactly one
+/// version, so admitting the pin is admitting the family; a local-less pin
+/// admits the local family of its release, so the clause must also admit a
+/// probed local variant. A verbatim `===` compares spellings, and a `!=`
+/// with local in its operand can still split a local family, so both are
+/// conservatively kept.
+fn pin_admits_clause(pin : Specifier, clause : Specifier) -> Bool {
+  let pinned = match pin.version {
+    Some(v) => v
+    None => return false
+  }
+  if pinned.local_segments.length() > 0 {
+    return specifier_contains(clause, pinned)
+  }
+  if clause.op == ArbitraryEqual {
+    return false
+  }
+  if clause.op == NotEqual {
+    match clause.version {
+      Some(v) => if v.local_segments.length() > 0 { return false }
+      None => ()
+    }
+  }
+  specifier_contains(clause, pinned) &&
+  specifier_contains(clause, with_probe_local(pinned))
+}
+
+///|
+/// Collapse the lower (or upper) ordered bounds to the single strongest
+/// clause, dropping a bound only when the survivor provably implies it. A
+/// dropped `>=`/`<=` is implied by anything beyond it, but a dropped `>` is
+/// implied only outside the survivor's release family (the post-release
+/// carve-out), and a dropped `<` only outside it or when its own operand is
+/// a pre or dev release (the pre-release carve-out). Both guards err toward
+/// keeping a clause, so the merged set never admits a version the original
+/// rejected.
+fn merge_bounds(specs : Array[Specifier], lower : Bool) -> Array[Specifier] {
+  let mut best : Int32 = -1
+  for i = 0; i < specs.length(); i = i + 1 {
+    let op = specs[i].op
+    let is_bound = if lower {
+      op == Greater || op == GreaterEqual
+    } else {
+      op == Less || op == LessEqual
+    }
+    if is_bound {
+      if best < 0 {
+        best = i
+      } else {
+        let order = compare_without_local(
+          spec_operand(specs[i]),
+          spec_operand(specs[best]),
+        )
+        // Lower bounds want the greatest operand, upper bounds the smallest;
+        // at equal operands the strict operator is the stronger claim.
+        let takes = if lower {
+          order > 0 ||
+          (order == 0 && op == Greater && specs[best].op == GreaterEqual)
+        } else {
+          order < 0 || (order == 0 && op == Less && specs[best].op == LessEqual)
+        }
+        if takes {
+          best = i
+        }
+      }
+    }
+  }
+  if best < 0 {
+    return specs
+  }
+  let winner = spec_operand(specs[best])
+  let out : Array[Specifier] = []
+  for i = 0; i < specs.length(); i = i + 1 {
+    let op = specs[i].op
+    let is_bound = if lower {
+      op == Greater || op == GreaterEqual
+    } else {
+      op == Less || op == LessEqual
+    }
+    if is_bound && i != best {
+      let operand = spec_operand(specs[i])
+      // Dropping `>b` (or `<b`) is unsound inside one release family:
+      // the family's post-releases sit above b yet are carved out of `>b`,
+      // and the pre-releases sitting at a final b are carved out of `<b`.
+      // Elsewhere, a `>=`/`<=` is implied by anything beyond it and a
+      // same-strictness `>`/`<` by a strictly stronger operand.
+      let droppable = if lower {
+        op == GreaterEqual ||
+        operand.has_post ||
+        !same_release_family(winner, operand)
+      } else {
+        op == LessEqual ||
+        version_is_prerelease(operand) ||
+        !same_release_family(winner, operand)
+      }
+      if !droppable {
+        out.push(specs[i])
+      }
+    } else {
+      out.push(specs[i])
+    }
+  }
+  out
+}
+
+///|
+/// Merge redundant clauses into an equivalent set with fewer clauses. A
+/// clause is dropped only when a kept clause provably implies it, so the
+/// simplified set admits exactly the versions the original admitted:
+///
+/// - duplicate renderings collapse to one;
+/// - the ordered lower bounds (`>`, `>=`) reduce to the single strongest
+///   clause, and the upper bounds (`<`, `<=`) likewise;
+/// - when the set pins exact versions (`==v`, non-wildcard), every clause
+///   that admits all the pins is dropped - the pins already decide those.
+///
+/// `===`, `~=` and wildcard clauses keep their shape in all cases (their
+/// pre/post-release carve-outs make pure interval merging unsound), and a
+/// bound is kept rather than dropped when it shares a release family with
+/// the surviving bound - `<2.0` excludes `2.0.dev*`, so `<=2.0.dev3,<2.0`
+/// does not reduce, and neither does `>=1.0.post1,>1.0`.
+///
+/// ```mbt check
+/// test {
+///   let spec = @moon_pyversion.SpecifierSet::parse(">=1.0,>=1.5,<3")
+///   inspect(
+///     @moon_pyversion.SpecifierSet::simplify(spec).to_string(),
+///     content="<3,>=1.5",
+///   )
+/// }
+/// ```
+pub fn SpecifierSet::simplify(self : SpecifierSet) -> SpecifierSet {
+  // Duplicates collapse; the rendering is the identity packaging uses.
+  let mut kept : Array[Specifier] = []
+  for spec in self.specs {
+    let mut seen = false
+    for existing in kept {
+      if existing.to_string() == spec.to_string() {
+        seen = true
+        break
+      }
+    }
+    if !seen {
+      kept.push(spec)
+    }
+  }
+  // Exact pins first: with at least one `==v`, a clause that admits every
+  // pin cannot reject anything the pins keep, so it goes; the pins stay.
+  let pins : Array[Specifier] = []
+  for spec in kept {
+    if spec.op == Equal && !spec.wildcard {
+      pins.push(spec)
+    }
+  }
+  if pins.length() > 0 {
+    let reduced : Array[Specifier] = []
+    for spec in kept {
+      let mut is_pin = false
+      for pin in pins {
+        if pin.to_string() == spec.to_string() {
+          is_pin = true
+          break
+        }
+      }
+      let mut implied = true
+      if !is_pin {
+        for pin in pins {
+          if !pin_admits_clause(pin, spec) {
+            implied = false
+            break
+          }
+        }
+      }
+      if is_pin || !implied {
+        reduced.push(spec)
+      }
+    }
+    kept = reduced
+  } else {
+    // No pin: collapse the ordered bounds on each side.
+    kept = merge_bounds(kept, true)
+    kept = merge_bounds(kept, false)
+  }
+  // Canonical order, and the rendering becomes the new original.
+  kept.sort_by(fn(a, b) {
+    String::lexical_compare(a.to_string(), b.to_string())
+  })
+  let rendered : Array[String] = []
+  for spec in kept {
+    rendered.push(spec.to_string())
+  }
+  { specs: kept, original: rendered.join(","), }
+}

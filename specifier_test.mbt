@@ -163,3 +163,87 @@ test "arbitrary equality keeps packaging's operand restrictions" {
     assert_true(specifier_rejected(raw))
   }
 }
+
+///|
+test "simplify merges redundant bounds to the strongest clause" {
+  let cases : Array[(String, String)] = [
+    (">=1.0,>=1.5,<3", "<3,>=1.5"),
+    (">=1.5,<3,>=1.0", "<3,>=1.5"),
+    (">=1,<2,>=1.5", "<2,>=1.5"),
+    (">=1.0,>=1.0", ">=1.0"),
+    (">=1.0,>1.0", ">1.0"),
+    ("<=2.0,<2.0", "<2.0"),
+    ("<2.0,<=2.0", "<2.0"),
+    (">=2,<=2", "<=2,>=2"),
+    ("", ""),
+  ]
+  for entry in cases {
+    let spec = @moon_pyversion.SpecifierSet::parse(entry.0)
+    assert_eq(@moon_pyversion.SpecifierSet::simplify(spec).to_string(), entry.1)
+  }
+}
+
+///|
+/// Clauses this merger never touches: `~=` and wildcards keep their shape,
+/// and a bound survives when it shares a release family with the winner -
+/// there the prerelease and post-release carve-outs make the two clauses
+/// differ on real versions, so dropping either would change the admitted
+/// set.
+test "simplify keeps clauses the merge cannot prove redundant" {
+  let cases : Array[(String, String)] = [
+    (">=1.0.post1,>1.0", ">1.0,>=1.0.post1"),
+    ("<2.0.dev3,<2.0", "<2.0,<2.0.dev3"),
+    ("~=1.4,>=1.0", ">=1.0,~=1.4"),
+    (">=1.0,==1.4.*", "==1.4.*,>=1.0"),
+  ]
+  for entry in cases {
+    let spec = @moon_pyversion.SpecifierSet::parse(entry.0)
+    assert_eq(@moon_pyversion.SpecifierSet::simplify(spec).to_string(), entry.1)
+  }
+}
+
+///|
+/// With an exact pin, every clause the pin already satisfies is implied and
+/// dropped; a clause the pin fails (or that could split the pin's local
+/// family) stays, preserving even the unsatisfiable combinations.
+test "simplify drops clauses an exact pin already decides" {
+  let cases : Array[(String, String)] = [
+    ("==1.4,>=1.0,<2.0,!=1.5", "==1.4"),
+    ("==1.4,!=1.4", "!=1.4,==1.4"),
+    ("==1.0,!=1.0+abc", "!=1.0+abc,==1.0"),
+    ("==1.4,==2.0,>=0.5,<3", "==1.4,==2.0"),
+    ("==1.4,==1.4", "==1.4"),
+    ("==1.4,~=1.4", "==1.4"),
+  ]
+  for entry in cases {
+    let spec = @moon_pyversion.SpecifierSet::parse(entry.0)
+    assert_eq(@moon_pyversion.SpecifierSet::simplify(spec).to_string(), entry.1)
+  }
+}
+
+///|
+/// The contract that matters: simplify never changes which versions pass.
+/// Each original and simplified pair is probed with finals, prereleases,
+/// post-releases and local variants around every boundary.
+test "simplify admits exactly the same versions" {
+  let probes = [
+    "0.9", "1.0", "1.0.post1", "1.0+abc", "1.4", "1.4.5", "1.4.5+local", "1.5", "1.9",
+    "2.0", "2.0.dev1", "2.0.post3", "3.0", "3.1",
+  ]
+  let originals = [
+    ">=1.0,>=1.5,<3", "==1.4,>=1.0,<2.0,!=1.5", ">1.0,>=1.0.post1,<2.0", "~=1.4,>=1.0,<2.0.dev3",
+  ]
+  for raw in originals {
+    let spec = @moon_pyversion.SpecifierSet::parse(raw)
+    let simplified = @moon_pyversion.SpecifierSet::simplify(spec)
+    for probe in probes {
+      let version = @moon_pyversion.Version::parse(probe)
+      let before = spec.contains(version, prereleases=Some(true))
+      let after = simplified.contains(version, prereleases=Some(true))
+      if before != after {
+        println("semantic drift for \{raw} at \{probe}")
+      }
+      assert_eq(after, before)
+    }
+  }
+}

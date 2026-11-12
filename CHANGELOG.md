@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### SpecifierSet::simplify
+
+The redundant-clause merger: `>=1.0,>=1.5,<3` becomes `>=1.5,<3` (canonical
+order `<3,>=1.5`), as a new equivalent SpecifierSet. A clause is dropped only
+when a kept clause provably implies it, so the simplified set admits exactly
+the versions the original admitted: duplicates collapse, the ordered lower
+bounds (`>`, `>=`) reduce to the single strongest clause and the upper bounds
+(`<`, `<=`) likewise, and when the set pins exact versions (`==v`,
+non-wildcard) every clause that admits all the pins goes. `===`, `~=` and
+wildcard clauses keep their shape, and a bound sharing a release family with
+the survivor is kept - packaging's pre/post-release carve-outs live there
+(`>1.0` does not admit `1.0.post1`, `<2.0` does not admit `2.0.dev1`), which
+is exactly where "implied" stops being implied. A semantic-drift test probes
+original and simplified pairs with finals, prereleases, post-releases and
+local variants around every boundary.
+
 ## 0.5.0 — 2026-11-12
 
 The judgment core: six new capabilities that turn parsed metadata into
