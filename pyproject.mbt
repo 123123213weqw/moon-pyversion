@@ -162,3 +162,100 @@ pub fn PyProject::check_runtime(
     Some(failures)
   }
 }
+
+///|
+/// The end-to-end answer: does this runtime support installing this
+/// project, and where would each dependency come from? Runs
+/// check_runtime for the go/no-go and the python gate, then - for each
+/// dependency whose project has an index - select_candidates to find
+/// the viable files on this runtime. The candidate lookup that
+/// check_runtime receives is the index-backed one: a dependency with
+/// no index simply fails with "no candidate for X" exactly as before;
+/// a dependency whose index has no viable file fails with the
+/// select_candidates exclusions rendered as reasons. This is the
+/// micro-pip: pyproject.toml plus a set of PEP 691 indexes in, a
+/// named-failure list or a green light out.
+pub fn PyProject::plan_install(
+  self : PyProject,
+  indexes : Map[String, SimpleIndex],
+  python_full_version : String,
+  implementation_name : String,
+  platform_system : String,
+  platform_machine : String,
+) -> Array[RequirementFailure]? raise VersionError {
+  // The candidate lookup: the newest viable version per project from
+  // its index, gated by select_candidates on the same runtime.
+  // The lookup for check_runtime must be non-raising; select_candidates
+  // raises on a malformed index, which plan_install propagates directly
+  // by pre-computing the best version per indexed project.
+  let best_versions : Map[String, Version] = Map([])
+  for name in indexes.keys() {
+    let (candidates, _) = select_candidates(
+      indexes[name],
+      Some(python_full_version),
+      None,
+    )
+    let mut best : Version? = None
+    for candidate in candidates {
+      match best {
+        None => best = Some(candidate.version)
+        Some(current) =>
+          if Version::compare(candidate.version, current) > 0 {
+            best = Some(candidate.version)
+          }
+      }
+    }
+    match best {
+      None => ()
+      Some(v) => best_versions[name] = v
+    }
+  }
+  fn resolve(name : String) -> Version? {
+    best_versions.get(name)
+  }
+  let failures = self.check_runtime(
+    python_full_version, implementation_name, platform_system, platform_machine,
+    resolve,
+  )
+  match failures {
+    None => None
+    Some(items) =>
+      // A "no candidate for X" failure where X has an index means the
+      // index had nothing viable - refine the reason with the count
+      // the caller can act on (zero candidates after gates).
+      Some(
+        items.map(item => {
+          if item.reason.has_prefix("no candidate for ") == false {
+            item
+          } else {
+            let name = item.reason
+              .strip_prefix("no candidate for ")
+              .unwrap()
+              .to_owned()
+            match indexes.get(name) {
+              None => item
+              Some(_) => {
+                let (_, excluded) = select_candidates(
+                  indexes.get(name).unwrap(),
+                  Some(python_full_version),
+                  None,
+                )
+                if excluded.is_empty() {
+                  item
+                } else {
+                  {
+                    requirement: item.requirement,
+                    reason: "no viable file for " +
+                    name +
+                    " (" +
+                    excluded.length().to_string() +
+                    " excluded)",
+                  }
+                }
+              }
+            }
+          }
+        }),
+      )
+  }
+}

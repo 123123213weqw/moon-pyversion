@@ -136,3 +136,64 @@ test "check_runtime names blockers across python gate and dependencies" {
   }
   assert_eq(blocker, "foo<2,>=1.0")
 }
+
+///|
+fn build_index(
+  name : String,
+  files_json : String,
+) -> @moon_pyversion.SimpleIndex raise {
+  let doc = "{\"name\": \"" +
+    name +
+    "\", \"version\": \"1.0\", \"files\": " +
+    files_json +
+    "}"
+  @moon_pyversion.SimpleIndex::parse(doc)
+}
+
+///|
+test "plan_install is the micro-pip end to end" {
+  let doc = @moon_pyversion.Toml::parse(
+    "[project]\nname = \"demo\"\nrequires-python = \">=3.11\"\ndependencies = [\"foo>=1.0,<2\"]\n",
+  )
+  let project = @moon_pyversion.PyProject::from_toml(doc)
+  // A good index: foo 1.5 wheel viable on this runtime.
+  let foo_index = build_index(
+    "foo", "[{\"filename\": \"foo-1.5-py3-none-any.whl\", \"url\": \"u1\", \"hashes\": {\"sha256\": \"a\"}}]",
+  )
+  let indexes : Map[String, @moon_pyversion.SimpleIndex] = Map([])
+  indexes["foo"] = foo_index
+  // All green: python gate passes, foo 1.5 from the index passes.
+  let plan = project.plan_install(
+    indexes, "3.11.4", "cpython", "linux", "x86_64",
+  )
+  let all_ok = match plan {
+    None => true
+    Some(_) => false
+  }
+  assert_eq(all_ok, true)
+  // Bad index: only a yanked file - no viable candidate, named.
+  let bad_index = build_index(
+    "foo", "[{\"filename\": \"foo-1.5-py3-none-any.whl\", \"url\": \"u1\", \"hashes\": {\"sha256\": \"a\"}, \"yanked\": \"recall\"}]",
+  )
+  let bad_map : Map[String, @moon_pyversion.SimpleIndex] = Map([])
+  bad_map["foo"] = bad_index
+  let blocked = project.plan_install(
+    bad_map, "3.11.4", "cpython", "linux", "x86_64",
+  )
+  let reason = match blocked {
+    None => ""
+    Some(items) => items[0].reason
+  }
+  // "no candidate" refined to "no viable file" when the index exists.
+  assert_eq(reason.has_prefix("no viable file for foo"), true)
+  // Missing index entirely: the plain no-candidate reason.
+  let empty : Map[String, @moon_pyversion.SimpleIndex] = Map([])
+  let missing = project.plan_install(
+    empty, "3.11.4", "cpython", "linux", "x86_64",
+  )
+  let reason2 = match missing {
+    None => ""
+    Some(items) => items[0].reason
+  }
+  assert_eq(reason2, "no candidate for foo")
+}
