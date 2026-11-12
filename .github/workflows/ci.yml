@@ -20,11 +20,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - uses: hustcer/setup-moonbit@87e2bdf5cf20d3b6f5c5f266a8a513f503bb5b76
-        with:
-          # Keep CI reproducible across compiler releases; the 2026-09-18
-          # toolchain introduced implicit_impl_as_method as a new warning.
-          version: '0.10.14+7d59c7ec9'
+      - name: Install pinned MoonBit (release asset - the ladder's toolchain)
+        # hustcer/setup-moonbit's core bundling is incompatible with the
+        # newest core layout (conditional imports), so CI installs the
+        # exact toolchain from this repository's own release instead.
+        run: |
+          mkdir -p "$HOME/.moon"
+          curl -fsSL https://github.com/123123213weqw/moon-pyversion/releases/download/toolchain-0.1.20261104/moonbit-0.1.20261104-linux-x86_64.tar.gz \
+            | tar xz -C "$HOME/.moon"
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+          "$HOME/.moon/bin/moon" version --all
       - run: moon version --all
       - run: moon fmt --check
       - run: moon info
@@ -53,7 +58,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - uses: hustcer/setup-moonbit@87e2bdf5cf20d3b6f5c5f266a8a513f503bb5b76
+      - name: Install pinned MoonBit (release asset)
+        run: |
+          mkdir -p "$HOME/.moon"
+          curl -fsSL https://github.com/123123213weqw/moon-pyversion/releases/download/toolchain-0.1.20261104/moonbit-0.1.20261104-linux-x86_64.tar.gz \
+            | tar xz -C "$HOME/.moon"
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
