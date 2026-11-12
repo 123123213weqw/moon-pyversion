@@ -262,3 +262,79 @@ test "textual local segments order lexically rather than by length" {
     @moon_pyversion.Version::parse("0+x"),
   )
 }
+
+///|
+/// The next-release helpers answer with release numbers, not with the
+/// smallest version above: pre/post/dev and local parts are dropped, the
+/// epoch survives, and short releases zero-pad before the bump.
+test "next_major bumps the first digit and drops the rest" {
+  let cases : Array[(String, String)] = [
+    ("1.2.3", "2"),
+    ("0.9", "1"),
+    ("1!1.9", "1!2"),
+    ("1.2.3rc4+local", "2"),
+    ("1.0.post3", "2"),
+  ]
+  for entry in cases {
+    let v = @moon_pyversion.Version::parse(entry.0)
+    assert_eq(@moon_pyversion.Version::next_major(v).to_string(), entry.1)
+  }
+}
+
+///|
+test "next_minor pads to two digits and bumps the second" {
+  let cases : Array[(String, String)] = [
+    ("1.2.3", "1.3"),
+    ("2", "2.1"),
+    ("1.9.9", "1.10"),
+    ("1!2.0.dev1", "1!2.1"),
+  ]
+  for entry in cases {
+    let v = @moon_pyversion.Version::parse(entry.0)
+    assert_eq(@moon_pyversion.Version::next_minor(v).to_string(), entry.1)
+  }
+}
+
+///|
+test "next_patch pads to three digits and bumps the third" {
+  let cases : Array[(String, String)] = [
+    ("1.2.3", "1.2.4"),
+    ("1.2", "1.2.1"),
+    ("0", "0.0.1"),
+    ("10.0.0.post1", "10.0.1"),
+  ]
+  for entry in cases {
+    let v = @moon_pyversion.Version::parse(entry.0)
+    assert_eq(@moon_pyversion.Version::next_patch(v).to_string(), entry.1)
+  }
+}
+
+///|
+/// The helpers compose the way release planning does: after a major bump
+/// the minor and patch dimensions restart from zero, so the first patch of
+/// the next major is `<next>.0.1`, not a carry of the old digits.
+test "next helpers chain across dimensions" {
+  let v = @moon_pyversion.Version::parse("1.2.3")
+  let next_major = @moon_pyversion.Version::next_major(v)
+  assert_eq(
+    @moon_pyversion.Version::next_patch(next_major).to_string(),
+    "2.0.1",
+  )
+  assert_eq(@moon_pyversion.Version::next_minor(next_major).to_string(), "2.1")
+  let next_minor = @moon_pyversion.Version::next_minor(v)
+  assert_eq(
+    @moon_pyversion.Version::next_patch(next_minor).to_string(),
+    "1.3.1",
+  )
+  // Every bumped form is a final release above its origin.
+  assert_true(@moon_pyversion.Version::next_patch(v) > v)
+  assert_true(@moon_pyversion.Version::next_minor(v) > v)
+  assert_true(@moon_pyversion.Version::next_major(v) > v)
+  assert_false(
+    @moon_pyversion.Version::is_prerelease(
+      @moon_pyversion.Version::next_patch(
+        @moon_pyversion.Version::parse("1.2.3.dev4"),
+      ),
+    ),
+  )
+}

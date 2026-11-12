@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Version::next_major / next_minor / next_patch
+
+Version navigation helpers: `1.2.3` -> `2` / `1.3` / `1.2.4`. Each answers
+with the next release number in that dimension, not the smallest version
+above (the dev, pre and post releases interleave with it): the release pads
+with zeros to the dimension's width before bumping (`1` -> `1.0.1` for a
+patch bump), deeper digits are dropped, the epoch survives, and the answer is
+always a final release. They compose across dimensions the way release
+planning does - the first patch of the next major of `1.2.3` is `2.0.1`.
+
 ### SpecifierSet::simplify
 
 The redundant-clause merger: `>=1.0,>=1.5,<3` becomes `>=1.5,<3` (canonical

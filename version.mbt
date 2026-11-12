@@ -642,3 +642,78 @@ pub impl Eq for Version with fn equal(self, other) {
 pub impl Compare for Version with fn compare(self, other) {
   Version::compare(self, other)
 }
+
+///|
+/// The release digits zero-padded out to `width`, with the last digit
+/// incremented. This is the release-number form of a "next" version - not
+/// the smallest version above the current one (the dev, pre and post
+/// releases interleave with it), but the next number in that dimension.
+fn bumped_release(v : Version, width : Int32) -> Array[@bigint.BigInt] {
+  let release : Array[@bigint.BigInt] = []
+  for i = 0; i < v.release.length(); i = i + 1 {
+    if i < width {
+      release.push(v.release[i])
+    }
+  }
+  while release.length() < width {
+    release.push(@bigint.BigInt::from_int(0))
+  }
+  let last = release.length() - 1
+  release[last] = release[last].add(@bigint.BigInt::from_int(1))
+  release
+}
+
+///|
+/// The bumped release as a final version: epoch preserved, pre/post/dev and
+/// local parts dropped, and `raw` empty because the value is computed
+/// rather than parsed - `to_string` is its canonical spelling.
+fn next_release_form(v : Version, width : Int32) -> Version {
+  {
+    raw: "",
+    epoch: v.epoch,
+    release: bumped_release(v, width),
+    has_pre: false,
+    pre_kind: 0,
+    pre_num: @bigint.BigInt::from_int(0),
+    has_post: false,
+    post_num: @bigint.BigInt::from_int(0),
+    has_dev: false,
+    dev_num: @bigint.BigInt::from_int(0),
+    local_segments: [],
+  }
+}
+
+///|
+/// The next major release number: `1.2.3` -> `2`, `0.9` -> `1`. The release
+/// keeps only its first digit (bumped), the epoch is preserved, and any
+/// pre/post/dev and local parts are dropped - the answer is always a final
+/// release. Versions with fewer digits than the dimension pad with zeros
+/// first, so PEP 440's `1 == 1.0 == 1.0.0` equivalence is respected.
+///
+/// ```mbt check
+/// test {
+///   let v = @moon_pyversion.Version::parse("1.2.3rc1")
+///   inspect(@moon_pyversion.Version::next_major(v).to_string(), content="2")
+///   inspect(@moon_pyversion.Version::next_minor(v).to_string(), content="1.3")
+///   inspect(@moon_pyversion.Version::next_patch(v).to_string(), content="1.2.4")
+/// }
+/// ```
+pub fn Version::next_major(self : Version) -> Version {
+  next_release_form(self, 1)
+}
+
+///|
+/// The next minor release number: `1.2.3` -> `1.3`, `2` -> `2.1`. The first
+/// two digits (zero-padded) are kept, the second bumped, deeper digits
+/// dropped; the same final-release and epoch rules as next_major.
+pub fn Version::next_minor(self : Version) -> Version {
+  next_release_form(self, 2)
+}
+
+///|
+/// The next patch release number: `1.2.3` -> `1.2.4`, `1.2` -> `1.2.1`,
+/// `1` -> `1.0.1`. The first three digits (zero-padded) are kept, the third
+/// bumped; the same final-release and epoch rules as next_major.
+pub fn Version::next_patch(self : Version) -> Version {
+  next_release_form(self, 3)
+}
