@@ -125,3 +125,101 @@ test "satisfied_by on a URL requirement still checks the constraints" {
   }
   assert_eq(ok, true)
 }
+
+///|
+test "all_satisfied_by is the resolver's outer loop with named blockers" {
+  fn req(text : String) -> @moon_pyversion.Requirement raise {
+    @moon_pyversion.Requirement::parse(text)
+  }
+  let list = [
+    req("foo>=1.0,<2"),
+    req("bar~=1.4; python_version >= '3.8'"),
+    req("baz==1.0"),
+  ]
+  let env = @moon_pyversion.MarkerEnvironment::new()
+  env.set("python_version", "3.11")
+  // Candidates pre-parsed per project; the lookup is a plain table.
+  fn table(
+    foo : String,
+    bar : String,
+    baz : String?,
+  ) -> ((String) -> @moon_pyversion.Version?) raise {
+    let v_foo = @moon_pyversion.Version::parse(foo)
+    let v_bar = @moon_pyversion.Version::parse(bar)
+    let v_baz = match baz {
+      Some(text) => Some(@moon_pyversion.Version::parse(text))
+      None => None
+    }
+    fn(name : String) -> @moon_pyversion.Version? {
+      if name == "foo" {
+        Some(v_foo)
+      } else if name == "bar" {
+        Some(v_bar)
+      } else if name == "baz" {
+        v_baz
+      } else {
+        None
+      }
+    }
+  }
+  // All satisfied: foo 1.5, bar 1.5, baz 1.0.
+  let all_good = @moon_pyversion.all_satisfied_by(
+    list,
+    table("1.5", "1.5", Some("1.0")),
+    env,
+  )
+  let none_failed = match all_good {
+    None => true
+    Some(_) => false
+  }
+  assert_eq(none_failed, true)
+  // foo moves out of range: it is the single named blocker.
+  let foo_out = @moon_pyversion.all_satisfied_by(
+    list,
+    table("2.5", "1.5", Some("1.0")),
+    env,
+  )
+  let blocker = match foo_out {
+    None => ""
+    Some(items) => items[0].requirement + " @ " + items[0].reason
+  }
+  assert_eq(blocker, "foo<2,>=1.0 @ version not in <2,>=1.0")
+  // A project with no candidate at all: its own reason.
+  let missing = @moon_pyversion.all_satisfied_by(
+    list,
+    table("1.5", "1.5", None),
+    env,
+  )
+  let absent = match missing {
+    None => ""
+    Some(items) => items[0].reason
+  }
+  assert_eq(absent, "no candidate for baz")
+}
+
+///|
+test "all_satisfied_by surfaces marker errors as failures" {
+  fn req(text : String) -> @moon_pyversion.Requirement raise {
+    @moon_pyversion.Requirement::parse(text)
+  }
+  // 'csv' in extras against an unset extras value: parse accepts the
+  // requirement, evaluation cannot answer - a failure with the error.
+  let list = [req("foo>=1.0; 'csv' in extras")]
+  let v = @moon_pyversion.Version::parse("1.0")
+  let failures = @moon_pyversion.all_satisfied_by(
+    list,
+    fn(name : String) -> @moon_pyversion.Version? {
+      if name == "foo" {
+        Some(v)
+      } else {
+        None
+      }
+    },
+    @moon_pyversion.MarkerEnvironment::new(),
+  )
+  let reason = match failures {
+    None => "no failures"
+    Some(items) => items[0].reason
+  }
+  assert_eq(reason.has_prefix("marker error:"), true)
+}

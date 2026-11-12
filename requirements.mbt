@@ -495,3 +495,78 @@ pub fn Requirement::satisfied_by_version(
 ) -> Bool {
   self.specifier.contains(version, prereleases~)
 }
+
+///|
+/// One candidate that fell out of a batch check, with the reason the
+/// single-requirement judgment already knows how to spell.
+#derive(@debug.Debug)
+pub(all) struct RequirementFailure {
+  /// The requirement's normalized rendering.
+  requirement : String
+  /// Why it failed - the same branch names satisfied_by reports.
+  reason : String
+}
+
+///|
+pub extend RequirementFailure with @debug.Debug::{to_repr}
+
+///|
+/// Check a whole requirement list against the candidates the caller
+/// holds, one version per project: the resolver's outer loop done
+/// right. Each requirement looks up its own project by canonical name
+/// via `lookup`; a requirement whose project has no candidate fails
+/// with its own reason, and so does every branch satisfied_by reports.
+/// The answer is None when every requirement is satisfied - or the
+/// list of failures, each naming the requirement and why it blocked.
+///
+/// This shape exists because a single version cannot serve a list of
+/// requirements about *different* projects: the batch judgment is per
+/// project, and the lookup function is where the caller's candidate
+/// set (an index slice, a lock file, a resolve plan) plugs in.
+pub fn all_satisfied_by(
+  requirements : Array[Requirement],
+  lookup : (String) -> Version?,
+  environment : MarkerEnvironment,
+  prereleases~ : Bool? = None,
+) -> Array[RequirementFailure]? {
+  let failures : Array[RequirementFailure] = []
+  for requirement in requirements {
+    match lookup(requirement.name) {
+      None =>
+        failures.push({
+          requirement: requirement.to_string(),
+          reason: "no candidate for " + requirement.name,
+        })
+      Some(version) => {
+        let verdict = requirement.satisfied_by(
+          version,
+          environment,
+          prereleases~,
+        )
+        match verdict {
+          Satisfied => ()
+          VersionRejected(spec) =>
+            failures.push({
+              requirement: requirement.to_string(),
+              reason: "version not in " + spec,
+            })
+          MarkerRejected(marker) =>
+            failures.push({
+              requirement: requirement.to_string(),
+              reason: "marker false: " + marker,
+            })
+          EvalError(message) =>
+            failures.push({
+              requirement: requirement.to_string(),
+              reason: "marker error: " + message,
+            })
+        }
+      }
+    }
+  }
+  if failures.is_empty() {
+    None
+  } else {
+    Some(failures)
+  }
+}
