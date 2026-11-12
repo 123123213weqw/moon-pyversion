@@ -172,3 +172,149 @@ test "requirement: show renders the normalized form" {
     "Requests[Security]<3.0,>=2.0; python_version >= \"3.8\"",
   )
 }
+
+///|
+test "conflicts_with decides version-set disjointness" {
+  let conflict : Array[(String, String)] = [
+    ("demo>=2.0", "demo<2.0"),
+    ("demo>2.0", "demo<=2.0"),
+    ("demo==1.0", "demo==1.1"),
+    ("demo==1.4.*", "demo==1.5.*"),
+    ("demo==1.4.5", "demo!=1.4.*"),
+    ("demo~=1.4", "demo>=2.0"),
+    ("demo~=1.4.5", "demo<=1.4"),
+    ("demo~=1.4", "demo~=2.0"),
+    ("demo==1.4.*", "demo>=1.5"),
+    ("demo>1.0,<2.0", "demo==2.0"),
+  ]
+  for entry in conflict {
+    let a = @moon_pyversion.Requirement::parse(entry.0)
+    let b = @moon_pyversion.Requirement::parse(entry.1)
+    assert_true(@moon_pyversion.Requirement::conflicts_with(a, b))
+  }
+  let compatible : Array[(String, String)] = [
+    ("demo>=1.0,<2.0", "demo>=1.5,<3.0"),
+    ("demo>=2.0", "demo<=2.0"),
+    ("demo~=1.4", "demo<1.5"),
+    ("demo~=1.4", "demo>=1.5"),
+    ("demo==1.4.*", "demo<1.4.6"),
+    ("demo!=1.4.*", "demo>=1.0"),
+    ("demo", "demo==1.0"),
+  ]
+  for entry in compatible {
+    let a = @moon_pyversion.Requirement::parse(entry.0)
+    let b = @moon_pyversion.Requirement::parse(entry.1)
+    assert_false(@moon_pyversion.Requirement::conflicts_with(a, b))
+  }
+}
+
+///|
+test "conflicts_with is scoped to one project by canonical name" {
+  // Different projects never conflict through versions.
+  let different = (
+    @moon_pyversion.Requirement::parse("demo>=2.0"),
+    @moon_pyversion.Requirement::parse("other<2.0"),
+  )
+  assert_false(
+    @moon_pyversion.Requirement::conflicts_with(different.0, different.1),
+  )
+  // Name spelling does not matter: PEP 503 canonicalization applies.
+  let canonical = (
+    @moon_pyversion.Requirement::parse("Demo>=2.0"),
+    @moon_pyversion.Requirement::parse("DEMO<2.0"),
+  )
+  assert_true(
+    @moon_pyversion.Requirement::conflicts_with(canonical.0, canonical.1),
+  )
+  let dashed = (
+    @moon_pyversion.Requirement::parse("Demo.Project>=2.0"),
+    @moon_pyversion.Requirement::parse("demo_project<2.0"),
+  )
+  assert_true(@moon_pyversion.Requirement::conflicts_with(dashed.0, dashed.1))
+}
+
+///|
+/// Two direct URLs for one project are pip's "double requirement": the
+/// same URL is the same artifact, a different URL is a conflict no version
+/// can reconcile. One URL against a specifier cannot be decided here.
+test "conflicts_with handles the direct-URL form" {
+  let same_url = (
+    @moon_pyversion.Requirement::parse("demo @ https://a.example/x.whl"),
+    @moon_pyversion.Requirement::parse("demo @ https://a.example/x.whl"),
+  )
+  assert_false(
+    @moon_pyversion.Requirement::conflicts_with(same_url.0, same_url.1),
+  )
+  let other_url = (
+    @moon_pyversion.Requirement::parse("demo @ https://a.example/x.whl"),
+    @moon_pyversion.Requirement::parse("demo @ https://b.example/y.whl"),
+  )
+  assert_true(
+    @moon_pyversion.Requirement::conflicts_with(other_url.0, other_url.1),
+  )
+  let url_vs_spec = (
+    @moon_pyversion.Requirement::parse("demo @ https://a.example/x.whl"),
+    @moon_pyversion.Requirement::parse("demo<1.0"),
+  )
+  assert_false(
+    @moon_pyversion.Requirement::conflicts_with(url_vs_spec.0, url_vs_spec.1),
+  )
+}
+
+///|
+/// Markers that provably never co-apply keep two disjoint requirements
+/// from being a conflict - one of them is always switched off. The
+/// exclusivity proof works through version comparisons, string equality
+/// and set membership; a disjunction gives up and co-applies.
+test "conflicts_with respects markers that separate environments" {
+  let separated : Array[(String, String)] = [
+    ("demo>=2.0; python_version >= '3'", "demo<2.0; python_version < '3'"),
+    ("demo==1.0; extra == 'html'", "demo==1.1; extra == 'pdf'"),
+    ("demo>=2.0; os_name == 'nt'", "demo<2.0; os_name == 'posix'"),
+    ("demo>=2.0; python_version >= '4' and python_version < '3'", "demo<2.0"),
+    (
+      "demo>=2.0; python_version in '3.9 3.10'", "demo<2.0; python_version == '3.8'",
+    ),
+  ]
+  for entry in separated {
+    let a = @moon_pyversion.Requirement::parse(entry.0)
+    let b = @moon_pyversion.Requirement::parse(entry.1)
+    assert_false(@moon_pyversion.Requirement::conflicts_with(a, b))
+  }
+  // Markers on different variables (or an `or`) do not separate anything:
+  // the disjoint constraints are a real conflict.
+  let together : Array[(String, String)] = [
+    ("demo>=2.0; python_version >= '3'", "demo<2.0; extra == 'html'"),
+    (
+      "demo>=2.0; python_version >= '3' or os_name == 'nt'", "demo<2.0; python_version < '3'",
+    ),
+    (
+      "demo>=2.0; (python_version >= '3' and sys_platform == 'linux')", "demo<2.0; implementation_name == 'cpython'",
+    ),
+  ]
+  for entry in together {
+    let a = @moon_pyversion.Requirement::parse(entry.0)
+    let b = @moon_pyversion.Requirement::parse(entry.1)
+    assert_true(@moon_pyversion.Requirement::conflicts_with(a, b))
+  }
+}
+
+///|
+/// A requirement whose own constraint set is unsatisfiable admits nothing,
+/// so it conflicts with every requirement on the same project - including
+/// an unconstrained one - but still with no other project.
+test "conflicts_with reports a self-contradicting requirement" {
+  let broken = @moon_pyversion.Requirement::parse("demo==1.0,==2.0")
+  let unconstrained = @moon_pyversion.Requirement::parse("demo")
+  assert_true(
+    @moon_pyversion.Requirement::conflicts_with(broken, unconstrained),
+  )
+  let other_project = @moon_pyversion.Requirement::parse("other>=1.0")
+  assert_false(
+    @moon_pyversion.Requirement::conflicts_with(broken, other_project),
+  )
+  let excluded = @moon_pyversion.Requirement::parse("demo==1.0,!=1.0")
+  assert_true(
+    @moon_pyversion.Requirement::conflicts_with(unconstrained, excluded),
+  )
+}

@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Requirement::conflicts_with
+
+The upgrade-conflict detector: whether two requirements about the same
+project (by canonical name) can never be satisfied together - constraint
+sets provably share no version AND no environment marker provably keeps the
+two from ever applying in the same environment. False means "no conflict
+found", never a proof of compatibility. The specifier side proves
+disjointness pairwise (pins against anything, wildcard families against
+each other and against interval edges, `~=` expanded to its
+compatible-release range) and also flags a set that contradicts itself
+(`foo==1.0,==2.0` conflicts with every requirement on the same project).
+The marker side proves exclusivity from must-hold comparisons on a shared
+variable - version intervals, string equality, set membership, `and` chains
+and groups - and gives up on `or`. Two direct URLs for one project follow
+pip's "double requirement" rule: same URL no conflict, different URL
+conflict; one URL against a specifier is not decidable and does not
+conflict.
+
 ### Version::next_major / next_minor / next_patch
 
 Version navigation helpers: `1.2.3` -> `2` / `1.3` / `1.2.4`. Each answers

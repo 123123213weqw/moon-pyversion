@@ -701,3 +701,234 @@ pub fn SpecifierSet::simplify(self : SpecifierSet) -> SpecifierSet {
   }
   { specs: kept, original: rendered.join(","), }
 }
+
+///|
+/// True for the operators that order versions rather than pin or exclude.
+fn is_ordered_op(op : SpecifierOp) -> Bool {
+  op == Less ||
+  op == LessEqual ||
+  op == Greater ||
+  op == GreaterEqual ||
+  op == Compatible
+}
+
+///|
+/// The exact version a clause pins, when it does: a non-wildcard `==v`, or
+/// a `===x` whose operand happens to parse as a version.
+fn pinned_version(spec : Specifier) -> Version? {
+  if spec.op == Equal && !spec.wildcard {
+    return spec.version
+  }
+  if spec.op == ArbitraryEqual {
+    return Some(Version::parse(spec.raw_version)) catch { _ => None }
+  }
+  None
+}
+
+///|
+/// The lower interval edge of an ordered clause: `>v` strict, `>=v`
+/// closed, `~=v` closed at its own operand.
+fn lower_edge(spec : Specifier) -> (Version, Bool)? {
+  match spec.op {
+    Greater => Some((spec_operand(spec), true))
+    GreaterEqual => Some((spec_operand(spec), false))
+    Compatible => Some((spec_operand(spec), false))
+    _ => None
+  }
+}
+
+///|
+/// The upper interval edge of an ordered clause: `<v` strict, `<=v`
+/// closed, `~=v` strict below its compatible-release bound.
+fn upper_edge(spec : Specifier) -> (Version, Bool)? {
+  match spec.op {
+    Less => Some((spec_operand(spec), true))
+    LessEqual => Some((spec_operand(spec), false))
+    Compatible => Some((compatible_upper(spec_operand(spec)), true))
+    _ => None
+  }
+}
+
+///|
+/// Whether a lower edge and an upper edge leave nothing between them: the
+/// operands cross, or meet with at least one strict side.
+fn edges_order_disjoint(
+  x : Version,
+  strict_lower : Bool,
+  y : Version,
+  strict_upper : Bool,
+) -> Bool {
+  let order = compare_without_local(x, y)
+  order > 0 || (order == 0 && (strict_lower || strict_upper))
+}
+
+///|
+/// The first release above a wildcard prefix's family: the prefix with its
+/// last digit incremented (`1.4` -> `1.5`).
+fn wildcard_ceiling(prefix : Version) -> Version {
+  let release : Array[@bigint.BigInt] = []
+  for i = 0; i < prefix.release.length(); i = i + 1 {
+    release.push(prefix.release[i])
+  }
+  let last = release.length() - 1
+  release[last] = release[last].add(@bigint.BigInt::from_int(1))
+  {
+    raw: "",
+    epoch: prefix.epoch,
+    release,
+    has_pre: false,
+    pre_kind: 0,
+    pre_num: @bigint.BigInt::from_int(0),
+    has_post: false,
+    post_num: @bigint.BigInt::from_int(0),
+    has_dev: false,
+    dev_num: @bigint.BigInt::from_int(0),
+    local_segments: [],
+  }
+}
+
+///|
+/// The smallest version sharing the wildcard prefix's release: the prefix
+/// with a `.dev0` appended (`1.4` -> `1.4.dev0`). A wildcard parse never
+/// carries pre/post/dev parts, so the spread is exactly this one field.
+fn wildcard_floor(prefix : Version) -> Version {
+  { ..prefix, has_dev: true, dev_num: @bigint.BigInt::from_int(0), }
+}
+
+///|
+/// Whether two wildcard prefixes can match one release: same epoch and no
+/// differing digit within the shorter prefix.
+fn wildcard_prefix_agrees(p : Version, q : Version) -> Bool {
+  if p.epoch.compare(q.epoch) != 0 {
+    return false
+  }
+  let shared = Int32::min(p.release.length(), q.release.length())
+  for i = 0; i < shared; i = i + 1 {
+    if p.release[i].compare(q.release[i]) != 0 {
+      return false
+    }
+  }
+  true
+}
+
+///|
+/// Whether everything matching the `eq` prefix also matches the `ne`
+/// prefix - the family `!=ne` removes wholesale.
+fn wildcard_prefix_within(eq : Version, ne : Version) -> Bool {
+  ne.release.length() <= eq.release.length() && wildcard_prefix_agrees(eq, ne)
+}
+
+///|
+/// Whether a wildcard family and an ordered clause can share no version:
+/// the family lives between its floor and its ceiling, so the check is the
+/// same edge logic with the family's own bounds.
+fn wildcard_bound_disjoint(prefix : Version, spec : Specifier) -> Bool {
+  match lower_edge(spec) {
+    Some((x, _)) =>
+      if compare_without_local(wildcard_ceiling(prefix), x) <= 0 {
+        return true
+      }
+    None => ()
+  }
+  match upper_edge(spec) {
+    Some((y, strict)) => {
+      // The floor is the family's smallest member: `<y` finds nothing when
+      // y sits at or under the floor, `<=y` when y sits strictly under.
+      let order = compare_without_local(wildcard_floor(prefix), y)
+      if strict {
+        if order >= 0 {
+          return true
+        }
+      } else if order > 0 {
+        return true
+      }
+    }
+    None => ()
+  }
+  false
+}
+
+///|
+/// Whether two clauses of a constraint set provably admit no common
+/// version - sufficient conditions only. Anything subtler (the prerelease
+/// and post-release carve-outs, two exclusions, a `!=` against a range)
+/// answers false, so a false here never means "compatible", only "not
+/// proven disjoint".
+fn clauses_disjoint(a : Specifier, b : Specifier) -> Bool {
+  // A pinned version on either side decides: the other clause must admit
+  // that exact version, or the two share nothing.
+  match pinned_version(a) {
+    Some(v) => if !specifier_contains(b, v) { return true }
+    None => ()
+  }
+  match pinned_version(b) {
+    Some(v) => if !specifier_contains(a, v) { return true }
+    None => ()
+  }
+  let a_eq_wild = a.op == Equal && a.wildcard
+  let b_eq_wild = b.op == Equal && b.wildcard
+  let a_ne_wild = a.op == NotEqual && a.wildcard
+  let b_ne_wild = b.op == NotEqual && b.wildcard
+  if a_eq_wild && b_eq_wild {
+    return !wildcard_prefix_agrees(spec_operand(a), spec_operand(b))
+  }
+  if a_eq_wild && b_ne_wild {
+    return wildcard_prefix_within(spec_operand(a), spec_operand(b))
+  }
+  if a_ne_wild && b_eq_wild {
+    return wildcard_prefix_within(spec_operand(b), spec_operand(a))
+  }
+  if a_eq_wild && is_ordered_op(b.op) {
+    return wildcard_bound_disjoint(spec_operand(a), b)
+  }
+  if b_eq_wild && is_ordered_op(a.op) {
+    return wildcard_bound_disjoint(spec_operand(b), a)
+  }
+  // Two ordered clauses: disjoint when either lower edge passes either
+  // upper edge.
+  match (lower_edge(a), upper_edge(b)) {
+    (Some(la), Some(ub)) =>
+      if edges_order_disjoint(la.0, la.1, ub.0, ub.1) {
+        return true
+      }
+    _ => ()
+  }
+  match (upper_edge(a), lower_edge(b)) {
+    (Some(ua), Some(lb)) =>
+      if edges_order_disjoint(lb.0, lb.1, ua.0, ua.1) {
+        return true
+      }
+    _ => ()
+  }
+  false
+}
+
+///|
+/// Whether two constraint sets can share no version: any clause of one
+/// excluding any clause of the other, or either set contradicting itself -
+/// a set that admits nothing conflicts with every set, which is what an
+/// upgrade tool needs to hear about `foo==1.0,==2.0`.
+fn specifier_sets_disjoint(a : SpecifierSet, b : SpecifierSet) -> Bool {
+  for i = 0; i < a.specs.length(); i = i + 1 {
+    for j = 0; j < b.specs.length(); j = j + 1 {
+      if clauses_disjoint(a.specs[i], b.specs[j]) {
+        return true
+      }
+    }
+  }
+  for i = 0; i < a.specs.length(); i = i + 1 {
+    for j = i + 1; j < a.specs.length(); j = j + 1 {
+      if clauses_disjoint(a.specs[i], a.specs[j]) {
+        return true
+      }
+    }
+  }
+  for i = 0; i < b.specs.length(); i = i + 1 {
+    for j = i + 1; j < b.specs.length(); j = j + 1 {
+      if clauses_disjoint(b.specs[i], b.specs[j]) {
+        return true
+      }
+    }
+  }
+  false
+}

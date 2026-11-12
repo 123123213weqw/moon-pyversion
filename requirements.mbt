@@ -570,3 +570,350 @@ pub fn all_satisfied_by(
     Some(failures)
   }
 }
+
+///|
+/// One side of a version-typed marker comparison, as an interval edge, an
+/// exact value, or a value the comparison rules out.
+priv enum MarkerSide {
+  SideLower(Version, Bool)
+  SideUpper(Version, Bool)
+  SideExact(Version)
+  SideExcluded(Version)
+}
+
+///|
+/// The interval sides a version-typed marker comparison contributes. An
+/// empty list means the operator is not reasoned about here: `===`
+/// compares spellings, and a `~=` whose value does not carry two release
+/// digits has no compatible-release bound to expand.
+fn marker_op_sides(op : MarkerOp, text : String) -> Array[MarkerSide] {
+  let parsed = Some(Version::parse(text)) catch { _ => None }
+  match parsed {
+    None => []
+    Some(version) =>
+      match op {
+        Equal => [SideExact(version)]
+        NotEqual => [SideExcluded(version)]
+        Greater => [SideLower(version, true)]
+        GreaterEqual => [SideLower(version, false)]
+        Less => [SideUpper(version, true)]
+        LessEqual => [SideUpper(version, false)]
+        Compatible =>
+          if version.release.length() >= 2 {
+            [
+              SideLower(version, false),
+              SideUpper(compatible_upper(version), true),
+            ]
+          } else {
+            []
+          }
+        ArbitraryEqual => []
+        In => []
+        NotIn => []
+      }
+  }
+}
+
+///|
+/// Whether any side of one version constraint contradicts any side of the
+/// other: the sides of one comparison hold conjunctively, so a single
+/// crossing pair leaves no version (hence no environment value) for both.
+fn marker_sides_conflict(
+  sides_a : Array[MarkerSide],
+  sides_b : Array[MarkerSide],
+) -> Bool {
+  for sa in sides_a {
+    for sb in sides_b {
+      let hit = match (sa, sb) {
+        (SideLower(x, sx), SideUpper(y, sy)) =>
+          edges_order_disjoint(x, sx, y, sy)
+        (SideUpper(y, sy), SideLower(x, sx)) =>
+          edges_order_disjoint(x, sx, y, sy)
+        (SideExact(x), SideExact(y)) => compare_without_local(x, y) != 0
+        (SideExact(x), SideExcluded(y)) => compare_without_local(x, y) == 0
+        (SideExcluded(y), SideExact(x)) => compare_without_local(x, y) == 0
+        (SideExact(x), SideLower(y, _)) => compare_without_local(x, y) < 0
+        (SideLower(y, _), SideExact(x)) => compare_without_local(x, y) < 0
+        (SideExact(x), SideUpper(y, _)) => compare_without_local(x, y) > 0
+        (SideUpper(y, _), SideExact(x)) => compare_without_local(x, y) > 0
+        (SideLower(_, _), SideLower(_, _)) => false
+        (SideUpper(_, _), SideUpper(_, _)) => false
+        (SideExcluded(_), _) => false
+        (_, SideExcluded(_)) => false
+      }
+      if hit {
+        return true
+      }
+    }
+  }
+  false
+}
+
+///|
+/// The words of a set-membership literal: `"nt posix"` is the two-element
+/// set {nt, posix}, split on ASCII whitespace.
+fn marker_set_words(text : String) -> Array[String] {
+  let chars = text.to_array()
+  let out : Array[String] = []
+  let current : Array[Char] = []
+  for i = 0; i < chars.length(); i = i + 1 {
+    let c = chars[i]
+    if c == ' ' || c == '\t' {
+      if current.length() > 0 {
+        out.push(String::from_array(current[0:current.length()].to_owned()))
+        current.clear()
+      }
+    } else {
+      current.push(c)
+    }
+  }
+  if current.length() > 0 {
+    out.push(String::from_array(current[0:current.length()].to_owned()))
+  }
+  out
+}
+
+///|
+/// Whether two string-typed marker comparisons on the same variable can
+/// never hold together. Only the operators with literal answers are
+/// reasoned about; everything else conservatively co-applies.
+fn marker_string_conflict(
+  op_a : MarkerOp,
+  value_a : String,
+  op_b : MarkerOp,
+  value_b : String,
+) -> Bool {
+  match (op_a, op_b) {
+    (Equal, Equal) => value_a != value_b
+    (Equal, NotEqual) => value_a == value_b
+    (NotEqual, Equal) => value_a == value_b
+    (Equal, In) => marker_set_words(value_b).contains(value_a) == false
+    (In, Equal) => marker_set_words(value_a).contains(value_b) == false
+    (In, In) => {
+      let words_a = marker_set_words(value_a)
+      let words_b = marker_set_words(value_b)
+      let mut shared = false
+      for word in words_a {
+        if words_b.contains(word) {
+          shared = true
+          break
+        }
+      }
+      shared == false
+    }
+    _ => false
+  }
+}
+
+///|
+/// Whether two must-hold marker clauses on the same variable contradict
+/// each other. Set-valued keys hold several names at once, so two
+/// membership tests on them can always hold together.
+fn marker_clause_pair_exclusive(ca : MarkerClause, cb : MarkerClause) -> Bool {
+  match (ca.lhs, cb.lhs) {
+    (Variable(va), Variable(vb)) => {
+      if va != vb {
+        return false
+      }
+      if va.is_set_valued() {
+        return false
+      }
+      match (ca.rhs, cb.rhs) {
+        (Value(ta), Value(tb)) => {
+          // PEP 508 evaluates `in`/`not in` as string membership even on
+          // version-like keys, so a membership operator routes through the
+          // string comparison regardless of the variable.
+          let membership = ca.op == In ||
+            ca.op == NotIn ||
+            cb.op == In ||
+            cb.op == NotIn
+          if va.is_version_like() && !membership {
+            marker_sides_conflict(
+              marker_op_sides(ca.op, ta),
+              marker_op_sides(cb.op, tb),
+            )
+          } else {
+            marker_string_conflict(ca.op, ta, cb.op, tb)
+          }
+        }
+        _ => false
+      }
+    }
+    _ => false
+  }
+}
+
+///|
+/// Whether two must-hold clause lists cannot be true in the same
+/// environment - proven from one contradicting pair.
+fn must_clauses_exclusive(
+  a : Array[MarkerClause],
+  b : Array[MarkerClause],
+) -> Bool {
+  for ca in a {
+    for cb in b {
+      if marker_clause_pair_exclusive(ca, cb) {
+        return true
+      }
+    }
+  }
+  false
+}
+
+///|
+/// The mirror image of a comparison operator, for normalizing
+/// `"3.8" <= python_version` to the variable-on-the-left form. Membership
+/// and compatible-release operators have no single mirror, so they stay
+/// unnormalized (and are then not reasoned about).
+fn flipped_marker_op(op : MarkerOp) -> MarkerOp? {
+  match op {
+    Less => Some(Greater)
+    Greater => Some(Less)
+    LessEqual => Some(GreaterEqual)
+    GreaterEqual => Some(LessEqual)
+    Equal => Some(Equal)
+    NotEqual => Some(NotEqual)
+    _ => None
+  }
+}
+
+///|
+/// The comparison clauses that must ALL hold for the marker to be true,
+/// with the variable normalized to the left side. None when the marker
+/// contains an `or`, at top level or inside a group: a disjunction has no
+/// must-hold clause to contradict, so nothing about it can be proven.
+fn must_hold_clauses(marker : Marker) -> Array[MarkerClause]? {
+  let out : Array[MarkerClause] = []
+  for item in marker.items {
+    let mut ok = true
+    match item {
+      Or => ok = false
+      And => ()
+      Atom(Clause(clause)) =>
+        match (clause.lhs, clause.rhs) {
+          (Variable(_), Value(_)) => out.push(clause)
+          (Value(_), Variable(_)) =>
+            match flipped_marker_op(clause.op) {
+              Some(op) => out.push({ lhs: clause.rhs, op, rhs: clause.lhs, })
+              None => ()
+            }
+          _ => ()
+        }
+      Atom(Group(inner)) =>
+        match must_hold_clauses(inner) {
+          Some(more) =>
+            for clause in more {
+              out.push(clause)
+            }
+          None => ok = false
+        }
+    }
+    if !ok {
+      return None
+    }
+  }
+  Some(out)
+}
+
+///|
+/// Whether a marker can be true in some environment. A marker whose
+/// must-hold clauses contradict themselves is unsatisfiable - never true,
+/// never co-true with anything, even with a missing marker. Disjunctions,
+/// unparseable values and unmodelled variables conservatively stay
+/// possibly-true.
+fn marker_may_be_true(text : String?) -> Bool {
+  match text {
+    None => true
+    Some(t) => {
+      let parsed = Some(Marker::parse(t)) catch { _ => None }
+      match parsed {
+        None => true
+        Some(marker) =>
+          match must_hold_clauses(marker) {
+            None => true
+            Some(clauses) => !must_clauses_exclusive(clauses, clauses)
+          }
+      }
+    }
+  }
+}
+
+///|
+/// Whether some environment can make both markers true at once.
+/// Exclusivity (the false answer) is proven only from must-hold
+/// comparisons on a shared variable - including a marker contradicting
+/// itself, which makes it unsatisfiable and therefore never co-true with
+/// anything. Everything else - a disjunction, an unparseable value, a
+/// variable this reasoning does not model - conservatively co-applies.
+fn markers_may_coapply(left : String?, right : String?) -> Bool {
+  if !marker_may_be_true(left) || !marker_may_be_true(right) {
+    return false
+  }
+  match (left, right) {
+    (Some(ta), Some(tb)) => {
+      let ma = Some(Marker::parse(ta)) catch { _ => None }
+      let mb = Some(Marker::parse(tb)) catch { _ => None }
+      match (ma, mb) {
+        (Some(parsed_a), Some(parsed_b)) =>
+          match (must_hold_clauses(parsed_a), must_hold_clauses(parsed_b)) {
+            (Some(clauses_a), Some(clauses_b)) =>
+              !must_clauses_exclusive(clauses_a, clauses_b)
+            _ => true
+          }
+        _ => true
+      }
+    }
+    _ => true
+  }
+}
+
+///|
+/// Whether two requirements about the same project can never be satisfied
+/// together - the question an upgrade tool asks before offering two pins
+/// that cannot coexist.
+///
+/// True means the constraint sets provably share no version AND no
+/// environment marker provably keeps the two requirements from ever
+/// applying in the same environment. False means "no conflict found",
+/// which is never a proof of compatibility: the specifier reasoning uses
+/// sufficient conditions only (prerelease and post-release carve-outs are
+/// not modelled, two `!=` clauses never collide), and the marker reasoning
+/// gives up on disjunctions.
+///
+/// The surrounding rules:
+///
+/// - requirements about different projects (by canonical name) never
+///   conflict through versions;
+/// - two direct URLs for one project are pip's "double requirement": the
+///   same URL is the same artifact (no conflict), a different URL is a
+///   conflict no version can reconcile. One URL against a specifier cannot
+///   be decided here, so it does not conflict;
+/// - a requirement whose own constraint set is unsatisfiable
+///   (`foo==1.0,==2.0`) admits nothing and therefore conflicts with every
+///   requirement on the same project.
+///
+/// ```mbt check
+/// test {
+///   let a = @moon_pyversion.Requirement::parse("demo>=2.0")
+///   let b = @moon_pyversion.Requirement::parse("Demo<2.0")
+///   inspect(@moon_pyversion.Requirement::conflicts_with(a, b), content="true")
+/// }
+/// ```
+pub fn Requirement::conflicts_with(
+  self : Requirement,
+  other : Requirement,
+) -> Bool {
+  if canonicalize_name(self.name) != canonicalize_name(other.name) {
+    return false
+  }
+  match (self.url, other.url) {
+    (Some(a), Some(b)) => return a != b
+    (Some(_), None) => return false
+    (None, Some(_)) => return false
+    (None, None) => ()
+  }
+  if !markers_may_coapply(self.marker_text, other.marker_text) {
+    return false
+  }
+  specifier_sets_disjoint(self.specifier, other.specifier)
+}
