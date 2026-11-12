@@ -197,3 +197,136 @@ test "plan_install is the micro-pip end to end" {
   }
   assert_eq(reason2, "no candidate for foo")
 }
+
+///|
+test "from_toml reads build-system requires with refusal discipline" {
+  let doc = @moon_pyversion.Toml::parse(
+    "[build-system]\nrequires = [\"setuptools>=61.0\", \"wheel; os_name == 'nt'\"]\n[project]\nname = \"demo\"\n",
+  )
+  let project = @moon_pyversion.PyProject::from_toml(doc)
+  assert_eq(project.build_requires.length(), 2)
+  assert_eq(project.build_requires[0].name, "setuptools")
+  assert_eq(project.build_requires[0].specifier.to_string(), ">=61.0")
+  let marker = match project.build_requires[1].marker_text {
+    Some(text) => text
+    None => "missing"
+  }
+  assert_eq(marker, "os_name == 'nt'")
+  // No [build-system] table: PEP 517's defaults apply, the list is empty.
+  let bare = @moon_pyversion.PyProject::from_toml(
+    @moon_pyversion.Toml::parse("[project]\nname = \"demo\"\n"),
+  )
+  assert_eq(bare.build_requires.length(), 0)
+  // Table present, key absent: still empty.
+  let no_key = @moon_pyversion.PyProject::from_toml(
+    @moon_pyversion.Toml::parse(
+      "[build-system]\nbuild-backend = \"setuptools.build_meta\"\n[project]\nname = \"demo\"\n",
+    ),
+  )
+  assert_eq(no_key.build_requires.length(), 0)
+  // requires is not an array: named refusal.
+  ignore(
+    @moon_pyversion.PyProject::from_toml(
+      @moon_pyversion.Toml::parse(
+        "[build-system]\nrequires = \"setuptools\"\n[project]\nname = \"demo\"\n",
+      ),
+    ),
+  ) catch {
+    @moon_pyversion.VersionError::InvalidRequirement(code, _) =>
+      assert_eq(code, "BUILD_REQUIRES_NOT_ARRAY")
+    other => abort("unexpected error \{other}")
+  }
+  // A non-string entry: its own named refusal.
+  ignore(
+    @moon_pyversion.PyProject::from_toml(
+      @moon_pyversion.Toml::parse(
+        "[build-system]\nrequires = [1]\n[project]\nname = \"demo\"\n",
+      ),
+    ),
+  ) catch {
+    @moon_pyversion.VersionError::InvalidRequirement(code, _) =>
+      assert_eq(code, "NON_STRING_BUILD_REQUIRES")
+    other => abort("unexpected error \{other}")
+  }
+  // A malformed requirement string refuses the whole read, as with the
+  // runtime dependencies.
+  let broken = Some(
+    @moon_pyversion.PyProject::from_toml(
+      @moon_pyversion.Toml::parse(
+        "[build-system]\nrequires = [\"setuptools >>=\"]\n[project]\nname = \"demo\"\n",
+      ),
+    ),
+  ) catch {
+    _ => None
+  }
+  let refused = match broken {
+    None => true
+    Some(_) => false
+  }
+  assert_eq(refused, true)
+}
+
+///|
+test "check_build_requires names blockers in the build table" {
+  let doc = @moon_pyversion.Toml::parse(
+    "[build-system]\nrequires = [\"setuptools>=64\", \"cython; python_version >= '3.11'\"]\n[project]\nname = \"demo\"\n",
+  )
+  let project = @moon_pyversion.PyProject::from_toml(doc)
+  fn table(
+    setuptools : String,
+    cython : String,
+  ) -> ((String) -> @moon_pyversion.Version?) raise {
+    let v_setuptools = @moon_pyversion.Version::parse(setuptools)
+    let v_cython = @moon_pyversion.Version::parse(cython)
+    fn(name : String) -> @moon_pyversion.Version? {
+      if name == "setuptools" {
+        Some(v_setuptools)
+      } else if name == "cython" {
+        Some(v_cython)
+      } else {
+        None
+      }
+    }
+  }
+  // A satisfied build environment: setuptools in range, cython's marker on.
+  let ok = project.check_build_requires(
+    "3.11.4",
+    "cpython",
+    "linux",
+    "x86_64",
+    table("68.0", "3.0"),
+  )
+  let no_failures = match ok {
+    None => true
+    Some(_) => false
+  }
+  assert_eq(no_failures, true)
+  // setuptools out of range: the named blocker with its constraint.
+  let old = project.check_build_requires(
+    "3.11.4",
+    "cpython",
+    "linux",
+    "x86_64",
+    table("61.0", "3.0"),
+  )
+  let blocker = match old {
+    None => ("", "")
+    Some(items) => (items[0].requirement, items[0].reason)
+  }
+  assert_eq(blocker.0, "setuptools>=64")
+  assert_eq(blocker.1, "version not in >=64")
+  // An older runtime switches cython's marker off: the named blocker.
+  let marker_off = project.check_build_requires(
+    "3.9.1",
+    "cpython",
+    "linux",
+    "x86_64",
+    table("68.0", "3.0"),
+  )
+  let marker_blocker = match marker_off {
+    None => ("", "")
+    Some(items) => (items[0].requirement, items[0].reason)
+  }
+  assert_eq(marker_blocker.0, "cython; python_version >= '3.11'")
+  assert_eq(marker_blocker.1, "marker false: python_version >= '3.11'")
+}

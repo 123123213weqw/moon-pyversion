@@ -18,6 +18,10 @@ pub(all) struct PyProject {
   /// The optional `[project].optional-dependencies` table, each key an
   /// extra name and its value the parsed requirement list.
   optional : Map[String, Array[Requirement]]
+  /// Every string in `[build-system].requires`, parsed with the same
+  /// refusal discipline as the runtime dependencies; empty when the
+  /// table or the key is absent (PEP 517's defaults then apply).
+  build_requires : Array[Requirement]
 }
 
 ///|
@@ -82,7 +86,32 @@ pub fn PyProject::from_toml(toml : Toml) -> PyProject raise VersionError {
       }
     Some(_) => raise VersionError::InvalidRequirement("OPTIONAL_NOT_TABLE", 0)
   }
-  { name, dependencies, requires_python, optional, }
+  // build-system.requires: absent table or key reads as empty (PEP 517
+  // supplies defaults); present-but-malformed refuses the whole read,
+  // naming the offence - a build requirement that cannot be parsed is a
+  // broken build table, not a build with fewer requirements.
+  let build_requires : Array[Requirement] = []
+  match toml.get_table("build-system") {
+    None => ()
+    Some(build) =>
+      match build.get("requires") {
+        None => ()
+        Some(TArray(items)) =>
+          for item in items {
+            let text = match item {
+              TString(value) => value
+              _ =>
+                raise VersionError::InvalidRequirement(
+                  "NON_STRING_BUILD_REQUIRES", 0,
+                )
+            }
+            build_requires.push(Requirement::parse(text))
+          }
+        Some(_) =>
+          raise VersionError::InvalidRequirement("BUILD_REQUIRES_NOT_ARRAY", 0)
+      }
+  }
+  { name, dependencies, requires_python, optional, build_requires, }
 }
 
 ///|
@@ -110,6 +139,29 @@ pub fn PyProject::with_extra(
     None =>
       raise VersionError::InvalidRequirement("UNDECLARED_EXTRA:" + extra, 0)
   }
+}
+
+///|
+/// The build-side judgment: does this runtime satisfy every
+/// `[build-system].requires` entry's version constraint and marker? The
+/// same named failures all_satisfied_by reports, over the PEP 517 build
+/// dependencies instead of the runtime ones. There is no python gate here:
+/// `[build-system]` declares no `requires-python`, so the build tools'
+/// own markers (sys_platform, os_name, python_version...) carry all the
+/// environment decisions. None means every build requirement is
+/// satisfied by the candidates the lookup provides.
+pub fn PyProject::check_build_requires(
+  self : PyProject,
+  python_full_version : String,
+  implementation_name : String,
+  platform_system : String,
+  platform_machine : String,
+  candidates : (String) -> Version?,
+) -> Array[RequirementFailure]? raise VersionError {
+  let environment = MarkerEnvironment::from_runtime(
+    python_full_version, implementation_name, platform_system, platform_machine,
+  )
+  all_satisfied_by(self.build_requires, candidates, environment)
 }
 
 ///|

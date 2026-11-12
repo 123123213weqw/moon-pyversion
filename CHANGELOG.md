@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### pyproject [build-system].requires
+
+PyProject now reads the PEP 517 build table: `build_requires` holds every
+string in `[build-system].requires`, parsed with the same refusal
+discipline as the runtime dependencies - an absent table or key reads as
+an empty list (PEP 517's defaults then apply), while a non-array value, a
+non-string entry or a malformed requirement string refuses the whole read
+with its own stable code (BUILD_REQUIRES_NOT_ARRAY,
+NON_STRING_BUILD_REQUIRES). check_build_requires runs the same judgment
+check_runtime runs for the runtime side - all_satisfied_by over the build
+requirements in the environment derived from the four runtime facts - with
+no python gate, because `[build-system]` declares no requires-python; the
+build tools' own markers carry the environment decisions.
+
 ### Requirement::conflicts_with
 
 The upgrade-conflict detector: whether two requirements about the same
