@@ -247,3 +247,56 @@ test "simplify admits exactly the same versions" {
     }
   }
 }
+
+///|
+fn spec_set(raw : String) -> @moon_pyversion.SpecifierSet raise {
+  @moon_pyversion.SpecifierSet::parse(raw)
+}
+
+///|
+test "intersects proves and refutes shared versions" {
+  // Ordered bounds that cross.
+  assert_false(spec_set(">=2.0").intersects(spec_set("<2.0")))
+  assert_false(spec_set(">2.0").intersects(spec_set("<=2.0")))
+  assert_false(spec_set(">=2.0,<3.0").intersects(spec_set(">=3.0")))
+  // A pin decides against everything that fails it.
+  assert_false(spec_set("==1.4").intersects(spec_set(">=2.0")))
+  assert_true(spec_set("==1.4").intersects(spec_set(">=1.0,<2")))
+  // Wildcard families.
+  assert_false(spec_set("==1.4.*").intersects(spec_set("==1.5.*")))
+  assert_false(spec_set("==1.4.*").intersects(spec_set("!=1.4.*")))
+  assert_true(spec_set("==1.4.*").intersects(spec_set(">=1.0")))
+  // Compatible release expands to its range: ~=1.4 is [1.4, 2.0).
+  assert_false(spec_set("~=1.4").intersects(spec_set(">=2.0")))
+  assert_true(spec_set("~=1.4").intersects(spec_set(">=1.4.5")))
+  // Order and identity: intersecting is symmetric, and the empty set
+  // (no clauses) intersects everything provable-free.
+  let range = spec_set(">=1.0,<2.0")
+  assert_true(range.intersects(spec_set(">=1.5,<3")))
+  assert_true(spec_set(">=1.5,<3").intersects(range))
+  assert_true(spec_set("").intersects(spec_set(">=1.0")))
+  assert_true(spec_set(">=1.0").intersects(spec_set("")))
+}
+
+///|
+/// A set that contradicts itself admits nothing, so it intersects nothing -
+/// not even an empty set - which is what an upgrade tool needs to hear
+/// about `foo==1.0,==2.0`.
+test "intersects reports a self-contradicting set as sharing nothing" {
+  let broken = @moon_pyversion.SpecifierSet::parse("==1.0,==2.0")
+  assert_false(broken.intersects(@moon_pyversion.SpecifierSet::parse(">=0")))
+  assert_false(broken.intersects(@moon_pyversion.SpecifierSet::parse("")))
+}
+
+///|
+/// The disjointness reasoning is a one-directional proof: false is a proof,
+/// true can be a "not proven". This pair really shares nothing - `<2.0`
+/// carves out the prereleases sitting at its boundary, so `2.0a1` (the only
+/// version the pin side admits) is out - but the interval reasoning does
+/// not model the carve-out and answers true, the safe direction.
+test "intersects stays conservative on the carve-outs it does not model" {
+  let range = @moon_pyversion.SpecifierSet::parse("<2.0")
+  let pin = @moon_pyversion.SpecifierSet::parse(">=2.0a1,<=2.0a1")
+  assert_false(range.contains(@moon_pyversion.Version::parse("2.0a1")))
+  assert_true(range.intersects(pin))
+}

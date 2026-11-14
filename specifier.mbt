@@ -932,3 +932,38 @@ fn specifier_sets_disjoint(a : SpecifierSet, b : SpecifierSet) -> Bool {
   }
   false
 }
+
+///|
+/// Whether two constraint sets can admit at least one common version - the
+/// batch form of the question `Requirement::conflicts_with` asks about two
+/// requirements, without the name and marker layers. This is the operation
+/// a dependency-graph pass runs over every pair of pins at once.
+///
+/// True means "no disjointness proven": the underlying reasoning proves
+/// emptiness from sufficient conditions only (pins against anything,
+/// wildcard families against each other and against interval edges, `~=`
+/// expanded to its compatible-release range, ordered bounds that cross),
+/// so a subtler emptiness - two `!=` clauses, the prerelease and
+/// post-release carve-outs - answers true. False is a proof: the two sets
+/// provably share no version. A set that contradicts itself
+/// (`foo==1.0,==2.0`) admits nothing and therefore intersects nothing,
+/// not even an empty set.
+///
+/// ```mbt check
+/// test {
+///   let range = @moon_pyversion.SpecifierSet::parse(">=2.0")
+///   let below = @moon_pyversion.SpecifierSet::parse("<2.0")
+///   inspect(
+///     @moon_pyversion.SpecifierSet::intersects(range, below),
+///     content="false",
+///   )
+///   let pin = @moon_pyversion.SpecifierSet::parse("==2.0")
+///   inspect(@moon_pyversion.SpecifierSet::intersects(range, pin), content="true")
+/// }
+/// ```
+pub fn SpecifierSet::intersects(
+  self : SpecifierSet,
+  other : SpecifierSet,
+) -> Bool {
+  !specifier_sets_disjoint(self, other)
+}

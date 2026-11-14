@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### SpecifierSet::intersects
+
+The batch conflict detector: whether two constraint sets admit at least one
+common version, without the name and marker layers
+`Requirement::conflicts_with` adds on top. This is the operation a
+dependency-graph pass runs over every pair of pins at once. False is a
+proof - the two sets provably share no version (crossing ordered bounds, a
+pin nothing on the other side admits, wildcard families that agree on no
+release, `~=` expanded to its compatible-release range); true means "no
+disjointness proven", the safe direction for the subtler cases the
+sufficient-condition reasoning does not model (two `!=` clauses, the
+prerelease/post-release carve-outs). A set that contradicts itself
+(`foo==1.0,==2.0`) admits nothing and intersects nothing, not even an
+empty set.
+
 ## 0.5.1 — 2026-11-13
 
 ### pyproject [build-system].requires
