@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Pylock::check_consistency
+
+The post-parse consistency pass over the `packages` array: what the
+per-entry grammar of `Pylock::parse` cannot see, because it is a property
+of the entries together. Never raises; answers `PylockIssue` findings
+(code + subject) in a fixed order, empty list means passed.
+`DUPLICATE_PACKAGE` (two entries share a canonical name - the grammar
+lets the document through, the pass names the repeat),
+`MULTIPLE_VERSIONS` (one name, distinct versions, first-seen order),
+`UNRESOLVED_DEPENDENCY` (a dependency names a package the array does not
+hold - a lock promises to be complete, so a dangling edge is a finding),
+`DEPENDENCY_VERSION_MISMATCH` (a pinned version no entry of that package
+carries, including source-tree targets), and `DEPENDENCY_CYCLE` (the
+name-level dependency graph has a cycle, rendered in its smallest
+rotation so it reports once however the walk finds it - which is also
+where a dependency on another version of its own package, the case the
+grammar deliberately leaves alone, surfaces as the self-loop it is).
+Name comparisons go through `canonicalize_name`, so the document's
+spelling never decides the verdicts.
+
 ### MarkerEnvironment::merge
 
 Overlay two environments: every key the overlay holds wins over the same

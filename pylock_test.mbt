@@ -1407,3 +1407,197 @@ test "pylock: the position of an error is the entry ordinal" {
   assert_lock_error_at(lock_document(""), "PACKAGES_REQUIRED", 0)
   assert_lock_error_at("lock-version = \"1.1\"\n", "LOCK_VERSION_INVALID", 0)
 }
+
+///|
+/// The consistency pass answers nothing on a clean document: two packages,
+/// one dependency that resolves to the version the target carries.
+test "pylock consistency: a clean document answers no findings" {
+  let body =
+    #|[[packages]]
+    #|name = "a"
+    #|version = "1.0"
+    #|[[packages.dependencies]]
+    #|name = "b"
+    #|version = "1.0"
+    #|[[packages]]
+    #|name = "b"
+    #|version = "1.0"
+  let findings = lock_of(lock_document(body)).check_consistency()
+  assert_eq(findings.length(), 0)
+}
+
+///|
+/// One entry per package is what a lock is expected to hold: a repeat is a
+/// finding whether the two spellings agree on the version or not, and
+/// versions compared by PEP 440 equality do not let 1.0 versus 1.0.0 pose
+/// as a conflict.
+test "pylock consistency: duplicate entries and conflicting versions" {
+  let same =
+    #|[[packages]]
+    #|name = "a"
+    #|version = "1.0"
+    #|[[packages]]
+    #|name = "A"
+    #|version = "1.0.0"
+  let findings = lock_of(lock_document(same)).check_consistency()
+  assert_eq(findings.length(), 1)
+  assert_eq(findings[0].code, "DUPLICATE_PACKAGE")
+  assert_eq(findings[0].subject, "a (2 entries)")
+  let conflict =
+    #|[[packages]]
+    #|name = "Flask_Core"
+    #|version = "1.0"
+    #|[[packages]]
+    #|name = "flask-core"
+    #|version = "2.0"
+  let findings = lock_of(lock_document(conflict)).check_consistency()
+  assert_eq(findings.length(), 1)
+  assert_eq(findings[0].code, "MULTIPLE_VERSIONS")
+  assert_eq(findings[0].subject, "flask-core: 1.0, 2.0")
+}
+
+///|
+/// A lock promises to be complete, so a dependency that names a package
+/// the array does not hold (by canonical name) is a finding; a dependency
+/// that pins a version no entry of that package carries is another, be it
+/// a different version or a source tree with no version at all. The pass
+/// never evaluates markers - the findings are name-level facts.
+test "pylock consistency: dangling edges and version mismatches" {
+  let dangling =
+    #|[[packages]]
+    #|name = "a"
+    #|version = "1.0"
+    #|[[packages.dependencies]]
+    #|name = "c"
+    #|version = "1.0"
+  let findings = lock_of(lock_document(dangling)).check_consistency()
+  assert_eq(findings.length(), 1)
+  assert_eq(findings[0].code, "UNRESOLVED_DEPENDENCY")
+  assert_eq(findings[0].subject, "a -> c")
+  let mismatch =
+    #|[[packages]]
+    #|name = "a"
+    #|version = "1.0"
+    #|[[packages.dependencies]]
+    #|name = "b"
+    #|version = "2.0"
+    #|[[packages]]
+    #|name = "b"
+    #|version = "1.0"
+  let findings = lock_of(lock_document(mismatch)).check_consistency()
+  assert_eq(findings.length(), 1)
+  assert_eq(findings[0].code, "DEPENDENCY_VERSION_MISMATCH")
+  assert_eq(findings[0].subject, "a -> b 2.0")
+  let source_target =
+    #|[[packages]]
+    #|name = "a"
+    #|version = "1.0"
+    #|[[packages.dependencies]]
+    #|name = "b"
+    #|version = "1.0"
+    #|[[packages]]
+    #|name = "b"
+    #|[packages.directory]
+    #|path = "../b"
+  let findings = lock_of(lock_document(source_target)).check_consistency()
+  assert_eq(findings.length(), 1)
+  assert_eq(findings[0].code, "DEPENDENCY_VERSION_MISMATCH")
+  assert_eq(findings[0].subject, "a -> b 1.0")
+}
+
+///|
+/// The dependency graph over the names the lock holds is walked for
+/// cycles. A three-way cycle reports once, in the smallest rotation,
+/// however the walk discovers it; a two-way cycle with an unrelated
+/// package in the lock stays that one finding.
+test "pylock consistency: dependency cycles" {
+  let three_way =
+    #|[[packages]]
+    #|name = "a"
+    #|version = "1.0"
+    #|[[packages.dependencies]]
+    #|name = "b"
+    #|version = "1.0"
+    #|[[packages]]
+    #|name = "b"
+    #|version = "1.0"
+    #|[[packages.dependencies]]
+    #|name = "c"
+    #|version = "1.0"
+    #|[[packages]]
+    #|name = "c"
+    #|version = "1.0"
+    #|[[packages.dependencies]]
+    #|name = "a"
+    #|version = "1.0"
+  let findings = lock_of(lock_document(three_way)).check_consistency()
+  assert_eq(findings.length(), 1)
+  assert_eq(findings[0].code, "DEPENDENCY_CYCLE")
+  assert_eq(findings[0].subject, "a -> b -> c -> a")
+  let two =
+    #|[[packages]]
+    #|name = "a"
+    #|version = "1.0"
+    #|[[packages.dependencies]]
+    #|name = "b"
+    #|version = "1.0"
+    #|[[packages]]
+    #|name = "b"
+    #|version = "1.0"
+    #|[[packages.dependencies]]
+    #|name = "a"
+    #|version = "1.0"
+    #|[[packages]]
+    #|name = "solo"
+    #|version = "1.0"
+  let findings = lock_of(lock_document(two)).check_consistency()
+  assert_eq(findings.length(), 1)
+  assert_eq(findings[0].code, "DEPENDENCY_CYCLE")
+  assert_eq(findings[0].subject, "a -> b -> a")
+}
+
+///|
+/// A dependency on another version of its own package - the one self-edge
+/// the per-entry grammar deliberately leaves alone - surfaces here as the
+/// self-loop it is, next to the version disagreement the two entries
+/// already are. The name-level graph is what makes the loop visible.
+test "pylock consistency: a self-dependency on another version is a cycle" {
+  let body =
+    #|[[packages]]
+    #|name = "a"
+    #|version = "1.0"
+    #|[[packages.dependencies]]
+    #|name = "a"
+    #|version = "2.0"
+    #|[[packages]]
+    #|name = "a"
+    #|version = "2.0"
+  let findings = lock_of(lock_document(body)).check_consistency()
+  assert_eq(findings.length(), 2)
+  assert_eq(findings[0].code, "MULTIPLE_VERSIONS")
+  assert_eq(findings[0].subject, "a: 1.0, 2.0")
+  assert_eq(findings[1].code, "DEPENDENCY_CYCLE")
+  assert_eq(findings[1].subject, "a -> a")
+}
+
+///|
+/// Findings compose: the same document can disagree about a version and
+/// dangle on another package - both named, in the pass's fixed order.
+test "pylock consistency: findings accumulate across the rules" {
+  let body =
+    #|[[packages]]
+    #|name = "a"
+    #|version = "1.0"
+    #|[[packages]]
+    #|name = "a"
+    #|version = "2.0"
+    #|[[packages.dependencies]]
+    #|name = "ghost"
+    #|version = "1.0"
+  let findings = lock_of(lock_document(body)).check_consistency()
+  assert_eq(findings.length(), 2)
+  assert_eq(findings[0].code, "MULTIPLE_VERSIONS")
+  assert_eq(findings[0].subject, "a: 1.0, 2.0")
+  assert_eq(findings[1].code, "UNRESOLVED_DEPENDENCY")
+  assert_eq(findings[1].subject, "a -> ghost")
+}

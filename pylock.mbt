@@ -665,6 +665,270 @@ pub fn Pylock::accepts_environment(
 }
 
 ///|
+/// One finding of the consistency pass: a stable code naming the rule and
+/// the subject it applies to, rendered the way the other named-thing types
+/// in this library carry diagnoses.
+#derive(Eq, @debug.Debug)
+pub(all) struct PylockIssue {
+  /// The rule that flagged the subject: DUPLICATE_PACKAGE,
+  /// MULTIPLE_VERSIONS, UNRESOLVED_DEPENDENCY, DEPENDENCY_VERSION_MISMATCH
+  /// or DEPENDENCY_CYCLE.
+  code : String
+  /// The packages or dependency edge the finding is about, spelled the way
+  /// the document spells the names.
+  subject : String
+}
+
+///|
+pub extend PylockIssue with Eq::{equal, not_equal}
+
+///|
+pub extend PylockIssue with @debug.Debug::{to_repr}
+
+///|
+/// The cycle a gray edge closes: the path slice from the entry node on,
+/// closed by repeating it, then rotated so the lexicographically smallest
+/// name comes first. The rotation makes one cycle report once no matter
+/// which of its members discovered it - `a -> b -> a` found from `a` is the
+/// same finding as `b -> a -> b` found from `b`.
+fn closed_cycle(path : Array[String], entry : String) -> String? {
+  let mut start = -1
+  for i = 0; i < path.length(); i = i + 1 {
+    if path[i] == entry {
+      start = i
+      break
+    }
+  }
+  if start < 0 {
+    return None
+  }
+  let nodes : Array[String] = []
+  for i = start; i < path.length(); i = i + 1 {
+    nodes.push(path[i])
+  }
+  nodes.push(entry)
+  let mut best = 0
+  for i = 1; i < nodes.length(); i = i + 1 {
+    if String::lexical_compare(nodes[i], nodes[best]) < 0 {
+      best = i
+    }
+  }
+  let rotated : Array[String] = []
+  for i = 0; i < nodes.length(); i = i + 1 {
+    rotated.push(nodes[(best + i) % nodes.length()])
+  }
+  Some(rotated.join(" -> "))
+}
+
+///|
+/// Depth-first walk over the dependency graph: 1 marks the current path, 2
+/// marks a finished subtree, and an edge to a 1 node closes a cycle. Each
+/// distinct cycle renders once, in discovery order.
+fn walk_lock_graph(
+  node : String,
+  graph : Map[String, Array[String]],
+  state : Map[String, Int32],
+  path : Array[String],
+  found : Array[String],
+) -> Unit {
+  state[node] = 1
+  path.push(node)
+  match graph.get(node) {
+    Some(edges) =>
+      for next in edges {
+        match state.get(next) {
+          None => walk_lock_graph(next, graph, state, path, found)
+          Some(1) =>
+            match closed_cycle(path, next) {
+              Some(rendered) =>
+                if !found.contains(rendered) {
+                  found.push(rendered)
+                }
+              None => ()
+            }
+          Some(_) => ()
+        }
+      }
+    None => ()
+  }
+  ignore(path.remove(path.length() - 1))
+  state[node] = 2
+}
+
+///|
+/// The post-parse consistency pass over the `packages` array: what the
+/// per-entry grammar of `Pylock::parse` cannot see, because it is a
+/// property of the entries together. The pass never raises; it answers the
+/// findings, each as a code plus the subject it applies to, in a fixed
+/// order (duplicate packages, version conflicts, unresolved dependencies,
+/// version mismatches, dependency cycles), and an empty list means the
+/// document passed.
+///
+/// - `DUPLICATE_PACKAGE` - two entries share a canonical name. The
+///   per-entry grammar lets the document through (the name may appear more
+///   than once, which is exactly why the pass exists), but a lock is
+///   expected to hold one entry per package, so a repeat is a finding
+///   regardless of what the versions say. The subject spells the name and
+///   the entry count.
+/// - `MULTIPLE_VERSIONS` - two entries for one name carry different
+///   versions. The subject spells the name and the distinct versions in
+///   first-seen order.
+/// - `UNRESOLVED_DEPENDENCY` - a dependency names a package the `packages`
+///   array does not contain (by canonical name). A lock promises to be
+///   complete, so a dangling edge is a finding, not a stylistic note.
+/// - `DEPENDENCY_VERSION_MISMATCH` - a dependency pins a version no entry
+///   of that package carries - the entries have a different version, no
+///   version at all (a source tree), or the package appears several times
+///   and none matches.
+/// - `DEPENDENCY_CYCLE` - the lock's dependency graph has a cycle, edges
+///   drawn only between packages the array actually holds. The subject
+///   renders the smallest rotation of the cycle (`a -> b -> a`), so the
+///   same cycle reports once however its members spell it.
+///
+/// Name comparisons go through `canonicalize_name`, so the document's
+/// spelling never decides whether two entries or an edge are about the
+/// same project.
+///
+/// ```mbt check
+/// test {
+///   let lock = @moon_pyversion.Pylock::parse(
+///     "lock-version = \"1.0\"\ncreated-by = \"x\"\n[[packages]]\nname = \"a\"\nversion = \"1.0\"\n[[packages]]\nname = \"b\"\nversion = \"2.0\"\n",
+///   )
+///   inspect(@moon_pyversion.Pylock::check_consistency(lock).length(), content="0")
+/// }
+/// ```
+pub fn Pylock::check_consistency(self : Pylock) -> Array[PylockIssue] {
+  let issues : Array[PylockIssue] = []
+  // Group the entries by canonical name, keeping first-seen order so the
+  // findings render deterministically without relying on map iteration.
+  let groups : Map[String, Array[PylockPackage]] = Map([])
+  let order : Array[String] = []
+  for entry in self.packages {
+    let key = canonicalize_name(entry.name)
+    match groups.get(key) {
+      Some(bucket) => bucket.push(entry)
+      None => {
+        let bucket : Array[PylockPackage] = [entry]
+        groups[key] = bucket
+        order.push(key)
+      }
+    }
+  }
+  // Duplicate names and conflicting versions.
+  for key in order {
+    match groups.get(key) {
+      Some(bucket) =>
+        if bucket.length() > 1 {
+          // The distinct versions the entries claim, first-seen order,
+          // compared by PEP 440 equality so 1.0 and 1.0.0 count as one.
+          let seen : Array[Version] = []
+          for entry in bucket {
+            match entry.version {
+              Some(v) => {
+                let mut known = false
+                for prior in seen {
+                  if prior.equal(v) {
+                    known = true
+                  }
+                }
+                if !known {
+                  seen.push(v)
+                }
+              }
+              None => ()
+            }
+          }
+          if seen.length() > 1 {
+            let spellings : Array[String] = []
+            for v in seen {
+              spellings.push(v.to_string())
+            }
+            issues.push({
+              code: "MULTIPLE_VERSIONS",
+              subject: key + ": " + spellings.join(", "),
+            })
+          } else {
+            issues.push({
+              code: "DUPLICATE_PACKAGE",
+              subject: key + " (" + bucket.length().to_string() + " entries)",
+            })
+          }
+        }
+      None => ()
+    }
+  }
+  // Dependencies: dangling edges first, then version mismatches.
+  for entry in self.packages {
+    for dep in entry.dependencies {
+      let key = canonicalize_name(dep.name)
+      match groups.get(key) {
+        None =>
+          issues.push({
+            code: "UNRESOLVED_DEPENDENCY",
+            subject: entry.name + " -> " + dep.name,
+          })
+        Some(bucket) =>
+          match dep.version {
+            Some(wanted) => {
+              let mut matched = false
+              for target in bucket {
+                match target.version {
+                  Some(v) => if v.equal(wanted) { matched = true }
+                  None => ()
+                }
+              }
+              if !matched {
+                issues.push({
+                  code: "DEPENDENCY_VERSION_MISMATCH",
+                  subject: entry.name +
+                  " -> " +
+                  dep.name +
+                  " " +
+                  wanted.to_string(),
+                })
+              }
+            }
+            None => ()
+          }
+      }
+    }
+  }
+  // Dependency cycles over the names the lock actually holds. A repeated
+  // name contributes its edges to the same node instead of a second one.
+  let graph : Map[String, Array[String]] = Map([])
+  for entry in self.packages {
+    let key = canonicalize_name(entry.name)
+    let edges = match graph.get(key) {
+      Some(existing) => existing
+      None => {
+        let fresh : Array[String] = []
+        graph[key] = fresh
+        fresh
+      }
+    }
+    for dep in entry.dependencies {
+      let target = canonicalize_name(dep.name)
+      if groups.get(target) is Some(_) && !edges.contains(target) {
+        edges.push(target)
+      }
+    }
+  }
+  let state : Map[String, Int32] = Map([])
+  let path : Array[String] = []
+  let cycles : Array[String] = []
+  for key in order {
+    match state.get(key) {
+      None => walk_lock_graph(key, graph, state, path, cycles)
+      Some(_) => ()
+    }
+  }
+  for rendered in cycles {
+    issues.push({ code: "DEPENDENCY_CYCLE", subject: rendered, })
+  }
+  issues
+}
+
+///|
 /// An `InvalidPylock` whose position is a *structural* index -- the ordinal of the
 /// offending `[[packages]]` entry, or `0` for a document-level problem -- not a
 /// byte offset, which the TOML layer has already forgotten.
