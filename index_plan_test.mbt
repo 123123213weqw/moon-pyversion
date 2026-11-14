@@ -111,3 +111,137 @@ test "select_candidates honors constraints and forced prereleases" {
   )
   assert_eq(kept2.length(), 3)
 }
+
+///|
+fn sdist_mix_index() -> String {
+  let b = StringBuilder()
+  b.write_string("{\"name\": \"demo\", \"version\": \"1.0\", \"files\": [")
+  b.write_string(
+    "{\"filename\": \"demo-1.0.tar.gz\", \"url\": \"u1\", \"hashes\": {\"sha256\": \"abc\"}},",
+  )
+  b.write_string(
+    "{\"filename\": \"demo-2.0-py3-none-any.whl\", \"url\": \"u2\", \"hashes\": {\"sha256\": \"abc\"}},",
+  )
+  b.write_string(
+    "{\"filename\": \"demo-3.0.zip\", \"url\": \"u3\", \"hashes\": {\"sha256\": \"abc\"}},",
+  )
+  b.write_string(
+    "{\"filename\": \"demo-3.0-py3-none-any.whl\", \"url\": \"u4\", \"hashes\": {\"sha256\": \"abc\"}}",
+  )
+  b.write_string("]}")
+  b.to_string()
+}
+
+///|
+/// The default keeps every surviving file, wheels and sdists alike; with
+/// `prefer_wheels` the sdists of versions a surviving wheel also carries
+/// fall behind it and are named, while a version with no wheel keeps its
+/// sdist - the source-only fallback.
+test "prefer_wheels drops sdists a wheel covers and keeps the sdist fallback" {
+  let index = @moon_pyversion.SimpleIndex::parse(sdist_mix_index())
+  // Default: both files of every version survive.
+  let (kept, _) = @moon_pyversion.select_candidates(index, None, None)
+  assert_eq(kept.length(), 4)
+  // Prefer wheels: 1.0 has no wheel, so its sdist survives; 3.0 has a
+  // wheel, so its other sdist spelling (.zip) falls behind it.
+  let (kept_wheels, excluded) = @moon_pyversion.select_candidates(
+    index,
+    None,
+    None,
+    prefer_wheels=true,
+  )
+  assert_eq(kept_wheels.length(), 3)
+  assert_eq(kept_wheels[0].file.filename, "demo-1.0.tar.gz")
+  assert_eq(kept_wheels[1].file.filename, "demo-2.0-py3-none-any.whl")
+  assert_eq(kept_wheels[2].file.filename, "demo-3.0-py3-none-any.whl")
+  let dropped = excluded.exists(pair => {
+    match pair.1 {
+      @moon_pyversion.WheelAvailable(version) => version == "3.0"
+      _ => false
+    }
+  })
+  assert_eq(dropped, true)
+  assert_eq(excluded.length(), 1)
+}
+
+///|
+/// PEP 440 equality decides "same version", so a 1.0 sdist falls behind a
+/// 1.0.0 wheel - and the exclusion names the version the sdist itself
+/// spells. A sdist-only index loses nothing: the fallback is the answer.
+test "prefer_wheels compares versions by PEP 440 equality" {
+  let b = StringBuilder()
+  b.write_string("{\"name\": \"demo\", \"version\": \"1.0\", \"files\": [")
+  b.write_string(
+    "{\"filename\": \"demo-1.0.0-py3-none-any.whl\", \"url\": \"u1\", \"hashes\": {\"sha256\": \"abc\"}},",
+  )
+  b.write_string(
+    "{\"filename\": \"demo-1.0.tar.gz\", \"url\": \"u2\", \"hashes\": {\"sha256\": \"abc\"}}",
+  )
+  b.write_string("]}")
+  let index = @moon_pyversion.SimpleIndex::parse(b.to_string())
+  let (kept, excluded) = @moon_pyversion.select_candidates(
+    index,
+    None,
+    None,
+    prefer_wheels=true,
+  )
+  assert_eq(kept.length(), 1)
+  assert_eq(kept[0].file.filename, "demo-1.0.0-py3-none-any.whl")
+  let dropped = excluded.exists(pair => {
+    match pair.1 {
+      @moon_pyversion.WheelAvailable(version) => version == "1.0"
+      _ => false
+    }
+  })
+  assert_eq(dropped, true)
+  // Source-only project: no wheel exists, so the sdist is the candidate.
+  let b2 = StringBuilder()
+  b2.write_string("{\"name\": \"demo\", \"version\": \"1.0\", \"files\": [")
+  b2.write_string(
+    "{\"filename\": \"demo-1.0.tar.gz\", \"url\": \"u1\", \"hashes\": {\"sha256\": \"abc\"}}",
+  )
+  b2.write_string("]}")
+  let index2 = @moon_pyversion.SimpleIndex::parse(b2.to_string())
+  let (kept2, excluded2) = @moon_pyversion.select_candidates(
+    index2,
+    None,
+    None,
+    prefer_wheels=true,
+  )
+  assert_eq(kept2.length(), 1)
+  assert_eq(kept2[0].file.filename, "demo-1.0.tar.gz")
+  assert_eq(excluded2.length(), 0)
+}
+
+///|
+/// The preference applies after every other gate, so a wheel that is
+/// yanked does not beat a healthy sdist of the same version - the sdist
+/// stays the candidate.
+test "prefer_wheels only prefers wheels that survived the other gates" {
+  let b = StringBuilder()
+  b.write_string("{\"name\": \"demo\", \"version\": \"1.0\", \"files\": [")
+  b.write_string(
+    "{\"filename\": \"demo-1.0-py3-none-any.whl\", \"url\": \"u1\", \"hashes\": {\"sha256\": \"abc\"}, \"yanked\": \"bad build\"},",
+  )
+  b.write_string(
+    "{\"filename\": \"demo-1.0.tar.gz\", \"url\": \"u2\", \"hashes\": {\"sha256\": \"abc\"}}",
+  )
+  b.write_string("]}")
+  let index = @moon_pyversion.SimpleIndex::parse(b.to_string())
+  let (kept, excluded) = @moon_pyversion.select_candidates(
+    index,
+    None,
+    None,
+    prefer_wheels=true,
+  )
+  assert_eq(kept.length(), 1)
+  assert_eq(kept[0].file.filename, "demo-1.0.tar.gz")
+  let yank = excluded.exists(pair => {
+    match pair.1 {
+      @moon_pyversion.Yanked(_) => true
+      _ => false
+    }
+  })
+  assert_eq(yank, true)
+  assert_eq(excluded.length(), 1)
+}

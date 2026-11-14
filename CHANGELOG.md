@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### select_candidates prefer_wheels - the sdist fallback gate
+
+pip's build-preference for the candidate planner: with `prefer_wheels=true`,
+an sdist whose version a surviving wheel also carries is excluded with the
+new `WheelAvailable(version)` reason, while a version with no surviving
+wheel keeps its sdist - the source-only fallback a project without wheels
+lives on. The comparison is PEP 440 equality (`1.0` and `1.0.0` are one
+version), the preference applies after every other gate (a yanked or
+requires-python-blocked wheel never beats a healthy sdist of its version),
+and the default stays false: without the flag every surviving file, wheels
+and sdists alike, is a candidate exactly as before.
+
 ### Pylock::check_consistency
 
 The post-parse consistency pass over the `packages` array: what the

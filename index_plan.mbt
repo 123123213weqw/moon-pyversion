@@ -41,6 +41,10 @@ pub(all) enum IndexExclusion {
   OutOfRange(String)
   /// A prerelease outside the prerelease policy.
   Prerelease(String)
+  /// With `prefer_wheels`, an sdist of a version a surviving wheel also
+  /// carries (value is that version's spelling) - the sdist stays only
+  /// when no wheel of the same version survived the other gates.
+  WheelAvailable(String)
 }
 
 ///|
@@ -54,11 +58,20 @@ pub(all) enum IndexExclusion {
 /// over and why. The prerelease policy defaults to preferring final
 /// releases but falling back to prereleases when no final release
 /// survives the other gates, exactly pip's default.
+///
+/// `prefer_wheels` layers pip's build-preference on top: an sdist whose
+/// version a surviving wheel also carries is excluded with
+/// `WheelAvailable`, while a version with no surviving wheel keeps its
+/// sdist - the sdist-only fallback a source-only project lives on. The
+/// comparison is PEP 440 equality, so `1.0` and `1.0.0` are one version
+/// and the default (false) keeps every surviving file, wheels and sdists
+/// alike.
 pub fn select_candidates(
   index : SimpleIndex,
   python : String?,
   constraints : SpecifierSet?,
   prereleases~ : Bool? = None,
+  prefer_wheels~ : Bool = false,
 ) -> (Array[IndexCandidate], Array[(String, IndexExclusion)]) raise VersionError {
   let candidates : Array[IndexCandidate] = []
   let exclusions : Array[(String, IndexExclusion)] = []
@@ -117,7 +130,7 @@ pub fn select_candidates(
   let allow_pre = prereleases.unwrap_or(false)
   let has_final = candidates.exists(c => !version_is_prerelease(c.version))
   let want_prereleases = allow_pre || !has_final
-  let kept : Array[IndexCandidate] = []
+  let mut kept : Array[IndexCandidate] = []
   for candidate in candidates {
     if version_is_prerelease(candidate.version) && !want_prereleases {
       exclusions.push(
@@ -125,6 +138,51 @@ pub fn select_candidates(
       )
     } else {
       kept.push(candidate)
+    }
+  }
+  // Wheel preference: the versions a surviving wheel carries beat the
+  // sdists of the same version; a version with no surviving wheel keeps
+  // its sdist, which is the source-only fallback.
+  if prefer_wheels {
+    let wheel_versions : Array[Version] = []
+    for candidate in kept {
+      if distribution_kind(candidate.file.filename) is Some(WheelFile) {
+        let mut known = false
+        for v in wheel_versions {
+          if v.equal(candidate.version) {
+            known = true
+          }
+        }
+        if !known {
+          wheel_versions.push(candidate.version)
+        }
+      }
+    }
+    if wheel_versions.length() > 0 {
+      let wheels_only : Array[IndexCandidate] = []
+      for candidate in kept {
+        if distribution_kind(candidate.file.filename) is Some(WheelFile) {
+          wheels_only.push(candidate)
+        } else {
+          let mut beaten = false
+          for v in wheel_versions {
+            if v.equal(candidate.version) {
+              beaten = true
+            }
+          }
+          if beaten {
+            exclusions.push(
+              (
+                candidate.file.filename,
+                WheelAvailable(candidate.version.to_string()),
+              ),
+            )
+          } else {
+            wheels_only.push(candidate)
+          }
+        }
+      }
+      kept = wheels_only
     }
   }
   (kept, exclusions)
