@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Version::bump_major / bump_minor / bump_patch
+
+The release-cycle bumps, next to the release-number navigation
+`next_major`/`next_minor`/`next_patch`. On a final release the two
+families answer the same thing; they differ in what survives the bump.
+`bump_*` carries the pre/dev identity verbatim (stage and number) to the
+advanced release number - the promotion a pre-release cycle implies:
+`1.2.3rc1` bump_minor -> `1.3rc1`, still a release candidate, still
+ordered between its input and the bumped final (`1.2.3 < 1.3rc1 < 1.3`).
+A post-release never carries (it patches the release it rides on, and the
+bumped number is a different release: `1.2.3.post1` bump_patch ->
+`1.2.4`), local segments never carry (build metadata of the old build),
+the epoch survives, and the release pads with zeros to the dimension's
+width first (`1rc1` bump_patch -> `1.0.1rc1`).
+
 ### SpecifierSet::intersects
 
 The batch conflict detector: whether two constraint sets admit at least one

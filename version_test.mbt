@@ -338,3 +338,82 @@ test "next helpers chain across dimensions" {
     ),
   )
 }
+
+///|
+/// On a final release the bump family answers exactly what next_ answers:
+/// the suffix policy only differs once there is a pre or dev stage to
+/// carry.
+test "bump matches next on final releases" {
+  let cases : Array[(String, String, String, String)] = [
+    // input, bump_major, bump_minor, bump_patch
+    ("1.2.3", "2", "1.3", "1.2.4"),
+    ("0.9", "1", "0.10", "0.9.1"),
+    ("2", "3", "2.1", "2.0.1"),
+    ("1!1.9", "1!2", "1!1.10", "1!1.9.1"),
+    ("1.0.post3", "2", "1.1", "1.0.1"),
+  ]
+  for entry in cases {
+    let v = @moon_pyversion.Version::parse(entry.0)
+    assert_eq(@moon_pyversion.Version::bump_major(v).to_string(), entry.1)
+    assert_eq(@moon_pyversion.Version::bump_minor(v).to_string(), entry.2)
+    assert_eq(@moon_pyversion.Version::bump_patch(v).to_string(), entry.3)
+  }
+}
+
+///|
+/// A pre-release keeps riding its cycle: the release number advances, the
+/// stage and its number survive verbatim. The result sorts between its own
+/// input and the bumped final, which is the order a release cycle expects.
+test "bump carries the pre-release stage to the advanced number" {
+  let cases : Array[(String, String, String, String)] = [
+    ("1.2.3rc1", "2rc1", "1.3rc1", "1.2.4rc1"),
+    ("1.2.3a2", "2a2", "1.3a2", "1.2.4a2"),
+    ("1.2.3b3", "2b3", "1.3b3", "1.2.4b3"),
+    ("1rc1", "2rc1", "1.1rc1", "1.0.1rc1"),
+    ("1.2.3c2", "2rc2", "1.3rc2", "1.2.4rc2"),
+  ]
+  for entry in cases {
+    let v = @moon_pyversion.Version::parse(entry.0)
+    assert_eq(@moon_pyversion.Version::bump_major(v).to_string(), entry.1)
+    assert_eq(@moon_pyversion.Version::bump_minor(v).to_string(), entry.2)
+    assert_eq(@moon_pyversion.Version::bump_patch(v).to_string(), entry.3)
+  }
+  // The promoted pre-release stays ordered: input < promoted < final.
+  let rc = @moon_pyversion.Version::parse("1.2.3rc1")
+  let promoted = @moon_pyversion.Version::bump_minor(rc)
+  assert_true(rc < promoted)
+  assert_true(
+    promoted <
+    @moon_pyversion.Version::bump_minor(@moon_pyversion.Version::parse("1.2.3")),
+  )
+  assert_true(
+    @moon_pyversion.Version::is_prerelease(
+      @moon_pyversion.Version::bump_minor(rc),
+    ),
+  )
+}
+
+///|
+/// Dev releases carry like pre-releases; a post-release never does - it
+/// patches the release it rides on, and the bumped number is a different
+/// release. A post+dev version keeps only the dev half.
+test "bump carries dev releases but drops post-releases" {
+  let cases : Array[(String, String, String, String)] = [
+    ("1.2.3.dev4", "2.dev4", "1.3.dev4", "1.2.4.dev4"),
+    ("1.2.3.post1", "2", "1.3", "1.2.4"),
+    ("1.2.3.post1.dev2", "2.dev2", "1.3.dev2", "1.2.4.dev2"),
+    ("1.2.3rc1.dev5", "2rc1.dev5", "1.3rc1.dev5", "1.2.4rc1.dev5"),
+    ("1.2.3rc1+local", "2rc1", "1.3rc1", "1.2.4rc1"),
+  ]
+  for entry in cases {
+    let v = @moon_pyversion.Version::parse(entry.0)
+    assert_eq(@moon_pyversion.Version::bump_major(v).to_string(), entry.1)
+    assert_eq(@moon_pyversion.Version::bump_minor(v).to_string(), entry.2)
+    assert_eq(@moon_pyversion.Version::bump_patch(v).to_string(), entry.3)
+  }
+  // A dev-only bump stays below the cycle it is working toward.
+  let dev = @moon_pyversion.Version::parse("1.2.3.dev4")
+  let promoted = @moon_pyversion.Version::bump_minor(dev)
+  assert_true(dev < promoted)
+  assert_true(promoted < @moon_pyversion.Version::parse("1.3a1"))
+}

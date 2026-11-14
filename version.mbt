@@ -717,3 +717,75 @@ pub fn Version::next_minor(self : Version) -> Version {
 pub fn Version::next_patch(self : Version) -> Version {
   next_release_form(self, 3)
 }
+
+///|
+/// The bumped release with the pre/dev identity carried over. A version on
+/// a pre-release or dev cycle stays on it - the release number advances,
+/// the stage and its number survive verbatim - while the post-release and
+/// the local segments are dropped, because a post patches the release it
+/// rides on (the bumped number is a different release, never a post of
+/// anything) and local segments are build metadata of the old build. The
+/// epoch survives. This is the "promotion" a pre-release cycle implies:
+/// when `1.2.3rc1` is promoted to the next minor, the answer is `1.3rc1`,
+/// still a release candidate, still one whose target has not shipped.
+fn bump_release_form(v : Version, width : Int32) -> Version {
+  {
+    raw: "",
+    epoch: v.epoch,
+    release: bumped_release(v, width),
+    has_pre: v.has_pre,
+    pre_kind: v.pre_kind,
+    pre_num: v.pre_num,
+    has_post: false,
+    post_num: @bigint.BigInt::from_int(0),
+    has_dev: v.has_dev,
+    dev_num: v.dev_num,
+    local_segments: [],
+  }
+}
+
+///|
+/// The next major release number with the suffix policy of a release
+/// cycle: `1.2.3` -> `2`, and a pre-release keeps riding its cycle -
+/// `1.2.3rc1` -> `2rc1`, `1.2.3.dev4` -> `2.dev4`. On a final release this
+/// is exactly `next_major`; the difference is only what survives the bump.
+/// Post-releases and local segments never survive, and the epoch is
+/// preserved.
+///
+/// ```mbt check
+/// test {
+///   let v = @moon_pyversion.Version::parse("1.2.3rc1")
+///   inspect(@moon_pyversion.Version::bump_major(v).to_string(), content="2rc1")
+///   inspect(@moon_pyversion.Version::bump_minor(v).to_string(), content="1.3rc1")
+///   inspect(
+///     @moon_pyversion.Version::bump_patch(v).to_string(),
+///     content="1.2.4rc1",
+///   )
+/// }
+/// ```
+pub fn Version::bump_major(self : Version) -> Version {
+  bump_release_form(self, 1)
+}
+
+///|
+/// The next minor release number with the suffix policy of a release
+/// cycle: `1.2.3` -> `1.3`, `1.2.3rc1` -> `1.3rc1`, `1.2.3.dev4` ->
+/// `1.3.dev4`. The pre/dev identity carries verbatim (kind and number),
+/// post-releases and local segments drop, the epoch survives. The result
+/// still sorts between its own input and the bumped final
+/// (`1.3rc1 < 1.3`, and `1.2.3 < 1.3rc1`), so a promoted pre-release
+/// stays ordered the way its cycle expects.
+pub fn Version::bump_minor(self : Version) -> Version {
+  bump_release_form(self, 2)
+}
+
+///|
+/// The next patch release number with the suffix policy of a release
+/// cycle: `1.2.3` -> `1.2.4`, `1.2.3b1.dev2` -> `1.2.4b1.dev2`,
+/// `1.2.3.post1` -> `1.2.4` (the post-release belongs to `1.2.3` and does
+/// not propagate), `1.2.3rc1+local` -> `1.2.4rc1` (local is build
+/// metadata of the old build). The pre/dev identity carries verbatim, the
+/// epoch survives.
+pub fn Version::bump_patch(self : Version) -> Version {
+  bump_release_form(self, 3)
+}
