@@ -890,6 +890,63 @@ pub fn MarkerEnvironment::set_names(
 }
 
 ///|
+/// Overlay two environments: every key `overlay` holds wins over the same
+/// key in `base`, and every key only `base` holds survives untouched. This
+/// is the pyproject-plus-command-line composition: `base` carries the
+/// facts one source derived (a runtime probe, a configuration file) and
+/// `overlay` carries the overrides another source supplies (the flags the
+/// caller was given), and the merged environment answers markers with the
+/// overlay's value wherever the two sources agree to disagree.
+///
+/// Both inputs are stored spellings - `set` and `set_names` canonicalize
+/// on the way in - so the copy is verbatim and nothing is re-normalized.
+/// The result is a fresh environment: mutating either input afterwards
+/// cannot change it, and mutating it cannot change the inputs. A key in
+/// neither map stays unset, and evaluates exactly as PEP 508 says an unset
+/// variable does.
+///
+/// ```mbt check
+/// test {
+///   let base = @moon_pyversion.MarkerEnvironment::new()
+///   base.set("python_version", "3.9")
+///   base.set("sys_platform", "linux")
+///   let overlay = @moon_pyversion.MarkerEnvironment::new()
+///   overlay.set("sys_platform", "win32")
+///   let merged = @moon_pyversion.MarkerEnvironment::merge(base, overlay)
+///   assert_eq(merged.get_text("python_version"), Some("3.9"))
+///   assert_eq(merged.get_text("sys_platform"), Some("win32"))
+/// }
+/// ```
+pub fn MarkerEnvironment::merge(
+  base : MarkerEnvironment,
+  overlay : MarkerEnvironment,
+) -> MarkerEnvironment {
+  let values : Map[String, String] = Map([])
+  for key in base.values.keys() {
+    values[key] = base.values[key]
+  }
+  for key in overlay.values.keys() {
+    values[key] = overlay.values[key]
+  }
+  let names : Map[String, Array[String]] = Map([])
+  for key in base.names.keys() {
+    let members : Array[String] = []
+    for item in base.names[key] {
+      members.push(item)
+    }
+    names[key] = members
+  }
+  for key in overlay.names.keys() {
+    let members : Array[String] = []
+    for item in overlay.names[key] {
+      members.push(item)
+    }
+    names[key] = members
+  }
+  { values, names, }
+}
+
+///|
 /// Look up a key, preferring the set-valued table so `set_names` wins for the
 /// keys that can be either.
 pub fn MarkerEnvironment::lookup(

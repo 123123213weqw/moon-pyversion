@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### MarkerEnvironment::merge
+
+Overlay two environments: every key the overlay holds wins over the same
+key in the base, every key only the base holds survives, a key in neither
+stays unset and evaluates exactly as PEP 508 treats an unset variable.
+This is the pyproject-plus-command-line composition - base carries the
+facts one source derived (a runtime probe, a configuration), overlay
+carries the overrides another source supplies. Both inputs are stored
+spellings (`set`/`set_names` canonicalize on the way in), so the copy is
+verbatim; the answer is a fresh environment that neither input can change
+afterwards, and set-valued keys (`extras`, `dependency_groups`) overlay
+the same replace-with-overlay way single values do.
+
 ### Version::bump_major / bump_minor / bump_patch
 
 The release-cycle bumps, next to the release-number navigation

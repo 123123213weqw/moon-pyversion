@@ -398,3 +398,70 @@ test "from_runtime derives the PEP 508 spellings" {
   )
   assert_eq(marker.evaluate(mac), false)
 }
+
+///|
+/// The overlay wins where the two sources disagree, the base keeps
+/// everything the overlay does not mention, and the answer is a fresh
+/// environment: neither input can change it afterwards, and `extra`
+/// canonicalization happened at set time so the copy carries it.
+test "marker environment merge overlays the command-line source on the base" {
+  let base = @moon_pyversion.MarkerEnvironment::new()
+  base.set("python_version", "3.9")
+  base.set("sys_platform", "linux")
+  base.set("extra", "Docs.Build")
+  let overlay = @moon_pyversion.MarkerEnvironment::new()
+  overlay.set("sys_platform", "win32")
+  let merged = @moon_pyversion.MarkerEnvironment::merge(base, overlay)
+  assert_eq(merged.get_text("python_version"), Some("3.9"))
+  assert_eq(merged.get_text("sys_platform"), Some("win32"))
+  assert_eq(merged.get_text("extra"), Some("docs-build"))
+  // The composition answers markers with the overlay's value.
+  assert_eq(evaluate_with("sys_platform == 'win32'", merged), true)
+  assert_eq(evaluate_with("python_version >= '3.9'", merged), true)
+  // Fresh copy: mutating the base afterwards cannot change the merge.
+  base.set("python_version", "3.13")
+  assert_eq(merged.get_text("python_version"), Some("3.9"))
+}
+
+///|
+/// Set-valued keys overlay the same way - the overlay's list replaces the
+/// base's - and a key in neither map stays unset, evaluating the way PEP
+/// 508 treats an unset variable.
+test "marker environment merge covers set-valued keys and leaves gaps unset" {
+  let base = @moon_pyversion.MarkerEnvironment::new()
+  base.set_names("extras", ["security", "speed"])
+  base.set_names("dependency_groups", ["docs"])
+  let overlay = @moon_pyversion.MarkerEnvironment::new()
+  overlay.set_names("extras", ["socks"])
+  let merged = @moon_pyversion.MarkerEnvironment::merge(base, overlay)
+  let extras = match @moon_pyversion.MarkerVar::parse("extras") {
+    Some(name) =>
+      match merged.lookup(name) {
+        @moon_pyversion.Names(list) => list
+        _ => abort("extras should be set-valued")
+      }
+    None => abort("extras is a marker variable")
+  }
+  assert_eq(extras, ["socks"])
+  let groups = match @moon_pyversion.MarkerVar::parse("dependency_groups") {
+    Some(name) =>
+      match merged.lookup(name) {
+        @moon_pyversion.Names(list) => list
+        _ => abort("dependency_groups should be set-valued")
+      }
+    None => abort("dependency_groups is a marker variable")
+  }
+  assert_eq(groups, ["docs"])
+  // os_name is in neither map: still unset, still an error on evaluation.
+  let os_name = match @moon_pyversion.MarkerVar::parse("os_name") {
+    Some(name) => name
+    None => abort("os_name is a marker variable")
+  }
+  let missing = try {
+    ignore(merged.lookup(os_name))
+    false
+  } catch {
+    _ => true
+  }
+  assert_eq(missing, true)
+}
