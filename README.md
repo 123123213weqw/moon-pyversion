@@ -19,12 +19,12 @@ PEP 751 锁文件。零第三方依赖，仅使用 `moonbitlang/core`。
 
 ## 安装
 
-已发布到 MoonCakes：`123123213weqw/moon_pyversion` **0.3.0**（0.2.0 及历史发布证据见
+已发布到 MoonCakes：`123123213weqw/moon_pyversion` **0.6.0**（历史发布证据见
 [docs/release-verification.md](docs/release-verification.md)）。消费项目可直接：
 [docs/release-verification.md](docs/release-verification.md)。消费项目可直接：
 
 ```sh
-moon add 123123213weqw/moon_pyversion@0.3.0
+moon add 123123213weqw/moon_pyversion@0.6.0
 ```
 
 从源码复现：
